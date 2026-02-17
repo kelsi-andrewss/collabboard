@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "boards": {
+      ".read": "auth != null",
+      "$boardId": {
+        "presence": {
+          "$userId": {
+            ".write": "auth != null && auth.uid === $userId"
+          }
+        }
+      }
+    }
+  }
+}
