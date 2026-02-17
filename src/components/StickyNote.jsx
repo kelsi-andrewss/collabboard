@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete }) => {
+export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50 }) => {
   const shapeRef = useRef();
+  const groupRef = useRef();
   const trRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
   const [isDark, setIsDark] = useState(document.documentElement.getAttribute('data-theme') === 'dark');
@@ -43,6 +44,8 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
   return (
     <>
       <Group
+        ref={groupRef}
+        name={id}
         x={x}
         y={y}
         rotation={rotation}
@@ -51,29 +54,19 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDblClick={(e) => {
+          e.cancelBubble = true;
+          setIsEditing(true);
+        }}
         onTap={(e) => {
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragMove={(e) => {
+          if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
+        }}
         onDragEnd={(e) => {
           onDragEnd(id, { x: e.target.x(), y: e.target.y() });
-        }}
-        onTransformEnd={(e) => {
-          const node = shapeRef.current;
-          const group = e.target;
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
-          node.scaleX(1);
-          node.scaleY(1);
-          if (onTransformEnd) {
-            onTransformEnd(id, {
-              x: group.x(),
-              y: group.y(),
-              rotation: group.rotation(),
-              width: Math.max(50, node.width() * scaleX),
-              height: Math.max(50, node.height() * scaleY),
-            });
-          }
         }}
       >
         <Rect
@@ -101,11 +94,15 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
             fill="#000000"
             onClick={(e) => {
               e.cancelBubble = true;
+              onSelect(id);
+            }}
+            onDblClick={(e) => {
+              e.cancelBubble = true;
               setIsEditing(true);
             }}
             onTap={(e) => {
               e.cancelBubble = true;
-              setIsEditing(true);
+              onSelect(id);
             }}
           />
         ) : (
@@ -166,10 +163,36 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           rotateEnabled={true}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 50 || newBox.height < 50) {
-              return oldBox;
-            }
+            if (newBox.width < 50 || newBox.height < 50) return oldBox;
             return newBox;
+          }}
+          onTransformEnd={() => {
+            const node = shapeRef.current;
+            const group = groupRef.current;
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
+            const rawX = group.x() + node.x();
+            const rawY = group.y() + node.y();
+            const rawW = Math.max(50, node.width() * scaleX);
+            const rawH = Math.max(50, node.height() * scaleY);
+            const s = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
+            const finalX = s(rawX);
+            const finalY = s(rawY);
+            const finalW = (snapToGrid ? Math.max(gridSize, s(rawX + rawW) - finalX) : rawW) || rawW;
+            const finalH = (snapToGrid ? Math.max(gridSize, s(rawY + rawH) - finalY) : rawH) || rawH;
+            node.scaleX(1);
+            node.scaleY(1);
+            node.position({ x: 0, y: 0 });
+            group.position({ x: finalX, y: finalY });
+            if (onTransformEnd) {
+              onTransformEnd(id, {
+                x: finalX,
+                y: finalY,
+                rotation: group.rotation(),
+                width: finalW,
+                height: finalH,
+              });
+            }
           }}
         />
       )}

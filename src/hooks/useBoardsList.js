@@ -25,14 +25,16 @@ export function useBoardsList() {
     return unsubscribe;
   }, []);
 
-  const createBoard = async (name, group = 'General') => {
+  const createBoard = async (name, group = null) => {
     const boardsRef = collection(db, 'boards');
-    await addDoc(boardsRef, {
+    const data = {
       name,
-      group,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
+    if (group) data.group = group;
+    const ref = await addDoc(boardsRef, data);
+    return ref;
   };
 
   return { boards, loading, createBoard };

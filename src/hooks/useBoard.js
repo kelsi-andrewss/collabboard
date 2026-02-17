@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  serverTimestamp 
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export function useBoard(boardId) {
   const [objects, setObjects] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!boardId) return;
+    setLoading(true);
 
     const objectsRef = collection(db, 'boards', boardId, 'objects');
     const q = query(objectsRef);
@@ -28,8 +31,10 @@ export function useBoard(boardId) {
       });
       console.log("Received objects update:", Object.keys(newObjects).length);
       setObjects(newObjects);
+      setLoading(false);
     }, (error) => {
       console.error("Firestore Snapshot Error:", error);
+      setLoading(false);
     });
 
     return unsubscribe;
@@ -60,5 +65,15 @@ export function useBoard(boardId) {
     await deleteDoc(objectRef);
   };
 
-  return { objects, addObject, updateObject, deleteObject };
+  const batchUpdateObjects = async (updates) => {
+    if (!boardId || !updates.length) return;
+    const batch = writeBatch(db);
+    updates.forEach(({ id, data }) => {
+      const ref = doc(db, 'boards', boardId, 'objects', id);
+      batch.update(ref, { ...data, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
+  };
+
+  return { objects, loading, addObject, updateObject, deleteObject, batchUpdateObjects };
 }

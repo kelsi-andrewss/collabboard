@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Stage, Layer, Rect } from 'react-konva';
+import React, { useState, useEffect, useRef } from 'react';
+import { Stage, Layer, Rect, Text, Line } from 'react-konva';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
@@ -11,8 +11,31 @@ import { StickyNote } from './components/StickyNote';
 import { Shape } from './components/Shape';
 import { LineShape } from './components/LineShape';
 import { Frame } from './components/Frame';
-import { Square, Circle, Plus, MousePointer2, MessageSquare, Send, Layout, Folder, Users, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, Frame as FrameIcon } from 'lucide-react';
+import { Square, Circle, Plus, MessageSquare, Send, Layout, Folder, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, AppWindow, LogOut, Grid3x3, Search } from 'lucide-react';
 import './App.css';
+
+function isInsideFrame(obj, frame) {
+  const cx = obj.x + (obj.width || 0) / 2;
+  const cy = obj.y + (obj.height || 0) / 2;
+  return cx >= frame.x && cx <= frame.x + frame.width &&
+         cy >= frame.y && cy <= frame.y + frame.height;
+}
+
+function findOverlappingFrame(obj, allObjects) {
+  const frames = Object.values(allObjects).filter(o => o.type === 'frame' && o.id !== obj.id);
+  let best = null;
+  let bestArea = Infinity;
+  for (const frame of frames) {
+    if (isInsideFrame(obj, frame)) {
+      const area = frame.width * frame.height;
+      if (area < bestArea) {
+        best = frame;
+        bestArea = area;
+      }
+    }
+  }
+  return best;
+}
 
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -81,75 +104,181 @@ function ColorPickerMenu({ type, data, onSelect }) {
       <div className="color-history">
         <label>History</label>
         <div className="history-grid">
-          {data.history.map((c, i) => (
-            <div
-              key={`${c}-${i}`}
-              className="color-swatch"
-              style={{backgroundColor: c}}
-              onClick={() => {
-                setOpacity(parseOpacity(c));
-                onSelect(type, c);
-              }}
-            />
-          ))}
+          {Array.from({ length: 10 }).map((_, i) => {
+            const c = data.history[i];
+            return c ? (
+              <div
+                key={`${c}-${i}`}
+                className="color-swatch"
+                style={{backgroundImage: `linear-gradient(${c}, ${c}), linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)`}}
+                onClick={() => {
+                  setOpacity(parseOpacity(c));
+                  onSelect(type, c);
+                }}
+              />
+            ) : (
+              <div key={`empty-${i}`} className="color-swatch empty-swatch" />
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function BoardSelector({ onSelectBoard, darkMode, setDarkMode }) {
+function UserAvatarMenu({ user, logout }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (!e.target.closest('.user-avatar-menu')) setOpen(false);
+    };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const timer = setTimeout(() => {
+      document.addEventListener('click', close);
+      document.addEventListener('keydown', esc);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  const initial = (user.displayName || user.email || '?').charAt(0).toUpperCase();
+  const avatarColor = '#6366f1';
+
+  return (
+    <div className="user-avatar-menu">
+      <div
+        className="user-avatar-circle"
+        style={{ backgroundColor: avatarColor }}
+        onClick={() => setOpen(!open)}
+        title={user.displayName || user.email}
+      >
+        {user.photoURL ? (
+          <img src={user.photoURL} alt="" className="user-avatar-img" referrerPolicy="no-referrer" />
+        ) : (
+          initial
+        )}
+      </div>
+      {open && (
+        <div className="user-avatar-dropdown">
+          <div className="dropdown-user-info">
+            <span className="dropdown-user-name">{user.displayName}</span>
+            <span className="dropdown-user-email">{user.email}</span>
+          </div>
+          <div className="dropdown-divider" />
+          <button className="dropdown-item" onClick={logout}>
+            <LogOut size={16} />
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
   const { boards, loading, createBoard } = useBoardsList();
   const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
-  const [newGroupName, setNewGroupName] = useState('General');
-  
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  const groupDropdownRef = useRef(null);
+
+  const groupInputRef = useRef(null);
+  const boardNameInputRef = useRef(null);
+
+  const existingGroups = [...new Set(boards.map(b => b.group).filter(Boolean))];
+  const filteredGroups = newGroupName
+    ? existingGroups.filter(g => g.toLowerCase().includes(newGroupName.toLowerCase()))
+    : existingGroups;
+  const isNewGroup = newGroupName.trim() && !existingGroups.some(g => g.toLowerCase() === newGroupName.trim().toLowerCase());
+
+  const submitCreate = async (name, group) => {
+    const ref = await createBoard(name, group || null);
+    setNewBoardName('');
+    setNewGroupName('');
+    setGroupDropdownOpen(false);
+    setShowModal(false);
+    onSelectBoard(ref.id, name);
+  };
+
   const handleAddBoard = (e) => {
     e.preventDefault();
     if (!newBoardName.trim()) return;
-    createBoard(newBoardName.trim(), newGroupName.trim() || 'General');
-    setNewBoardName('');
-    setNewGroupName('General');
-    setShowModal(false);
+    submitCreate(newBoardName.trim(), newGroupName.trim());
+  };
+
+  const handleGroupKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!newBoardName.trim()) {
+        boardNameInputRef.current?.focus();
+        return;
+      }
+      submitCreate(newBoardName.trim(), newGroupName.trim());
+    } else if (e.key === 'Escape') {
+      setGroupDropdownOpen(false);
+      groupInputRef.current?.blur();
+    }
   };
 
   if (loading) return <div className="loading">Loading boards...</div>;
 
-  // Group boards
+  // Group boards - null key for ungrouped boards
   const groups = boards.reduce((acc, board) => {
-    const g = board.group || 'General';
+    const g = board.group || null;
     if (!acc[g]) acc[g] = [];
     acc[g].push(board);
     return acc;
   }, {});
 
+  // Sort boards within each group by updatedAt descending
+  for (const key of Object.keys(groups)) {
+    groups[key].sort((a, b) => {
+      const aTime = a.updatedAt?.toMillis?.() ?? a.updatedAt?.seconds * 1000 ?? 0;
+      const bTime = b.updatedAt?.toMillis?.() ?? b.updatedAt?.seconds * 1000 ?? 0;
+      return bTime - aTime;
+    });
+  }
+
+  // Sort groups: ungrouped (null) first, then named groups by most-recently-edited board desc
+  const sortedGroupEntries = Object.entries(groups).sort(([a, aBoards], [b, bBoards]) => {
+    if (a === 'null') return -1;
+    if (b === 'null') return 1;
+    const aTime = aBoards[0]?.updatedAt?.toMillis?.() ?? aBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
+    const bTime = bBoards[0]?.updatedAt?.toMillis?.() ?? bBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
+    return bTime - aTime;
+  });
+
   return (
     <div className="board-selector-container">
       <div className="selector-header">
         <div className="dashboard-top">
-          <h1>Global Boards</h1>
-          <button 
-            className="theme-toggle-inline"
-            onClick={() => setDarkMode(!darkMode)}
-            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          <h1>Collaboard</h1>
+          <UserAvatarMenu user={user} logout={logout} />
         </div>
         <p>Everyone can see and edit all boards</p>
       </div>
-      
+
       <div className="groups-list">
-        {Object.entries(groups).map(([groupName, groupBoards]) => (
-          <div key={groupName} className="board-group">
-            <h2 className="group-title"><Folder size={20} /> {groupName}</h2>
+        {sortedGroupEntries.map(([groupKey, groupBoards]) => (
+          <div key={groupKey} className="board-group">
+            {groupKey !== 'null' && (
+              <h2 className="group-title">
+                <Folder size={20} /> {groupKey}
+              </h2>
+            )}
             <div className="boards-grid">
               {groupBoards.map(board => (
-                <div 
-                  key={board.id} 
+                <div
+                  key={board.id}
                   className="board-card"
-                  onClick={() => onSelectBoard(board.id)}
+                  onClick={() => onSelectBoard(board.id, board.name)}
                 >
                   <div className="board-card-preview">
                     <Layout size={40} />
@@ -161,9 +290,9 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode }) {
                       {globalPresence[board.id] && globalPresence[board.id].length > 0 && (
                         <div className="card-avatars">
                           {globalPresence[board.id].slice(0, 3).map((u, i) => (
-                            <div 
-                              key={i} 
-                              className="mini-avatar" 
+                            <div
+                              key={i}
+                              className="mini-avatar"
                               style={{ backgroundColor: u.color }}
                               title={u.name}
                             >
@@ -186,13 +315,21 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode }) {
         ))}
         {boards.length === 0 && (
           <div className="empty-state">
-            <p>No global boards found. Create the first one!</p>
+            <p>No boards found. Create the first one!</p>
           </div>
         )}
       </div>
 
-      <button className="create-board-fab" onClick={() => setShowModal(true)} title="Create New Global Board">
+      <button className="create-board-fab" onClick={() => setShowModal(true)} title="Create New Board">
         <Plus size={32} />
+      </button>
+
+      <button
+        className="theme-fab"
+        onClick={() => setDarkMode(!darkMode)}
+        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      >
+        {darkMode ? <Sun size={24} /> : <Moon size={24} />}
       </button>
 
       {showModal && (
@@ -202,25 +339,77 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode }) {
             <form onSubmit={handleAddBoard}>
               <div className="form-group">
                 <label>Board Name</label>
-                <input 
-                  type="text" 
-                  value={newBoardName} 
-                  onChange={(e) => setNewBoardName(e.target.value)} 
+                <input
+                  ref={boardNameInputRef}
+                  type="text"
+                  value={newBoardName}
+                  onChange={(e) => setNewBoardName(e.target.value)}
                   placeholder="My Creative Board"
                   autoFocus
                 />
               </div>
               <div className="form-group">
-                <label>Group (optional)</label>
-                <input 
-                  type="text" 
-                  value={newGroupName} 
-                  onChange={(e) => setNewGroupName(e.target.value)} 
-                  placeholder="General"
-                />
+                <label>Group <span className="label-optional">(optional)</span></label>
+                <div className="group-search-wrapper" ref={groupDropdownRef}>
+                  <div className="group-search-input-row">
+                    {isNewGroup
+                      ? <Plus size={14} className="group-search-icon group-search-icon--plus" />
+                      : <Search size={14} className="group-search-icon" />
+                    }
+                    <input
+                      ref={groupInputRef}
+                      type="text"
+                      value={newGroupName}
+                      onChange={(e) => {
+                        setNewGroupName(e.target.value);
+                        setGroupDropdownOpen(true);
+                      }}
+                      onFocus={() => setGroupDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setGroupDropdownOpen(false), 150)}
+                      onKeyDown={handleGroupKeyDown}
+                      placeholder="Search or create a group..."
+                    />
+                    {newGroupName && (
+                      <button
+                        type="button"
+                        className="group-clear-btn"
+                        onClick={() => {
+                          setNewGroupName('');
+                          setGroupDropdownOpen(false);
+                          groupInputRef.current?.focus();
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {isNewGroup && newGroupName && (
+                    <div className="group-new-hint">
+                      <Plus size={12} /> New group &ldquo;{newGroupName.trim()}&rdquo;
+                      {newBoardName.trim() ? ' — press Enter to create' : ' — enter a board name first'}
+                    </div>
+                  )}
+                  {groupDropdownOpen && filteredGroups.length > 0 && (
+                    <div className="group-dropdown-list">
+                      {filteredGroups.map(g => (
+                        <div
+                          key={g}
+                          className="group-dropdown-item"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setNewGroupName(g);
+                            setGroupDropdownOpen(false);
+                          }}
+                        >
+                          <Folder size={14} /> {g}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="secondary-btn" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="secondary-btn" onClick={() => { setShowModal(false); setNewGroupName(''); setGroupDropdownOpen(false); }}>Cancel</button>
                 <button type="submit" className="primary-btn">Create Board</button>
               </div>
             </form>
@@ -298,8 +487,21 @@ function PresenceAvatars({ presentUsers, currentUserId }) {
 
 function App() {
   const { user, loading, login, logout } = useAuth();
-  const [boardId, setBoardId] = useState(null);
+  const [boardId, setBoardId] = useState(() => localStorage.getItem('collaboard_boardId') || null);
+  const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
   const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const stageRef = useRef(null);
+  const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0 });
+
+  useEffect(() => {
+    if (boardId) {
+      localStorage.setItem('collaboard_boardId', boardId);
+      localStorage.setItem('collaboard_boardName', boardName);
+    } else {
+      localStorage.removeItem('collaboard_boardId');
+      localStorage.removeItem('collaboard_boardName');
+    }
+  }, [boardId, boardName]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -323,18 +525,35 @@ function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
-  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
-  const [stageScale, setStageScale] = useState(1);
+  const [stagePos, setStagePos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      if (saved) { const v = JSON.parse(saved); return { x: v.x ?? 0, y: v.y ?? 0 }; }
+    } catch {}
+    return { x: 0, y: 0 };
+  });
+  const [stageScale, setStageScale] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      if (saved) { const v = JSON.parse(saved); return v.scale ?? 1; }
+    } catch {}
+    return 1;
+  });
   const [shapeColors, setShapeColors] = useState(() => {
     const saved = localStorage.getItem(`shapeColors_${boardId}`);
     return saved ? JSON.parse(saved) : {
-      rectangle: { active: '#bfdbfe', history: ['#bfdbfe', '#fbcfe8', '#e9d5ff', '#fef08a', '#bbf7d0'] },
-      circle: { active: '#fbcfe8', history: ['#bfdbfe', '#fbcfe8', '#e9d5ff', '#fef08a', '#bbf7d0'] },
-      triangle: { active: '#e9d5ff', history: ['#bfdbfe', '#fbcfe8', '#e9d5ff', '#fef08a', '#bbf7d0'] },
-      line: { active: '#3b82f6', history: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'] }
+      rectangle: { active: '#bfdbfe', history: [] },
+      circle: { active: '#fbcfe8', history: [] },
+      triangle: { active: '#e9d5ff', history: [] },
+      line: { active: '#3b82f6', history: [] }
     };
   });
   const [showColorPicker, setShowColorPicker] = useState(null);
+  const [dragState, setDragState] = useState({ draggingId: null, overFrameId: null, action: null });
+  const [snapToGrid, setSnapToGrid] = useState(() => localStorage.getItem('snapToGrid') === 'true');
+  const GRID_SIZE = 50;
+  const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
+  const snapSize = (val, min) => snapToGrid ? Math.max(min, Math.round(val / GRID_SIZE) * GRID_SIZE) : val;
 
   useEffect(() => {
     if (!showColorPicker) return;
@@ -363,6 +582,27 @@ function App() {
     }
   }, [shapeColors, boardId]);
 
+  useEffect(() => {
+    if (boardId) {
+      localStorage.setItem(`collaboard_view_${boardId}`, JSON.stringify({ x: stagePos.x, y: stagePos.y, scale: stageScale }));
+    }
+  }, [stagePos, stageScale, boardId]);
+
+  useEffect(() => {
+    if (!boardId) return;
+    try {
+      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      if (saved) {
+        const v = JSON.parse(saved);
+        setStagePos({ x: v.x ?? 0, y: v.y ?? 0 });
+        setStageScale(v.scale ?? 1);
+        return;
+      }
+    } catch {}
+    setStagePos({ x: 0, y: 0 });
+    setStageScale(1);
+  }, [boardId]);
+
   const updateActiveColor = (type, color) => {
     setShapeColors(prev => {
       // If the color is already the active one and we're just picking it again, don't update history
@@ -389,6 +629,91 @@ function App() {
         }
       };
     });
+  };
+
+  const handleDragMove = (id, pos) => {
+    const obj = board.objects[id];
+    if (!obj || obj.type === 'frame') return;
+    const tempObj = { ...obj, ...pos };
+    const overFrame = findOverlappingFrame(tempObj, board.objects);
+    const currentFrameId = obj.frameId || null;
+    let action = null;
+    let overFrameId = null;
+    if (overFrame) {
+      overFrameId = overFrame.id;
+      if (currentFrameId !== overFrame.id) {
+        action = 'add';
+      }
+    } else if (currentFrameId) {
+      overFrameId = currentFrameId;
+      action = 'remove';
+    }
+    setDragState({ draggingId: id, overFrameId, action });
+  };
+
+  const handleContainedDragEnd = (id, updates) => {
+    const obj = board.objects[id];
+    if (!obj) return;
+    const snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
+    const tempObj = { ...obj, ...snapped };
+    const overFrame = findOverlappingFrame(tempObj, board.objects);
+    const newFrameId = overFrame ? overFrame.id : null;
+    board.updateObject(id, { ...snapped, frameId: newFrameId || null });
+    setDragState({ draggingId: null, overFrameId: null, action: null });
+  };
+
+  const handleFrameDragMove = (id, pos) => {
+    const frame = board.objects[id];
+    if (!frame) return;
+    const dx = pos.x - frame.x;
+    const dy = pos.y - frame.y;
+    frameDragRef.current = { frameId: id, dx, dy };
+    const stage = stageRef.current;
+    if (!stage) return;
+    const children = Object.values(board.objects).filter(o => o.frameId === id);
+    for (const child of children) {
+      const node = stage.findOne('.' + child.id);
+      if (node) {
+        node.x(child.x + dx);
+        node.y(child.y + dy);
+      }
+    }
+    stage.batchDraw();
+  };
+
+  const handleFrameDragEnd = (id, updates) => {
+    const frame = board.objects[id];
+    if (!frame) return;
+    const snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
+    const dx = snapped.x - frame.x;
+    const dy = snapped.y - frame.y;
+    const children = Object.values(board.objects).filter(o => o.frameId === id);
+    const batchUpdates = children.map(child => ({
+      id: child.id,
+      data: { x: child.x + dx, y: child.y + dy }
+    }));
+    board.updateObject(id, snapped);
+    if (batchUpdates.length > 0) {
+      board.batchUpdateObjects(batchUpdates);
+    }
+    frameDragRef.current = { frameId: null, dx: 0, dy: 0 };
+    setDragState({ draggingId: null, overFrameId: null, action: null });
+  };
+
+  const handleTransformEnd = (id, updates) => {
+    board.updateObject(id, updates);
+  };
+
+  const handleDeleteWithCleanup = (id) => {
+    const obj = board.objects[id];
+    if (obj && obj.type === 'frame') {
+      const children = Object.values(board.objects).filter(o => o.frameId === id);
+      if (children.length > 0) {
+        board.batchUpdateObjects(children.map(c => ({ id: c.id, data: { frameId: null } })));
+      }
+    }
+    board.deleteObject(id);
+    setSelectedId(null);
   };
 
   const handleMouseMove = (e) => {
@@ -500,7 +825,7 @@ function App() {
   if (!user) {
     return (
       <div className="login-container">
-        <h1>CollabBoard</h1>
+        <h1>Collaboard</h1>
         <p>Real-time collaborative whiteboard with AI agent</p>
         <button onClick={() => login()}>Sign in with Google</button>
       </div>
@@ -508,34 +833,25 @@ function App() {
   }
 
   if (!boardId) {
-    return <BoardSelector onSelectBoard={setBoardId} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <BoardSelector onSelectBoard={(id, name) => { setBoardId(id); setBoardName(name || id); }} darkMode={darkMode} setDarkMode={setDarkMode} user={user} logout={logout} />;
   }
 
   return (
     <div className="app-container">
       <div className="header">
         <div className="header-left">
-          <span className="logo-text" onClick={() => setBoardId(null)} style={{cursor: 'pointer'}}>
-            CollabBoard
+          <span className="logo-text" onClick={() => { setBoardId(null); setBoardName(''); }} style={{cursor: 'pointer'}}>
+            Collaboard
           </span>
-          <span className="board-badge">/{boardId}</span>
+          <span className="board-badge">/ {boardName}</span>
           <div className="toolbar">
-            <button 
-              className={!selectedId ? 'active' : ''} 
-              onClick={() => setSelectedId(null)}
-              title="Select"
-            >
-              <MousePointer2 size={18} />
-            </button>
-            
             <div className="tool-split-button">
               <button onClick={handleAddSticky} title="Add Sticky Note">
-                <Plus size={14} />
                 <Square size={18} fill="#fef08a" stroke="#ca8a04" />
               </button>
             </div>
 
-            <div className="tool-split-button">
+            <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('rectangle')} title="Add Square">
                 <Square size={18} fill={shapeColors.rectangle.active} stroke="currentColor" />
               </button>
@@ -551,7 +867,7 @@ function App() {
               )}
             </div>
 
-            <div className="tool-split-button">
+            <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('circle')} title="Add Circle">
                 <Circle size={18} fill={shapeColors.circle.active} stroke="currentColor" />
               </button>
@@ -567,7 +883,7 @@ function App() {
               )}
             </div>
 
-            <div className="tool-split-button">
+            <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('triangle')} title="Add Triangle">
                 <Triangle size={18} fill={shapeColors.triangle.active} stroke="currentColor" />
               </button>
@@ -583,7 +899,7 @@ function App() {
               )}
             </div>
 
-            <div className="tool-split-button">
+            <div className="tool-split-button no-outline">
               <button onClick={handleAddLine} title="Add Line">
                 <Minus size={18} stroke={shapeColors.line.active} />
               </button>
@@ -599,22 +915,34 @@ function App() {
               )}
             </div>
 
-            <button onClick={handleAddFrame} title="Add Frame">
-              <FrameIcon size={18} />
+            <div className="tool-split-button no-outline">
+              <button onClick={handleAddFrame} title="Add Frame">
+                <AppWindow size={18} />
+              </button>
+            </div>
+
+            <button
+              className={`snap-toggle ${snapToGrid ? 'active' : ''}`}
+              onClick={() => { const next = !snapToGrid; setSnapToGrid(next); localStorage.setItem('snapToGrid', next); }}
+              title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
+            >
+              <Grid3x3 size={18} />
             </button>
           </div>
         </div>
         <div className="header-right">
           <PresenceAvatars presentUsers={presence.presentUsers} currentUserId={user.uid} />
-          <button onClick={() => setBoardId(null)} className="change-board-btn" title="Global Dashboard">
-            <Layout size={18} />
-          </button>
-          <span className="user-name">{user.displayName}</span>
-          <button onClick={logout} className="logout-btn">Logout</button>
+          <UserAvatarMenu user={user} logout={logout} />
         </div>
       </div>
       <div className="board-wrapper">
+        {board.loading && (
+          <div className="board-loading">
+            <div className="board-loading-spinner" />
+          </div>
+        )}
         <Stage
+          ref={stageRef}
           width={window.innerWidth}
           height={window.innerHeight - 50}
           onMouseMove={handleMouseMove}
@@ -642,8 +970,93 @@ function App() {
               y={-stagePos.y / stageScale}
               width={window.innerWidth / stageScale}
               height={(window.innerHeight - 50) / stageScale}
-              fill={darkMode ? '#030712' : '#f9fafb'}
+              fill={darkMode ? '#111827' : '#ffffff'}
             />
+            {snapToGrid && (() => {
+              const left = -stagePos.x / stageScale;
+              const top = -stagePos.y / stageScale;
+              const right = left + window.innerWidth / stageScale;
+              const bottom = top + (window.innerHeight - 50) / stageScale;
+              const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
+              const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
+              const color = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+              const sw = 1 / stageScale;
+              const lines = [];
+              for (let x = startX; x <= right; x += GRID_SIZE) {
+                lines.push(<Line key={`gx${x}`} points={[x, top, x, bottom]} stroke={color} strokeWidth={sw} listening={false} />);
+              }
+              for (let y = startY; y <= bottom; y += GRID_SIZE) {
+                lines.push(<Line key={`gy${y}`} points={[left, y, right, y]} stroke={color} strokeWidth={sw} listening={false} />);
+              }
+              return lines;
+            })()}
+            {Object.keys(board.objects).length === 0 && (() => {
+              const cx = window.innerWidth / 2;
+              const cy = (window.innerHeight - 50) / 2;
+              const boldColor = darkMode ? '#d1d5db' : '#374151';
+              const textColor = darkMode ? '#9ca3af' : '#6b7280';
+              const dimColor = darkMode ? '#6b7280' : '#9ca3af';
+              const font = 'system-ui, sans-serif';
+              const tips = [
+                { key: 'Drag', desc: ' to pan' },
+                { key: 'Scroll', desc: ' to zoom' },
+                { key: 'Click', desc: ' to select' },
+              ];
+              // Measure widths with canvas for accurate positioning
+              const mc = document.createElement('canvas').getContext('2d');
+              const fontSize = 13;
+              const segments = tips.map(tip => {
+                mc.font = `bold ${fontSize}px ${font}`;
+                const boldW = mc.measureText(tip.key).width;
+                mc.font = `${fontSize}px ${font}`;
+                const normalW = mc.measureText(tip.desc).width;
+                mc.font = `${fontSize}px ${font}`;
+                const sepW = mc.measureText('  ·  ').width;
+                return { ...tip, boldW, normalW, sepW };
+              });
+              const totalLineW = segments.reduce((sum, s, i) =>
+                sum + s.boldW + s.normalW + (i < segments.length - 1 ? s.sepW : 0), 0);
+              let curX = cx - totalLineW / 2;
+              const tipsY = cy + 38;
+              return (
+                <>
+                  <Text
+                    x={cx - 260}
+                    y={cy - 20}
+                    width={520}
+                    text="Your board is empty"
+                    fontSize={22}
+                    fontStyle="bold"
+                    fontFamily={font}
+                    fill={boldColor}
+                    align="center"
+                    listening={false}
+                  />
+                  <Text
+                    x={cx - 260}
+                    y={cy + 14}
+                    width={520}
+                    text="Pick a tool from the toolbar above to get started"
+                    fontSize={14}
+                    fontFamily={font}
+                    fill={textColor}
+                    align="center"
+                    listening={false}
+                  />
+                  {segments.map((s, i) => {
+                    const boldX = curX;
+                    const normalX = curX + s.boldW;
+                    const sepX = normalX + s.normalW;
+                    curX = sepX + s.sepW;
+                    return [
+                      <Text key={`b${i}`} x={boldX} y={tipsY} text={s.key} fontSize={fontSize} fontStyle="bold" fontFamily={font} fill={boldColor} listening={false} />,
+                      <Text key={`n${i}`} x={normalX} y={tipsY} text={s.desc} fontSize={fontSize} fontFamily={font} fill={dimColor} listening={false} />,
+                      i < segments.length - 1 && <Text key={`sep${i}`} x={sepX} y={tipsY} text="  ·  " fontSize={fontSize} fontFamily={font} fill={dimColor} listening={false} />,
+                    ];
+                  })}
+                </>
+              );
+            })()}
             {Object.values(board.objects)
               .sort((a, b) => (a.type === 'frame' ? -1 : 0) - (b.type === 'frame' ? -1 : 0))
               .map((obj) => {
@@ -654,10 +1067,14 @@ function App() {
                     {...obj}
                     isSelected={obj.id === selectedId}
                     onSelect={setSelectedId}
-                    onDragEnd={board.updateObject}
-                    onTransformEnd={board.updateObject}
+                    onDragEnd={handleFrameDragEnd}
+                    onDragMove={handleFrameDragMove}
+                    onTransformEnd={handleTransformEnd}
                     onUpdate={board.updateObject}
-                    onDelete={board.deleteObject}
+                    onDelete={handleDeleteWithCleanup}
+                    dragState={dragState}
+                    snapToGrid={snapToGrid}
+                    gridSize={GRID_SIZE}
                   />
                 );
               }
@@ -668,10 +1085,13 @@ function App() {
                     {...obj}
                     isSelected={obj.id === selectedId}
                     onSelect={setSelectedId}
-                    onDragEnd={board.updateObject}
-                    onTransformEnd={board.updateObject}
+                    onDragEnd={handleContainedDragEnd}
+                    onTransformEnd={handleTransformEnd}
                     onUpdate={board.updateObject}
-                    onDelete={board.deleteObject}
+                    onDelete={handleDeleteWithCleanup}
+                    onDragMove={handleDragMove}
+                    snapToGrid={snapToGrid}
+                    gridSize={GRID_SIZE}
                   />
                 );
               }
@@ -682,10 +1102,13 @@ function App() {
                     {...obj}
                     isSelected={obj.id === selectedId}
                     onSelect={setSelectedId}
-                    onDragEnd={board.updateObject}
-                    onTransformEnd={board.updateObject}
+                    onDragEnd={handleContainedDragEnd}
+                    onTransformEnd={handleTransformEnd}
                     onUpdate={board.updateObject}
-                    onDelete={board.deleteObject}
+                    onDelete={handleDeleteWithCleanup}
+                    onDragMove={handleDragMove}
+                    snapToGrid={snapToGrid}
+                    gridSize={GRID_SIZE}
                   />
                 );
               }
@@ -696,9 +1119,10 @@ function App() {
                     {...obj}
                     isSelected={obj.id === selectedId}
                     onSelect={setSelectedId}
-                    onDragEnd={board.updateObject}
-                    onTransformEnd={board.updateObject}
-                    onDelete={board.deleteObject}
+                    onDragEnd={handleContainedDragEnd}
+                    onTransformEnd={handleTransformEnd}
+                    onDelete={handleDeleteWithCleanup}
+                    onDragMove={handleDragMove}
                   />
                 );
               }
@@ -735,16 +1159,33 @@ function App() {
         )}
 
         {selectedId && board.objects[selectedId] && (
-          <button 
+          <button
             className="delete-fab"
-            onClick={() => {
-              board.deleteObject(selectedId);
-              setSelectedId(null);
-            }}
+            onClick={() => handleDeleteWithCleanup(selectedId)}
             title="Delete Selected"
           >
             <Trash2 size={24} />
           </button>
+        )}
+
+        {selectedId && board.objects[selectedId] && board.objects[selectedId].type === 'frame' && (
+          <div className="frame-props-panel">
+            <label>Background</label>
+            <div className="frame-props-row">
+              <input
+                type="color"
+                value={board.objects[selectedId].backgroundColor || '#ffffff'}
+                onChange={(e) => board.updateObject(selectedId, { backgroundColor: e.target.value })}
+                className="native-picker"
+              />
+              <button
+                className="secondary-btn"
+                onClick={() => board.updateObject(selectedId, { backgroundColor: null })}
+              >
+                None
+              </button>
+            </div>
+          </div>
         )}
 
         {showAI && (

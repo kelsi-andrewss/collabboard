@@ -2,14 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete }) => {
-  const shapeRef = useRef();
+function getLuminance(hex) {
+  if (!hex || !hex.startsWith('#')) return 1;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const toLinear = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', backgroundColor, rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, dragState, snapToGrid = false, gridSize = 50 }) => {
+  const groupRef = useRef();
   const trRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (isSelected && !isEditing && trRef.current && shapeRef.current) {
-      trRef.current.nodes([shapeRef.current]);
+    if (isSelected && !isEditing && trRef.current && groupRef.current) {
+      trRef.current.nodes([groupRef.current]);
       trRef.current.getLayer().batchDraw();
     }
   }, [isSelected, isEditing]);
@@ -25,10 +34,14 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
   }, [isSelected, isEditing, onDelete, id]);
 
   const titleBarHeight = 32;
+  const titleColor = backgroundColor
+    ? (getLuminance(backgroundColor) > 0.5 ? '#1f2937' : '#ffffff')
+    : color;
 
   return (
     <>
       <Group
+        ref={groupRef}
         x={x}
         y={y}
         rotation={rotation}
@@ -41,30 +54,25 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragMove={(e) => {
+          if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
+        }}
         onDragEnd={(e) => {
           onDragEnd(id, { x: e.target.x(), y: e.target.y() });
         }}
-        onTransformEnd={(e) => {
-          const node = shapeRef.current;
-          const group = e.target;
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
-          node.scaleX(1);
-          node.scaleY(1);
-          if (onTransformEnd) {
-            onTransformEnd(id, {
-              x: group.x(),
-              y: group.y(),
-              rotation: group.rotation(),
-              width: Math.max(100, node.width() * scaleX),
-              height: Math.max(80, node.height() * scaleY),
-            });
-          }
-        }}
       >
+        {/* Background fill */}
+        {backgroundColor && (
+          <Rect
+            width={width}
+            height={height}
+            fill={backgroundColor}
+            cornerRadius={4}
+            listening={false}
+          />
+        )}
         {/* Frame body - dashed border */}
         <Rect
-          ref={shapeRef}
           width={width}
           height={height}
           fill="transparent"
@@ -91,7 +99,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             height={titleBarHeight}
             fontSize={13}
             fontStyle="bold"
-            fill={color}
+            fill={titleColor}
             verticalAlign="middle"
             fontFamily="sans-serif"
             ellipsis={true}
@@ -131,7 +139,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
                   fontSize: '13px',
                   fontWeight: 'bold',
                   fontFamily: 'sans-serif',
-                  color: color,
+                  color: titleColor,
                   padding: '0',
                   margin: '0',
                   pointerEvents: 'auto',
@@ -140,6 +148,33 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             </div>
           </Html>
         )}
+        {/* Drag indicator overlay */}
+        {dragState && dragState.overFrameId === id && dragState.action && (
+          <>
+            <Rect
+              width={width}
+              height={height}
+              fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
+              opacity={0.15}
+              cornerRadius={4}
+              listening={false}
+            />
+            <Text
+              text={dragState.action === 'add' ? '+' : '-'}
+              x={0}
+              y={0}
+              width={width}
+              height={height}
+              fontSize={48}
+              fontStyle="bold"
+              fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
+              opacity={0.6}
+              align="center"
+              verticalAlign="middle"
+              listening={false}
+            />
+          </>
+        )}
       </Group>
       {isSelected && !isEditing && (
         <Transformer
@@ -147,10 +182,34 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           rotateEnabled={true}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 100 || newBox.height < 80) {
-              return oldBox;
-            }
+            if (newBox.width < 100 || newBox.height < 80) return oldBox;
             return newBox;
+          }}
+          onTransformEnd={() => {
+            const group = groupRef.current;
+            const scaleX = group.scaleX();
+            const scaleY = group.scaleY();
+            const rawX = group.x();
+            const rawY = group.y();
+            const rawW = Math.max(100, width * scaleX);
+            const rawH = Math.max(80, height * scaleY);
+            const s = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
+            const finalX = s(rawX);
+            const finalY = s(rawY);
+            const finalW = (snapToGrid ? Math.max(gridSize, s(rawX + rawW) - finalX) : rawW) || rawW;
+            const finalH = (snapToGrid ? Math.max(gridSize, s(rawY + rawH) - finalY) : rawH) || rawH;
+            group.scaleX(1);
+            group.scaleY(1);
+            group.position({ x: finalX, y: finalY });
+            if (onTransformEnd) {
+              onTransformEnd(id, {
+                x: finalX,
+                y: finalY,
+                rotation: group.rotation(),
+                width: finalW,
+                height: finalH,
+              });
+            }
           }}
         />
       )}

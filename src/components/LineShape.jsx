@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Line, Group, Transformer } from 'react-konva';
 
-export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete }) => {
+export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove }) => {
   const lineRef = useRef();
   const trRef = useRef();
 
@@ -25,6 +25,7 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
   return (
     <>
       <Group
+        name={id}
         x={x}
         y={y}
         rotation={rotation}
@@ -36,6 +37,9 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
         onTap={(e) => {
           e.cancelBubble = true;
           onSelect(id);
+        }}
+        onDragMove={(e) => {
+          if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
           onDragEnd(id, { x: e.target.x(), y: e.target.y() });
@@ -78,7 +82,7 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
         <Transformer
           ref={trRef}
           rotateEnabled={true}
-          enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
+          enabledAnchors={['middle-left', 'middle-right']}
           boundBoxFunc={(oldBox, newBox) => {
             if (Math.abs(newBox.width) < 5 && Math.abs(newBox.height) < 5) {
               return oldBox;
