@@ -11,7 +11,7 @@ import { StickyNote } from './components/StickyNote';
 import { Shape } from './components/Shape';
 import { LineShape } from './components/LineShape';
 import { Frame } from './components/Frame';
-import { Square, Circle, Plus, MessageSquare, Send, Layout, Folder, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, AppWindow, LogOut, Grid3x3, Search } from 'lucide-react';
+import { Square, Circle, Plus, MessageSquare, Send, Layout, Folder, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, AppWindow, LogOut, Grid3x3, Search, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 import './App.css';
 
 function isInsideFrame(obj, frame) {
@@ -35,6 +35,15 @@ function findOverlappingFrame(obj, allObjects) {
     }
   }
   return best;
+}
+
+function darkenHex(hex, amount = 0.3) {
+  if (!hex || !hex.startsWith('#')) return hex;
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount));
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount));
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount));
+  const toHex = (n) => n.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 function hexToRgba(hex, alpha) {
@@ -517,9 +526,22 @@ function App() {
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
   const board = useBoard(boardId);
+  const { boards: allBoards, createBoard: createNewBoard } = useBoardsList();
+
+  const aiCreateBoard = async (name, group) => {
+    const ref = await createNewBoard(name, group);
+    setBoardId(ref.id);
+    setBoardName(name);
+    // Small delay to let board subscription initialize
+    await new Promise(r => setTimeout(r, 500));
+  };
+
   const ai = useAI(boardId, {
     addObject: board?.addObject,
-    updateObject: board?.updateObject
+    updateObject: board?.updateObject,
+    deleteObject: board?.deleteObject,
+    createBoard: aiCreateBoard,
+    getBoards: () => allBoards
   }, board?.objects);
 
   const [selectedId, setSelectedId] = useState(null);
@@ -541,12 +563,18 @@ function App() {
   });
   const [shapeColors, setShapeColors] = useState(() => {
     const saved = localStorage.getItem(`shapeColors_${boardId}`);
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
+      sticky: { active: '#fef08a', history: [] },
       rectangle: { active: '#bfdbfe', history: [] },
       circle: { active: '#fbcfe8', history: [] },
       triangle: { active: '#e9d5ff', history: [] },
       line: { active: '#3b82f6', history: [] }
     };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaults, ...parsed };
+    }
+    return defaults;
   });
   const [showColorPicker, setShowColorPicker] = useState(null);
   const [dragState, setDragState] = useState({ draggingId: null, overFrameId: null, action: null });
@@ -631,11 +659,33 @@ function App() {
     });
   };
 
+  // Recursively collect all descendant IDs of a frame (to prevent circular nesting)
+  const getDescendantIds = (frameId) => {
+    const ids = new Set();
+    const collect = (fid) => {
+      for (const o of Object.values(board.objects)) {
+        if (o.frameId === fid && !ids.has(o.id)) {
+          ids.add(o.id);
+          if (o.type === 'frame') collect(o.id);
+        }
+      }
+    };
+    collect(frameId);
+    return ids;
+  };
+
   const handleDragMove = (id, pos) => {
     const obj = board.objects[id];
-    if (!obj || obj.type === 'frame') return;
+    if (!obj) return;
     const tempObj = { ...obj, ...pos };
-    const overFrame = findOverlappingFrame(tempObj, board.objects);
+    // For frames, exclude self and descendants from candidate parent frames
+    let candidates = board.objects;
+    if (obj.type === 'frame') {
+      const excluded = getDescendantIds(id);
+      excluded.add(id);
+      candidates = Object.fromEntries(Object.entries(board.objects).filter(([k]) => !excluded.has(k)));
+    }
+    const overFrame = findOverlappingFrame(tempObj, candidates);
     const currentFrameId = obj.frameId || null;
     let action = null;
     let overFrameId = null;
@@ -651,13 +701,29 @@ function App() {
     setDragState({ draggingId: id, overFrameId, action });
   };
 
+  const FRAME_MARGIN = 20;
+
   const handleContainedDragEnd = (id, updates) => {
     const obj = board.objects[id];
     if (!obj) return;
-    const snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
+    let snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
     const tempObj = { ...obj, ...snapped };
     const overFrame = findOverlappingFrame(tempObj, board.objects);
     const newFrameId = overFrame ? overFrame.id : null;
+
+    // Clamp inside frame with margin
+    if (overFrame) {
+      const ow = obj.width || 150;
+      const oh = obj.height || 150;
+      const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
+      const minX = overFrame.x + FRAME_MARGIN;
+      const minY = overFrame.y + titleBar + FRAME_MARGIN;
+      const maxX = overFrame.x + overFrame.width - ow - FRAME_MARGIN;
+      const maxY = overFrame.y + overFrame.height - oh - FRAME_MARGIN;
+      snapped.x = Math.max(minX, Math.min(maxX, snapped.x));
+      snapped.y = Math.max(minY, Math.min(maxY, snapped.y));
+    }
+
     board.updateObject(id, { ...snapped, frameId: newFrameId || null });
     setDragState({ draggingId: null, overFrameId: null, action: null });
   };
@@ -670,29 +736,60 @@ function App() {
     frameDragRef.current = { frameId: id, dx, dy };
     const stage = stageRef.current;
     if (!stage) return;
-    const children = Object.values(board.objects).filter(o => o.frameId === id);
-    for (const child of children) {
-      const node = stage.findOne('.' + child.id);
+    // Recursively move all descendants
+    const descendants = getDescendantIds(id);
+    for (const childId of descendants) {
+      const child = board.objects[childId];
+      if (!child) continue;
+      const node = stage.findOne('.' + childId);
       if (node) {
         node.x(child.x + dx);
         node.y(child.y + dy);
       }
     }
     stage.batchDraw();
+    // Show drag indicator for frame-in-frame
+    handleDragMove(id, pos);
   };
 
   const handleFrameDragEnd = (id, updates) => {
     const frame = board.objects[id];
     if (!frame) return;
-    const snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
+    let snapped = { ...updates, x: snap(updates.x), y: snap(updates.y) };
+
+    // Check if this frame is being dropped inside another frame (excluding self & descendants)
+    const excluded = getDescendantIds(id);
+    excluded.add(id);
+    const candidates = Object.fromEntries(Object.entries(board.objects).filter(([k]) => !excluded.has(k)));
+    const tempObj = { ...frame, ...snapped };
+    const overFrame = findOverlappingFrame(tempObj, candidates);
+    const newFrameId = overFrame ? overFrame.id : null;
+
+    // Clamp inside parent frame with margin
+    if (overFrame) {
+      const ow = frame.width || 400;
+      const oh = frame.height || 300;
+      const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
+      const minX = overFrame.x + FRAME_MARGIN;
+      const minY = overFrame.y + titleBar + FRAME_MARGIN;
+      const maxX = overFrame.x + overFrame.width - ow - FRAME_MARGIN;
+      const maxY = overFrame.y + overFrame.height - oh - FRAME_MARGIN;
+      snapped.x = Math.max(minX, Math.min(maxX, snapped.x));
+      snapped.y = Math.max(minY, Math.min(maxY, snapped.y));
+    }
+
     const dx = snapped.x - frame.x;
     const dy = snapped.y - frame.y;
-    const children = Object.values(board.objects).filter(o => o.frameId === id);
-    const batchUpdates = children.map(child => ({
-      id: child.id,
-      data: { x: child.x + dx, y: child.y + dy }
-    }));
-    board.updateObject(id, snapped);
+    // Recursively move all descendants
+    const descendants = getDescendantIds(id);
+    const batchUpdates = [];
+    for (const childId of descendants) {
+      const child = board.objects[childId];
+      if (child) {
+        batchUpdates.push({ id: childId, data: { x: child.x + dx, y: child.y + dy } });
+      }
+    }
+    board.updateObject(id, { ...snapped, frameId: newFrameId || null });
     if (batchUpdates.length > 0) {
       board.batchUpdateObjects(batchUpdates);
     }
@@ -714,6 +811,40 @@ function App() {
     }
     board.deleteObject(id);
     setSelectedId(null);
+  };
+
+  const handleBringToFront = (id) => {
+    const maxZ = Math.max(0, ...Object.values(board.objects).map(o => o.zIndex || 0));
+    board.updateObject(id, { zIndex: maxZ + 1 });
+  };
+
+  const handleSendToBack = (id) => {
+    const minZ = Math.min(0, ...Object.values(board.objects).map(o => o.zIndex || 0));
+    board.updateObject(id, { zIndex: minZ - 1 });
+  };
+
+  const findOpenSpot = (w, h, isFrame = false) => {
+    const cx = (window.innerWidth / 2 - stagePos.x) / stageScale;
+    const cy = ((window.innerHeight - 50) / 2 - stagePos.y) / stageScale;
+    const allObjs = Object.values(board.objects);
+    const objs = isFrame ? allObjs : allObjs.filter(o => o.type !== 'frame');
+    const overlaps = (x, y) => objs.some(o => {
+      const ow = o.width || 100;
+      const oh = o.height || 100;
+      return x < o.x + ow && x + w > o.x && y < o.y + oh && y + h > o.y;
+    });
+    // Try center first, then spiral outward
+    if (!overlaps(cx - w / 2, cy - h / 2)) return { x: cx - w / 2, y: cy - h / 2 };
+    const step = 50;
+    for (let dist = step; dist < 2000; dist += step) {
+      for (let angle = 0; angle < 360; angle += 30) {
+        const rad = (angle * Math.PI) / 180;
+        const tx = cx - w / 2 + Math.cos(rad) * dist;
+        const ty = cy - h / 2 + Math.sin(rad) * dist;
+        if (!overlaps(tx, ty)) return { x: tx, y: ty };
+      }
+    }
+    return { x: cx - w / 2, y: cy - h / 2 };
   };
 
   const handleMouseMove = (e) => {
@@ -758,21 +889,23 @@ function App() {
   };
 
   const handleAddSticky = () => {
+    const pos = findOpenSpot(150, 150);
     board.addObject({
       type: 'sticky',
       text: 'New Sticky Note',
-      x: (window.innerWidth / 2 - stagePos.x) / stageScale,
-      y: (window.innerHeight / 2 - stagePos.y) / stageScale,
-      color: '#fef08a', // Always pastel yellow for sticky notes
+      x: pos.x,
+      y: pos.y,
+      color: shapeColors.sticky.active,
       userId: user.uid
     });
   };
 
   const handleAddShape = (type) => {
+    const pos = findOpenSpot(100, 100);
     board.addObject({
       type,
-      x: (window.innerWidth / 2 - stagePos.x) / stageScale,
-      y: (window.innerHeight / 2 - stagePos.y) / stageScale,
+      x: pos.x,
+      y: pos.y,
       width: 100,
       height: 100,
       color: shapeColors[type].active,
@@ -781,12 +914,15 @@ function App() {
   };
 
   const handleAddFrame = () => {
+    const fw = Math.round(window.innerWidth * 0.55 / stageScale);
+    const fh = Math.round((window.innerHeight - 50) * 0.55 / stageScale);
+    const pos = findOpenSpot(fw, fh, true);
     board.addObject({
       type: 'frame',
-      x: (window.innerWidth / 2 - stagePos.x) / stageScale - 200,
-      y: (window.innerHeight / 2 - stagePos.y) / stageScale - 150,
-      width: 400,
-      height: 300,
+      x: pos.x,
+      y: pos.y,
+      width: fw,
+      height: fh,
       title: 'Frame',
       color: '#6366f1',
       userId: user.uid
@@ -845,15 +981,25 @@ function App() {
           </span>
           <span className="board-badge">/ {boardName}</span>
           <div className="toolbar">
-            <div className="tool-split-button">
+            <div className="tool-split-button" style={{borderColor: darkenHex(shapeColors.sticky.active, 0.2)}}>
               <button onClick={handleAddSticky} title="Add Sticky Note">
-                <Square size={18} fill="#fef08a" stroke="#ca8a04" />
+                <Square size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
               </button>
+              <button className="dropdown-arrow" style={{borderLeftColor: darkenHex(shapeColors.sticky.active, 0.2)}} onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'sticky' && (
+                <ColorPickerMenu
+                  type="sticky"
+                  data={shapeColors.sticky}
+                  onSelect={updateActiveColor}
+                />
+              )}
             </div>
 
             <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('rectangle')} title="Add Square">
-                <Square size={18} fill={shapeColors.rectangle.active} stroke="currentColor" />
+                <Square size={18} fill={shapeColors.rectangle.active} stroke={shapeColors.rectangle.active} />
               </button>
               <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'rectangle' ? null : 'rectangle')}>
                 <ChevronDown size={14} />
@@ -869,7 +1015,7 @@ function App() {
 
             <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('circle')} title="Add Circle">
-                <Circle size={18} fill={shapeColors.circle.active} stroke="currentColor" />
+                <Circle size={18} fill={shapeColors.circle.active} stroke={shapeColors.circle.active} />
               </button>
               <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'circle' ? null : 'circle')}>
                 <ChevronDown size={14} />
@@ -885,7 +1031,7 @@ function App() {
 
             <div className="tool-split-button no-outline">
               <button onClick={() => handleAddShape('triangle')} title="Add Triangle">
-                <Triangle size={18} fill={shapeColors.triangle.active} stroke="currentColor" />
+                <Triangle size={18} fill={shapeColors.triangle.active} stroke={shapeColors.triangle.active} />
               </button>
               <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'triangle' ? null : 'triangle')}>
                 <ChevronDown size={14} />
@@ -1058,7 +1204,13 @@ function App() {
               );
             })()}
             {Object.values(board.objects)
-              .sort((a, b) => (a.type === 'frame' ? -1 : 0) - (b.type === 'frame' ? -1 : 0))
+              .sort((a, b) => {
+                // Frames always render behind non-frames, then sort by zIndex
+                const aFrame = a.type === 'frame' ? 0 : 1;
+                const bFrame = b.type === 'frame' ? 0 : 1;
+                if (aFrame !== bFrame) return aFrame - bFrame;
+                return (a.zIndex || 0) - (b.zIndex || 0);
+              })
               .map((obj) => {
               if (obj.type === 'frame') {
                 return (
@@ -1159,13 +1311,29 @@ function App() {
         )}
 
         {selectedId && board.objects[selectedId] && (
-          <button
-            className="delete-fab"
-            onClick={() => handleDeleteWithCleanup(selectedId)}
-            title="Delete Selected"
-          >
-            <Trash2 size={24} />
-          </button>
+          <div className="selected-actions">
+            <button
+              className="action-fab"
+              onClick={() => handleBringToFront(selectedId)}
+              title="Bring to Front"
+            >
+              <ArrowUpToLine size={20} />
+            </button>
+            <button
+              className="action-fab"
+              onClick={() => handleSendToBack(selectedId)}
+              title="Send to Back"
+            >
+              <ArrowDownToLine size={20} />
+            </button>
+            <button
+              className="action-fab delete-action"
+              onClick={() => handleDeleteWithCleanup(selectedId)}
+              title="Delete Selected"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
         )}
 
         {selectedId && board.objects[selectedId] && board.objects[selectedId].type === 'frame' && (
@@ -1192,9 +1360,9 @@ function App() {
           <div className="ai-panel">
             <div className="ai-header">AI Board Agent</div>
             <form onSubmit={handleAISubmit} className="ai-input-area">
-              <input 
-                type="text" 
-                placeholder="Ask AI to draw something..." 
+              <input
+                type="text"
+                placeholder="Ask AI to draw something..."
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 autoFocus
@@ -1205,6 +1373,12 @@ function App() {
               </button>
             </form>
             {ai.isTyping && <div className="ai-status">AI is thinking...</div>}
+            {ai.error && (
+              <div className="ai-error" onClick={() => ai.clearError()}>
+                {ai.error}
+                <span className="ai-error-dismiss">dismiss</span>
+              </div>
+            )}
           </div>
         )}
       </div>

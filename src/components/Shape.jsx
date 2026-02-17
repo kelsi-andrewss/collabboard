@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Rect, Circle, Group, Transformer, Text, Line } from 'react-konva';
+import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50 }) => {
@@ -39,19 +39,18 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
     onUpdate(id, { text: e.target.value });
   };
 
-  const getTrianglePoints = (w, h) => {
-    return [w / 2, 0, 0, h, w, h];
-  };
 
   const updateShapeSize = (w, h) => {
     const shape = shapeRef.current;
     if (shape) {
       if (type === 'circle') {
-        shape.radius(Math.min(w, h) / 2);
+        shape.radiusX(w / 2);
+        shape.radiusY(h / 2);
         shape.x(w / 2);
         shape.y(h / 2);
       } else if (type === 'triangle') {
-        shape.points([w / 2, 0, 0, h, w, h]);
+        shape.width(w);
+        shape.height(h);
       } else {
         shape.width(w);
         shape.height(h);
@@ -97,31 +96,40 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             width={width}
             height={height}
             fill={color}
-            stroke={isSelected ? '#2563eb' : 'transparent'}
-            strokeWidth={2}
+            cornerRadius={4}
           />
         )}
         {type === 'circle' && (
-          <Circle
+          <Ellipse
             ref={shapeRef}
-            width={width}
-            height={height}
-            x={width/2}
-            y={height/2}
-            radius={Math.min(width, height) / 2}
+            x={width / 2}
+            y={height / 2}
+            radiusX={width / 2}
+            radiusY={height / 2}
             fill={color}
-            stroke={isSelected ? '#2563eb' : 'transparent'}
-            strokeWidth={2}
           />
         )}
         {type === 'triangle' && (
-          <Line
+          <KonvaShape
             ref={shapeRef}
-            points={getTrianglePoints(width, height)}
-            closed
+            width={width}
+            height={height}
             fill={color}
-            stroke={isSelected ? '#2563eb' : 'transparent'}
-            strokeWidth={2}
+            sceneFunc={(ctx, shape) => {
+              const w = shape.width();
+              const h = shape.height();
+              const r = Math.min(6, w / 8, h / 8);
+              const p0 = { x: w / 2, y: 0 };
+              const p1 = { x: 0, y: h };
+              const p2 = { x: w, y: h };
+              ctx.beginPath();
+              ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+              ctx.arcTo(p1.x, p1.y, p2.x, p2.y, r);
+              ctx.arcTo(p2.x, p2.y, p0.x, p0.y, r);
+              ctx.arcTo(p0.x, p0.y, p1.x, p1.y, r);
+              ctx.closePath();
+              ctx.fillStrokeShape(shape);
+            }}
           />
         )}
 
@@ -208,7 +216,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
       {isSelected && !isEditing && (
         <Transformer
           ref={trRef}
-          keepRatio={type === 'circle'}
+          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 5 || newBox.height < 5) return oldBox;
             return newBox;
@@ -222,19 +230,14 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             // Use sizeRef (not React props) to handle rapid consecutive resizes
             const rawW = Math.max(5, sizeRef.current.w * scaleX);
             const rawH = Math.max(5, sizeRef.current.h * scaleY);
+            const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
             let finalX, finalY, finalW, finalH;
-            if (snapToGrid) {
+            if (snapToGrid && isResize) {
               const s = (v) => Math.round(v / gridSize) * gridSize;
               finalX = s(rawX);
               finalY = s(rawY);
-              if (type === 'circle') {
-                const size = Math.max(gridSize, s(Math.max(rawW, rawH)));
-                finalW = size;
-                finalH = size;
-              } else {
-                finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
-                finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
-              }
+              finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
+              finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
             } else {
               finalX = rawX;
               finalY = rawY;

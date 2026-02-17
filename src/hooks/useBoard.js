@@ -43,11 +43,12 @@ export function useBoard(boardId) {
   const addObject = async (objectData) => {
     if (!boardId) return;
     const objectsRef = collection(db, 'boards', boardId, 'objects');
-    await addDoc(objectsRef, {
+    const ref = await addDoc(objectsRef, {
       ...objectData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    return ref;
   };
 
   const updateObject = async (objectId, updates) => {

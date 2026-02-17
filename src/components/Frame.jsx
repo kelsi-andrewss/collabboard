@@ -33,7 +33,8 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete, id]);
 
-  const titleBarHeight = 32;
+  const titleBarHeight = Math.max(32, Math.min(52, height * 0.12));
+  const titleFontSize = Math.max(13, Math.min(20, titleBarHeight * 0.5));
   const titleColor = backgroundColor
     ? (getLuminance(backgroundColor) > 0.5 ? '#1f2937' : '#ffffff')
     : color;
@@ -42,6 +43,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
     <>
       <Group
         ref={groupRef}
+        name={id}
         x={x}
         y={y}
         rotation={rotation}
@@ -97,7 +99,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             y={0}
             width={width - 16}
             height={titleBarHeight}
-            fontSize={13}
+            fontSize={titleFontSize}
             fontStyle="bold"
             fill={titleColor}
             verticalAlign="middle"
@@ -136,7 +138,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  fontSize: '13px',
+                  fontSize: `${titleFontSize}px`,
                   fontWeight: 'bold',
                   fontFamily: 'sans-serif',
                   color: titleColor,
@@ -180,6 +182,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
         <Transformer
           ref={trRef}
           rotateEnabled={true}
+          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 100 || newBox.height < 80) return oldBox;
@@ -193,11 +196,20 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             const rawY = group.y();
             const rawW = Math.max(100, width * scaleX);
             const rawH = Math.max(80, height * scaleY);
-            const s = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
-            const finalX = s(rawX);
-            const finalY = s(rawY);
-            const finalW = (snapToGrid ? Math.max(gridSize, s(rawX + rawW) - finalX) : rawW) || rawW;
-            const finalH = (snapToGrid ? Math.max(gridSize, s(rawY + rawH) - finalY) : rawH) || rawH;
+            const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
+            let finalX, finalY, finalW, finalH;
+            if (snapToGrid && isResize) {
+              const s = (v) => Math.round(v / gridSize) * gridSize;
+              finalX = s(rawX);
+              finalY = s(rawY);
+              finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
+              finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
+            } else {
+              finalX = rawX;
+              finalY = rawY;
+              finalW = rawW;
+              finalH = rawH;
+            }
             group.scaleX(1);
             group.scaleY(1);
             group.position({ x: finalX, y: finalY });

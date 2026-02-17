@@ -2,12 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
+function darkenHex(hex, amount = 0.3) {
+  if (!hex || !hex.startsWith('#')) return hex;
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount));
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount));
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount));
+  return `rgb(${r},${g},${b})`;
+}
+
 export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50 }) => {
   const shapeRef = useRef();
+  const textRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
+  const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
   const [isDark, setIsDark] = useState(document.documentElement.getAttribute('data-theme') === 'dark');
+
+  useEffect(() => {
+    sizeRef.current = { w: width, h: height };
+  }, [width, height]);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -18,11 +32,11 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
   }, []);
 
   useEffect(() => {
-    if (isSelected && trRef.current) {
-      trRef.current.nodes([shapeRef.current]);
+    if (isSelected && !isEditing && trRef.current) {
+      trRef.current.nodes([groupRef.current]);
       trRef.current.getLayer().batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, isEditing, width, height]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -76,12 +90,14 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           fill={color}
           shadowBlur={5}
           shadowOpacity={0.3}
-          cornerRadius={2}
-          stroke={isSelected ? '#2563eb' : 'transparent'}
+          cornerRadius={4}
+          stroke={isSelected ? '#2563eb' : darkenHex(color, 0.2)}
           strokeWidth={2}
+          shadowColor={color}
         />
         {!isEditing ? (
           <Text
+            ref={textRef}
             text={text}
             width={width}
             height={height}
@@ -161,29 +177,49 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
         <Transformer
           ref={trRef}
           rotateEnabled={true}
+          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 50 || newBox.height < 50) return oldBox;
             return newBox;
           }}
           onTransformEnd={() => {
-            const node = shapeRef.current;
             const group = groupRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-            const rawX = group.x() + node.x();
-            const rawY = group.y() + node.y();
-            const rawW = Math.max(50, node.width() * scaleX);
-            const rawH = Math.max(50, node.height() * scaleY);
-            const s = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
-            const finalX = s(rawX);
-            const finalY = s(rawY);
-            const finalW = (snapToGrid ? Math.max(gridSize, s(rawX + rawW) - finalX) : rawW) || rawW;
-            const finalH = (snapToGrid ? Math.max(gridSize, s(rawY + rawH) - finalY) : rawH) || rawH;
-            node.scaleX(1);
-            node.scaleY(1);
-            node.position({ x: 0, y: 0 });
+            const scaleX = group.scaleX();
+            const scaleY = group.scaleY();
+            const rawX = group.x();
+            const rawY = group.y();
+            const rawW = Math.max(50, sizeRef.current.w * scaleX);
+            const rawH = Math.max(50, sizeRef.current.h * scaleY);
+            const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
+            let finalX, finalY, finalW, finalH;
+            if (snapToGrid && isResize) {
+              const s = (v) => Math.round(v / gridSize) * gridSize;
+              finalX = s(rawX);
+              finalY = s(rawY);
+              finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
+              finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
+            } else {
+              finalX = rawX;
+              finalY = rawY;
+              finalW = rawW;
+              finalH = rawH;
+            }
+            sizeRef.current = { w: finalW, h: finalH };
+            group.scaleX(1);
+            group.scaleY(1);
             group.position({ x: finalX, y: finalY });
+            // Imperatively update children to prevent flash
+            if (shapeRef.current) {
+              shapeRef.current.width(finalW);
+              shapeRef.current.height(finalH);
+            }
+            if (textRef.current) {
+              textRef.current.width(finalW);
+              textRef.current.height(finalH);
+            }
+            trRef.current?.nodes([group]);
+            group.getLayer()?.batchDraw();
             if (onTransformEnd) {
               onTransformEnd(id, {
                 x: finalX,
