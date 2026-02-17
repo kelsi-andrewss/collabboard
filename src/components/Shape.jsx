@@ -217,6 +217,10 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
         <Transformer
           ref={trRef}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
+          anchorSize={10}
+          anchorStrokeWidth={2}
+          anchorCornerRadius={2}
+          anchorHitStrokeWidth={12}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 5 || newBox.height < 5) return oldBox;
             return newBox;

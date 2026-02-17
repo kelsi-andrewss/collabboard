@@ -83,6 +83,10 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
           ref={trRef}
           rotateEnabled={true}
           enabledAnchors={['middle-left', 'middle-right']}
+          anchorSize={10}
+          anchorStrokeWidth={2}
+          anchorCornerRadius={2}
+          anchorHitStrokeWidth={12}
           boundBoxFunc={(oldBox, newBox) => {
             if (Math.abs(newBox.width) < 5 && Math.abs(newBox.height) < 5) {
               return oldBox;

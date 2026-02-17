@@ -2,19 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-function getLuminance(hex) {
-  if (!hex || !hex.startsWith('#')) return 1;
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const toLinear = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-}
 
-export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', backgroundColor, rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, dragState, snapToGrid = false, gridSize = 50 }) => {
+export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80 }) => {
   const groupRef = useRef();
   const trRef = useRef();
+  const bgRectRef = useRef();
+  const borderRectRef = useRef();
+  const titleBarRef = useRef();
+  const titleTextRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
+  // Track committed dimensions imperatively so consecutive resizes use the latest values
+  const sizeRef = useRef({ width, height });
+
+  useEffect(() => {
+    sizeRef.current = { width, height };
+  }, [width, height]);
 
   useEffect(() => {
     if (isSelected && !isEditing && trRef.current && groupRef.current) {
@@ -35,9 +37,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
 
   const titleBarHeight = Math.max(32, Math.min(52, height * 0.12));
   const titleFontSize = Math.max(13, Math.min(20, titleBarHeight * 0.5));
-  const titleColor = backgroundColor
-    ? (getLuminance(backgroundColor) > 0.5 ? '#1f2937' : '#ffffff')
-    : color;
+  const titleColor = color;
 
   return (
     <>
@@ -63,18 +63,19 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           onDragEnd(id, { x: e.target.x(), y: e.target.y() });
         }}
       >
-        {/* Background fill */}
-        {backgroundColor && (
-          <Rect
-            width={width}
-            height={height}
-            fill={backgroundColor}
-            cornerRadius={4}
-            listening={false}
-          />
-        )}
+        {/* Translucent background fill derived from frame color */}
+        <Rect
+          ref={bgRectRef}
+          width={width}
+          height={height}
+          fill={color}
+          opacity={0.06}
+          cornerRadius={4}
+          listening={false}
+        />
         {/* Frame body - dashed border */}
         <Rect
+          ref={borderRectRef}
           width={width}
           height={height}
           fill="transparent"
@@ -85,6 +86,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
         />
         {/* Title bar */}
         <Rect
+          ref={titleBarRef}
           width={width}
           height={titleBarHeight}
           fill={color}
@@ -94,6 +96,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
         {/* Title text */}
         {!isEditing ? (
           <Text
+            ref={titleTextRef}
             text={title}
             x={8}
             y={0}
@@ -184,8 +187,12 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           rotateEnabled={true}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
+          anchorSize={10}
+          anchorStrokeWidth={2}
+          anchorCornerRadius={2}
+          anchorHitStrokeWidth={12}
           boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 100 || newBox.height < 80) return oldBox;
+            if (newBox.width < 50 || newBox.height < 40) return oldBox;
             return newBox;
           }}
           onTransformEnd={() => {
@@ -194,8 +201,8 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             const scaleY = group.scaleY();
             const rawX = group.x();
             const rawY = group.y();
-            const rawW = Math.max(100, width * scaleX);
-            const rawH = Math.max(80, height * scaleY);
+            const rawW = Math.max(100, sizeRef.current.width * scaleX);
+            const rawH = Math.max(80, sizeRef.current.height * scaleY);
             const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
             let finalX, finalY, finalW, finalH;
             if (snapToGrid && isResize) {
@@ -210,9 +217,39 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
               finalW = rawW;
               finalH = rawH;
             }
+            // Clamp to minimum size required by children
+            const wasClamped = finalW < minWidth || finalH < minHeight;
+            finalW = Math.max(finalW, minWidth);
+            finalH = Math.max(finalH, minHeight);
+
             group.scaleX(1);
             group.scaleY(1);
             group.position({ x: finalX, y: finalY });
+            sizeRef.current = { width: finalW, height: finalH };
+            // Imperatively resize the full-frame Rects so outline and background
+            // snap to the new size immediately, before React re-renders
+            if (bgRectRef.current) {
+              bgRectRef.current.width(finalW);
+              bgRectRef.current.height(finalH);
+            }
+            if (borderRectRef.current) {
+              borderRectRef.current.width(finalW);
+              borderRectRef.current.height(finalH);
+            }
+            const finalTitleBarH = Math.max(32, Math.min(52, finalH * 0.12));
+            if (titleBarRef.current) {
+              titleBarRef.current.width(finalW);
+              titleBarRef.current.height(finalTitleBarH);
+            }
+            if (titleTextRef.current) {
+              titleTextRef.current.width(finalW - 16);
+              titleTextRef.current.height(finalTitleBarH);
+            }
+            trRef.current?.nodes([group]);
+            group.getLayer()?.batchDraw();
+            if (wasClamped && onResizeClamped) {
+              onResizeClamped(id);
+            }
             if (onTransformEnd) {
               onTransformEnd(id, {
                 x: finalX,

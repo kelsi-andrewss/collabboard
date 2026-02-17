@@ -59,7 +59,8 @@ export function useAI(boardId, boardActions, objects) {
             width: { type: "NUMBER", description: "Width — auto-calculated if items use frameIndex to reference this frame" },
             height: { type: "NUMBER", description: "Height — auto-calculated if items use frameIndex to reference this frame" },
             color: { type: "STRING", description: "Hex color code" },
-            frameIndex: { type: "NUMBER", description: "Unique index for this frame so items can reference it via their frameIndex" }
+            frameIndex: { type: "NUMBER", description: "Unique index for this frame so items can reference it via their frameIndex" },
+            parentFrameIndex: { type: "NUMBER", description: "frameIndex of the parent frame to nest this frame inside. Parent frame must also be created in the same batch." }
           },
           required: ["title", "x", "y"]
         }
@@ -263,6 +264,12 @@ When creating frames with items inside them, use frameIndex to link them by docu
 - Frame sizes are AUTO-CALCULATED based on item count — do NOT specify width/height for frames with items
 - This links items to frames by their Firestore document ID, NOT by title
 
+FRAME NESTING (parentFrameIndex):
+- To nest a frame inside another frame, set parentFrameIndex on the child frame to the parent's frameIndex
+- Parent frames must be created in the same batch
+- Parent frames auto-size to include both items AND child frames
+- Example: parentFrameIndex: 0 nests a frame inside the frame with frameIndex: 0
+
 CRITICAL TOOL SELECTION RULES:
 - "Make items not overlap" / "fix overlaps" → use resolveOverlaps.
 - "Arrange by object/type" / "group by type" / "organize by kind" → use arrangeByType. This includes ALL objects: frames, shapes, stickies, lines. Do NOT exclude any type.
@@ -403,13 +410,29 @@ The user's message includes a summary of current board objects with their IDs, t
             itemsByFrame[fi].push(call);
           }
         }
+        // Count child frames per parent frameIndex for auto-sizing
+        for (const call of frameCalls) {
+          const pfi = call.args?.parentFrameIndex;
+          if (pfi !== undefined && pfi !== null) {
+            if (!itemsByFrame[pfi]) itemsByFrame[pfi] = [];
+            itemsByFrame[pfi].push(call);
+          }
+        }
 
         // Layout constants
         const ITEM_W = 150, ITEM_H = 150, ITEM_GAP = 15, FRAME_PAD = 25, TITLE_H = 50;
 
+        // Sort frames: parent-less frames first, then children (so parents exist when children are created)
+        const sortedFrameCalls = [...frameCalls].sort((a, b) => {
+          const aHasParent = a.args?.parentFrameIndex !== undefined && a.args?.parentFrameIndex !== null;
+          const bHasParent = b.args?.parentFrameIndex !== undefined && b.args?.parentFrameIndex !== null;
+          if (aHasParent === bHasParent) return 0;
+          return aHasParent ? 1 : -1;
+        });
+
         // --- Pass 1: Create frames (with auto-sizing) ---
-        for (let i = 0; i < frameCalls.length; i++) {
-          const call = frameCalls[i];
+        for (let i = 0; i < sortedFrameCalls.length; i++) {
+          const call = sortedFrameCalls[i];
           const fi = call.args.frameIndex ?? i;
           const items = itemsByFrame[fi] || [];
           const itemCount = items.length;
@@ -425,15 +448,36 @@ The user's message includes a summary of current board objects with their IDs, t
             h = call.args.height || 300;
           }
 
-          const pos = findNonOverlappingPos(call.args.x || 50, call.args.y || 50, w, h, true, localFrames);
-          const { frameIndex: _fi, ...frameArgs } = call.args;
+          const { frameIndex: _fi, parentFrameIndex: pfi, ...frameArgs } = call.args;
+          let frameId = null;
+          let posX, posY;
+
+          // Check if this frame should be nested inside a parent frame
+          if (pfi !== undefined && pfi !== null && frameIndexMap[pfi]) {
+            const parent = frameIndexMap[pfi];
+            frameId = parent.id;
+            // Auto-position inside parent
+            const parentItems = itemsByFrame[pfi] || [];
+            const idx = parentItems.indexOf(call);
+            const cols = Math.max(1, Math.ceil(Math.sqrt(parentItems.length)));
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            posX = parent.x + FRAME_PAD + col * (w + ITEM_GAP);
+            posY = parent.y + TITLE_H + FRAME_PAD + row * (h + ITEM_GAP);
+          } else {
+            const pos = findNonOverlappingPos(call.args.x || 50, call.args.y || 50, w, h, true, localFrames);
+            posX = pos.x;
+            posY = pos.y;
+          }
+
           console.log("Executing Tool: createFrame", call.args);
           const ref = await act().addObject({
             type: 'frame', color: '#6366f1',
-            ...frameArgs, x: pos.x, y: pos.y, width: w, height: h
+            ...frameArgs, x: posX, y: posY, width: w, height: h,
+            ...(frameId ? { frameId } : {})
           });
           if (ref) {
-            const frameData = { id: ref.id, x: pos.x, y: pos.y, width: w, height: h };
+            const frameData = { id: ref.id, x: posX, y: posY, width: w, height: h };
             localFrames.push(frameData);
             frameIndexMap[fi] = frameData;
           }

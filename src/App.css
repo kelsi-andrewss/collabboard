@@ -167,6 +167,20 @@
   cursor: pointer;
 }
 
+.color-suggestions label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
 .color-history label {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -229,6 +243,22 @@
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.help-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.help-btn:hover {
+  color: white;
 }
 
 /* User Avatar Menu */
@@ -371,6 +401,54 @@
 
 .selector-header p {
   color: var(--text-secondary);
+}
+
+.dashboard-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 14px;
+  max-width: 360px;
+}
+
+.dashboard-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.dashboard-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 34px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dashboard-search-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.dashboard-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.dashboard-search-clear:hover {
+  color: var(--text-primary);
 }
 
 .board-group {
@@ -516,6 +594,30 @@
   background: var(--bg-tertiary);
 }
 
+.undo-fab {
+  position: fixed;
+  bottom: 110px;
+  right: 110px;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 1000;
+}
+
+.undo-fab:hover {
+  transform: scale(1.1);
+  background: var(--bg-tertiary);
+}
+
 .recenter-fab {
   position: fixed;
   bottom: 110px;
@@ -581,6 +683,23 @@
 .action-fab.delete-action:hover {
   background: #dc2626;
   border-color: #dc2626;
+}
+
+.selected-color-picker-wrapper {
+  position: relative;
+}
+
+.selected-color-dropdown {
+  position: absolute;
+  left: 56px;
+  top: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  z-index: 1000;
+  width: 160px;
 }
 
 
@@ -983,6 +1102,12 @@
   font-size: 0.75rem;
 }
 
+.frame-color-swatches {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .tool-split-button.no-outline {
   border: none;
 }
@@ -1008,6 +1133,34 @@
 .snap-toggle.active {
   color: #22c55e;
   background: rgba(34, 197, 94, 0.15);
+}
+
+.snap-toggle:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.snap-toggle:disabled:hover {
+  color: var(--text-tertiary);
+  background: transparent;
+}
+
+.resize-tooltip {
+  background: #1f2937;
+  color: #f9fafb;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  animation: resize-tooltip-fade 2.5s ease forwards;
+}
+
+@keyframes resize-tooltip-fade {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Group search dropdown */
@@ -1127,4 +1280,70 @@
 
 .group-clear-btn:hover {
   color: var(--text-primary);
+}
+
+/* Tutorial */
+.tutorial-tooltip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  max-width: 300px;
+  min-width: 220px;
+}
+
+.tutorial-step-indicator {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+
+.tutorial-title {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.tutorial-desc {
+  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.tutorial-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.tutorial-skip:hover {
+  color: var(--text-primary);
+}
+
+.tutorial-next {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tutorial-next:hover {
+  background: var(--accent-hover);
 }

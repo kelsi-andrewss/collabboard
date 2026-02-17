@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Text, Line } from 'react-konva';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
+import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useAI } from './hooks/useAI';
@@ -11,7 +12,8 @@ import { StickyNote } from './components/StickyNote';
 import { Shape } from './components/Shape';
 import { LineShape } from './components/LineShape';
 import { Frame } from './components/Frame';
-import { Square, Circle, Plus, MessageSquare, Send, Layout, Folder, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, AppWindow, LogOut, Grid3x3, Search, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
+import { Tutorial } from './components/Tutorial';
+import { Square, Circle, Plus, MessageSquare, Send, Layout, Folder, Sun, Moon, Maximize, ChevronDown, Triangle, Trash2, Minus, AppWindow, LogOut, Grid3x3, Search, ArrowUpToLine, ArrowDownToLine, Palette, Undo2, HelpCircle } from 'lucide-react';
 import './App.css';
 
 function isInsideFrame(obj, frame) {
@@ -35,6 +37,32 @@ function findOverlappingFrame(obj, allObjects) {
     }
   }
   return best;
+}
+
+function computeAncestorExpansions(childX, childY, childW, childH, parentFrameId, allObjects, margin) {
+  const expansions = [];
+  const working = { ...allObjects };
+  let cx = childX, cy = childY, cw = childW, ch = childH;
+  let currentParent = working[parentFrameId];
+  while (currentParent) {
+    const neededW = cx + cw + margin - currentParent.x;
+    const neededH = cy + ch + margin - currentParent.y;
+    const newW = Math.max(currentParent.width, neededW);
+    const newH = Math.max(currentParent.height, neededH);
+    if (newW > currentParent.width || newH > currentParent.height) {
+      expansions.push({ id: currentParent.id, data: { width: newW, height: newH } });
+      working[currentParent.id] = { ...currentParent, width: newW, height: newH };
+    }
+    cx = currentParent.x; cy = currentParent.y;
+    cw = newW; ch = newH;
+    currentParent = currentParent.frameId ? working[currentParent.frameId] : null;
+  }
+  return expansions;
+}
+
+function rectsOverlap(a, b) {
+  return a.x < b.x + (b.width || 0) && a.x + a.width > b.x &&
+         a.y < b.y + (b.height || 0) && a.y + a.height > b.y;
 }
 
 function darkenHex(hex, amount = 0.3) {
@@ -69,6 +97,17 @@ function parseOpacity(colorStr) {
   const match = colorStr.match(/rgba?\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
   return match ? parseFloat(match[1]) : 1;
 }
+
+const SUGGESTED_COLORS = [
+  // Warm pastels
+  '#fef08a', '#fde68a', '#fed7aa', '#fecaca', '#fbcfe8',
+  // Cool pastels
+  '#bfdbfe', '#c7d2fe', '#e9d5ff', '#a7f3d0', '#d9f99d',
+  // Vivid accents
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6',
+  // Deep tones
+  '#7c3aed', '#db2777', '#0d9488', '#1d4ed8', '#374151',
+];
 
 function ColorPickerMenu({ type, data, onSelect }) {
   const [opacity, setOpacity] = useState(() => parseOpacity(data.active));
@@ -109,6 +148,22 @@ function ColorPickerMenu({ type, data, onSelect }) {
           onChange={handleOpacityChange}
         />
         <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 30}}>{Math.round(opacity * 100)}%</span>
+      </div>
+      <div className="color-suggestions">
+        <label>Suggestions</label>
+        <div className="suggestions-grid">
+          {SUGGESTED_COLORS.map((c) => (
+            <div
+              key={c}
+              className="color-swatch"
+              style={{ background: c }}
+              onClick={() => {
+                setOpacity(1);
+                onSelect(type, c);
+              }}
+            />
+          ))}
+        </div>
       </div>
       <div className="color-history">
         <label>History</label>
@@ -196,6 +251,7 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
   const [newBoardName, setNewBoardName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const groupDropdownRef = useRef(null);
 
   const groupInputRef = useRef(null);
@@ -255,8 +311,21 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
     });
   }
 
+  // Filter boards/groups by search query
+  const q = searchQuery.trim().toLowerCase();
+  const searchedGroups = {};
+  for (const [key, groupBoards] of Object.entries(groups)) {
+    const matchedBoards = q
+      ? groupBoards.filter(b =>
+          b.name.toLowerCase().includes(q) ||
+          (key !== 'null' && key.toLowerCase().includes(q))
+        )
+      : groupBoards;
+    if (matchedBoards.length > 0) searchedGroups[key] = matchedBoards;
+  }
+
   // Sort groups: ungrouped (null) first, then named groups by most-recently-edited board desc
-  const sortedGroupEntries = Object.entries(groups).sort(([a, aBoards], [b, bBoards]) => {
+  const sortedGroupEntries = Object.entries(searchedGroups).sort(([a, aBoards], [b, bBoards]) => {
     if (a === 'null') return -1;
     if (b === 'null') return 1;
     const aTime = aBoards[0]?.updatedAt?.toMillis?.() ?? aBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
@@ -268,10 +337,23 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
     <div className="board-selector-container">
       <div className="selector-header">
         <div className="dashboard-top">
-          <h1>Collaboard</h1>
+          <h1>CollabBoard</h1>
           <UserAvatarMenu user={user} logout={logout} />
         </div>
         <p>Everyone can see and edit all boards</p>
+        <div className="dashboard-search">
+          <Search size={16} className="dashboard-search-icon" />
+          <input
+            type="text"
+            placeholder="Search boards and groups..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="dashboard-search-input"
+          />
+          {searchQuery && (
+            <button className="dashboard-search-clear" onClick={() => setSearchQuery('')}>×</button>
+          )}
+        </div>
       </div>
 
       <div className="groups-list">
@@ -325,6 +407,11 @@ function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
         {boards.length === 0 && (
           <div className="empty-state">
             <p>No boards found. Create the first one!</p>
+          </div>
+        )}
+        {boards.length > 0 && sortedGroupEntries.length === 0 && (
+          <div className="empty-state">
+            <p>No boards match &ldquo;{searchQuery}&rdquo;</p>
           </div>
         )}
       </div>
@@ -496,7 +583,11 @@ function PresenceAvatars({ presentUsers, currentUserId }) {
 
 function App() {
   const { user, loading, login, logout } = useAuth();
-  const [boardId, setBoardId] = useState(() => localStorage.getItem('collaboard_boardId') || null);
+  const [boardId, setBoardId] = useState(() => {
+    // URL hash takes priority (for shareable links), then localStorage
+    const hash = window.location.hash.slice(1);
+    return hash || localStorage.getItem('collaboard_boardId') || null;
+  });
   const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
   const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
   const stageRef = useRef(null);
@@ -506,9 +597,11 @@ function App() {
     if (boardId) {
       localStorage.setItem('collaboard_boardId', boardId);
       localStorage.setItem('collaboard_boardName', boardName);
+      window.location.hash = boardId;
     } else {
       localStorage.removeItem('collaboard_boardId');
       localStorage.removeItem('collaboard_boardName');
+      history.pushState('', document.title, window.location.pathname);
     }
   }, [boardId, boardName]);
 
@@ -525,8 +618,17 @@ function App() {
   
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
-  const board = useBoard(boardId);
+  const rawBoard = useBoard(boardId);
+  const board = useUndoStack(rawBoard);
   const { boards: allBoards, createBoard: createNewBoard } = useBoardsList();
+
+  // When loading from a shared URL hash, look up the board name from the boards list
+  useEffect(() => {
+    if (boardId && !boardName && allBoards.length > 0) {
+      const found = allBoards.find(b => b.id === boardId);
+      if (found) setBoardName(found.name);
+    }
+  }, [boardId, boardName, allBoards]);
 
   const aiCreateBoard = async (name, group) => {
     const ref = await createNewBoard(name, group);
@@ -537,9 +639,9 @@ function App() {
   };
 
   const ai = useAI(boardId, {
-    addObject: board?.addObject,
-    updateObject: board?.updateObject,
-    deleteObject: board?.deleteObject,
+    addObject: rawBoard?.addObject,
+    updateObject: rawBoard?.updateObject,
+    deleteObject: rawBoard?.deleteObject,
     createBoard: aiCreateBoard,
     getBoards: () => allBoards
   }, board?.objects);
@@ -577,8 +679,12 @@ function App() {
     return defaults;
   });
   const [showColorPicker, setShowColorPicker] = useState(null);
+  const [showSelectedColorPicker, setShowSelectedColorPicker] = useState(false);
   const [dragState, setDragState] = useState({ draggingId: null, overFrameId: null, action: null });
   const [snapToGrid, setSnapToGrid] = useState(() => localStorage.getItem('snapToGrid') === 'true');
+  const [showTutorial, setShowTutorial] = useState(() => Tutorial.shouldShow());
+  const [resizeTooltip, setResizeTooltip] = useState(null); // { x, y, msg }
+  const resizeTooltipTimer = useRef(null);
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
   const snapSize = (val, min) => snapToGrid ? Math.max(min, Math.round(val / GRID_SIZE) * GRID_SIZE) : val;
@@ -603,6 +709,44 @@ function App() {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [showColorPicker]);
+
+  // Reset selected-object color picker when selection changes
+  useEffect(() => {
+    setShowSelectedColorPicker(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!showSelectedColorPicker) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.selected-color-picker-wrapper')) {
+        setShowSelectedColorPicker(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setShowSelectedColorPicker(false);
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showSelectedColorPicker]);
+
+  // Ctrl/Cmd+Z undo shortcut
+  useEffect(() => {
+    const handleUndo = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (board.canUndo) board.undo();
+      }
+    };
+    window.addEventListener('keydown', handleUndo);
+    return () => window.removeEventListener('keydown', handleUndo);
+  }, [board.canUndo, board.undo]);
 
   useEffect(() => {
     if (boardId) {
@@ -765,17 +909,65 @@ function App() {
     const overFrame = findOverlappingFrame(tempObj, candidates);
     const newFrameId = overFrame ? overFrame.id : null;
 
-    // Clamp inside parent frame with margin
+    // Snap outside parent when a child frame is removed from its parent
+    const wasRemoved = frame.frameId && !newFrameId;
+    if (wasRemoved) {
+      const oldParent = board.objects[frame.frameId];
+      if (oldParent) {
+        const childW = frame.width || 400;
+        const childH = frame.height || 300;
+        const parentCX = oldParent.x + oldParent.width / 2;
+        const parentCY = oldParent.y + oldParent.height / 2;
+        const childCX = snapped.x + childW / 2;
+        const childCY = snapped.y + childH / 2;
+        const dirX = childCX - parentCX;
+        const dirY = childCY - parentCY;
+
+        let snapX, snapY;
+        if (Math.abs(dirX) >= Math.abs(dirY)) {
+          // Horizontal exit
+          snapX = dirX >= 0
+            ? oldParent.x + oldParent.width + FRAME_MARGIN
+            : oldParent.x - childW - FRAME_MARGIN;
+          snapY = snapped.y;
+        } else {
+          // Vertical exit
+          snapX = snapped.x;
+          snapY = dirY >= 0
+            ? oldParent.y + oldParent.height + FRAME_MARGIN
+            : oldParent.y - childH - FRAME_MARGIN;
+        }
+
+        const snappedRect = { x: snapX, y: snapY, width: childW, height: childH };
+        const descendantIds = getDescendantIds(id);
+        const hasOverlap = Object.values(board.objects).some(o => {
+          if (o.id === id || o.id === frame.frameId || descendantIds.has(o.id)) return false;
+          return rectsOverlap(snappedRect, o);
+        });
+
+        if (!hasOverlap) {
+          snapped.x = snap(snapX);
+          snapped.y = snap(snapY);
+        }
+      }
+    }
+
+    // When dropping inside a parent frame: clamp top-left edge (below title bar),
+    // then recursively expand all ancestor frames that need to grow to fit.
+    let ancestorExpansions = [];
     if (overFrame) {
       const ow = frame.width || 400;
       const oh = frame.height || 300;
       const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
       const minX = overFrame.x + FRAME_MARGIN;
       const minY = overFrame.y + titleBar + FRAME_MARGIN;
-      const maxX = overFrame.x + overFrame.width - ow - FRAME_MARGIN;
-      const maxY = overFrame.y + overFrame.height - oh - FRAME_MARGIN;
-      snapped.x = Math.max(minX, Math.min(maxX, snapped.x));
-      snapped.y = Math.max(minY, Math.min(maxY, snapped.y));
+      // Only clamp top-left so child stays below title bar / inside left edge
+      snapped.x = Math.max(minX, snapped.x);
+      snapped.y = Math.max(minY, snapped.y);
+
+      ancestorExpansions = computeAncestorExpansions(
+        snapped.x, snapped.y, ow, oh, overFrame.id, board.objects, FRAME_MARGIN
+      );
     }
 
     const dx = snapped.x - frame.x;
@@ -789,6 +981,7 @@ function App() {
         batchUpdates.push({ id: childId, data: { x: child.x + dx, y: child.y + dy } });
       }
     }
+    for (const exp of ancestorExpansions) batchUpdates.push(exp);
     board.updateObject(id, { ...snapped, frameId: newFrameId || null });
     if (batchUpdates.length > 0) {
       board.batchUpdateObjects(batchUpdates);
@@ -798,7 +991,37 @@ function App() {
   };
 
   const handleTransformEnd = (id, updates) => {
+    const obj = board.objects[id];
     board.updateObject(id, updates);
+    if (!obj || !obj.frameId) return;
+    const childX = updates.x ?? obj.x;
+    const childY = updates.y ?? obj.y;
+    const childW = updates.width ?? obj.width ?? 150;
+    const childH = updates.height ?? obj.height ?? 150;
+    const expansions = computeAncestorExpansions(
+      childX, childY, childW, childH, obj.frameId, board.objects, FRAME_MARGIN
+    );
+    if (expansions.length > 0) {
+      board.batchUpdateObjects(expansions);
+    }
+  };
+
+  const handleResizeClamped = (id) => {
+    const obj = board.objects[id];
+    if (!obj) return;
+    const stage = stageRef.current;
+    if (stage) {
+      const frameScreenX = obj.x * stageScale + stagePos.x;
+      const frameScreenY = obj.y * stageScale + stagePos.y;
+      const frameScreenW = (obj.width || 400) * stageScale;
+      clearTimeout(resizeTooltipTimer.current);
+      setResizeTooltip({
+        x: frameScreenX + frameScreenW / 2,
+        y: frameScreenY - 12,
+        msg: 'Parent cannot be smaller than child. Remove child first.',
+      });
+      resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
+    }
   };
 
   const handleDeleteWithCleanup = (id) => {
@@ -961,7 +1184,7 @@ function App() {
   if (!user) {
     return (
       <div className="login-container">
-        <h1>Collaboard</h1>
+        <h1>CollabBoard</h1>
         <p>Real-time collaborative whiteboard with AI agent</p>
         <button onClick={() => login()}>Sign in with Google</button>
       </div>
@@ -977,15 +1200,15 @@ function App() {
       <div className="header">
         <div className="header-left">
           <span className="logo-text" onClick={() => { setBoardId(null); setBoardName(''); }} style={{cursor: 'pointer'}}>
-            Collaboard
+            CollabBoard
           </span>
           <span className="board-badge">/ {boardName}</span>
           <div className="toolbar">
-            <div className="tool-split-button" style={{borderColor: darkenHex(shapeColors.sticky.active, 0.2)}}>
+            <div className="tool-split-button no-outline">
               <button onClick={handleAddSticky} title="Add Sticky Note">
                 <Square size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
               </button>
-              <button className="dropdown-arrow" style={{borderLeftColor: darkenHex(shapeColors.sticky.active, 0.2)}} onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
                 <ChevronDown size={14} />
               </button>
               {showColorPicker === 'sticky' && (
@@ -1074,10 +1297,26 @@ function App() {
             >
               <Grid3x3 size={18} />
             </button>
+
+            <button
+              className={`snap-toggle ${board.canUndo ? '' : 'disabled'}`}
+              onClick={() => board.canUndo && board.undo()}
+              title="Undo (Ctrl+Z)"
+              disabled={!board.canUndo}
+            >
+              <Undo2 size={18} />
+            </button>
           </div>
         </div>
         <div className="header-right">
           <PresenceAvatars presentUsers={presence.presentUsers} currentUserId={user.uid} />
+          <button
+            className="help-btn"
+            onClick={() => setShowTutorial(true)}
+            title="Show Tutorial"
+          >
+            <HelpCircle size={18} />
+          </button>
           <UserAvatarMenu user={user} logout={logout} />
         </div>
       </div>
@@ -1125,16 +1364,31 @@ function App() {
               const bottom = top + (window.innerHeight - 50) / stageScale;
               const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
               const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
-              const color = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-              const sw = 1 / stageScale;
-              const lines = [];
-              for (let x = startX; x <= right; x += GRID_SIZE) {
-                lines.push(<Line key={`gx${x}`} points={[x, top, x, bottom]} stroke={color} strokeWidth={sw} listening={false} />);
+              const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
+              const rows = Math.ceil((bottom - startY) / GRID_SIZE) + 1;
+              if (cols * rows > 5000) return null;
+              const fill = darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+              const dotSize = 2 / stageScale;
+              const dots = [];
+              for (let xi = 0; xi < cols; xi++) {
+                for (let yi = 0; yi < rows; yi++) {
+                  const px = startX + xi * GRID_SIZE;
+                  const py = startY + yi * GRID_SIZE;
+                  dots.push(
+                    <Rect
+                      key={`gd${xi}_${yi}`}
+                      x={px - dotSize / 2}
+                      y={py - dotSize / 2}
+                      width={dotSize}
+                      height={dotSize}
+                      fill={fill}
+                      cornerRadius={dotSize / 2}
+                      listening={false}
+                    />
+                  );
+                }
               }
-              for (let y = startY; y <= bottom; y += GRID_SIZE) {
-                lines.push(<Line key={`gy${y}`} points={[left, y, right, y]} stroke={color} strokeWidth={sw} listening={false} />);
-              }
-              return lines;
+              return dots;
             })()}
             {Object.keys(board.objects).length === 0 && (() => {
               const cx = window.innerWidth / 2;
@@ -1205,14 +1459,30 @@ function App() {
             })()}
             {Object.values(board.objects)
               .sort((a, b) => {
-                // Frames always render behind non-frames, then sort by zIndex
+                // Frames always render behind non-frames
                 const aFrame = a.type === 'frame' ? 0 : 1;
                 const bFrame = b.type === 'frame' ? 0 : 1;
                 if (aFrame !== bFrame) return aFrame - bFrame;
+                // Among frames: parent frames before child frames so children are clickable on top
+                if (a.type === 'frame' && b.type === 'frame') {
+                  const aDepth = a.frameId ? 1 : 0;
+                  const bDepth = b.frameId ? 1 : 0;
+                  if (aDepth !== bDepth) return aDepth - bDepth;
+                }
                 return (a.zIndex || 0) - (b.zIndex || 0);
               })
               .map((obj) => {
               if (obj.type === 'frame') {
+                // Compute minimum size to contain all direct children
+                const frameChildren = Object.values(board.objects).filter(o => o.frameId === obj.id);
+                let frameMinW = 100;
+                let frameMinH = 80;
+                for (const child of frameChildren) {
+                  const cr = (child.x - obj.x) + (child.width || 150) + FRAME_MARGIN;
+                  const cb = (child.y - obj.y) + (child.height || 150) + FRAME_MARGIN;
+                  if (cr > frameMinW) frameMinW = cr;
+                  if (cb > frameMinH) frameMinH = cb;
+                }
                 return (
                   <Frame
                     key={obj.id}
@@ -1227,6 +1497,9 @@ function App() {
                     dragState={dragState}
                     snapToGrid={snapToGrid}
                     gridSize={GRID_SIZE}
+                    minWidth={frameMinW}
+                    minHeight={frameMinH}
+                    onResizeClamped={handleResizeClamped}
                   />
                 );
               }
@@ -1301,7 +1574,7 @@ function App() {
         </button>
 
         {isOffCenter && (
-          <button 
+          <button
             className="recenter-fab"
             onClick={handleRecenter}
             title="Recenter Board"
@@ -1310,8 +1583,49 @@ function App() {
           </button>
         )}
 
+        {resizeTooltip && (
+          <div
+            className="resize-tooltip"
+            style={{
+              position: 'fixed',
+              left: resizeTooltip.x,
+              top: resizeTooltip.y,
+              transform: 'translate(-50%, -100%)',
+              zIndex: 2000,
+            }}
+          >
+            {resizeTooltip.msg}
+          </div>
+        )}
+
         {selectedId && board.objects[selectedId] && (
           <div className="selected-actions">
+            {board.objects[selectedId].type !== 'frame' && (
+              <div className="selected-color-picker-wrapper">
+                <button
+                  className="action-fab"
+                  style={{ background: board.objects[selectedId].color || '#3b82f6' }}
+                  onClick={() => setShowSelectedColorPicker(!showSelectedColorPicker)}
+                  title="Change Color"
+                >
+                  <Palette size={20} color="#fff" />
+                </button>
+                {showSelectedColorPicker && (
+                  <div className="selected-color-dropdown">
+                    <div className="suggestions-grid">
+                      {SUGGESTED_COLORS.map((c) => (
+                        <div
+                          key={c}
+                          className="color-swatch"
+                          style={{ background: c }}
+                          onClick={() => board.updateObject(selectedId, { color: c })}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <button
               className="action-fab"
               onClick={() => handleBringToFront(selectedId)}
@@ -1338,20 +1652,24 @@ function App() {
 
         {selectedId && board.objects[selectedId] && board.objects[selectedId].type === 'frame' && (
           <div className="frame-props-panel">
-            <label>Background</label>
+            <label>Frame Color</label>
             <div className="frame-props-row">
               <input
                 type="color"
-                value={board.objects[selectedId].backgroundColor || '#ffffff'}
-                onChange={(e) => board.updateObject(selectedId, { backgroundColor: e.target.value })}
+                value={board.objects[selectedId].color || '#6366f1'}
+                onChange={(e) => board.updateObject(selectedId, { color: e.target.value })}
                 className="native-picker"
               />
-              <button
-                className="secondary-btn"
-                onClick={() => board.updateObject(selectedId, { backgroundColor: null })}
-              >
-                None
-              </button>
+            </div>
+            <div className="frame-color-swatches">
+              {['#6366f1', '#3b82f6', '#22c55e', '#eab308', '#ef4444', '#ec4899', '#f97316', '#374151'].map(c => (
+                <div
+                  key={c}
+                  className="color-swatch"
+                  style={{ background: c }}
+                  onClick={() => board.updateObject(selectedId, { color: c })}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -1380,6 +1698,10 @@ function App() {
               </div>
             )}
           </div>
+        )}
+
+        {showTutorial && (
+          <Tutorial onComplete={() => setShowTutorial(false)} />
         )}
       </div>
     </div>

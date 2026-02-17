@@ -179,6 +179,10 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           rotateEnabled={true}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
+          anchorSize={10}
+          anchorStrokeWidth={2}
+          anchorCornerRadius={2}
+          anchorHitStrokeWidth={12}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 50 || newBox.height < 50) return oldBox;
             return newBox;
