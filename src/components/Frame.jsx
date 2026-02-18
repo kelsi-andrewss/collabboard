@@ -3,14 +3,14 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 
-function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onTransformMove, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef }) {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos }) {
   const groupRef = useRef();
   const trRef = useRef();
+  const hitRectRef = useRef();
   const bgRectRef = useRef();
   const borderRectRef = useRef();
   const titleBarRef = useRef();
   const titleTextRef = useRef();
-  const resizeOverlayRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
   // Track committed dimensions imperatively so consecutive resizes use the latest values
   const sizeRef = useRef({ width, height });
@@ -45,8 +45,8 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
       <Group
         ref={groupRef}
         name={id}
-        x={x}
-        y={y}
+        x={dragPos?.id === id ? dragPos.x : x}
+        y={dragPos?.id === id ? dragPos.y : y}
         rotation={0}
         draggable={!isEditing}
         onClick={(e) => {
@@ -74,6 +74,14 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           onDragEnd(id, pos);
         }}
       >
+        {/* Invisible hit area for the full frame body */}
+        <Rect
+          ref={hitRectRef}
+          width={width}
+          height={height}
+          fill="transparent"
+          listening={true}
+        />
         {/* Translucent background fill derived from frame color */}
         <Rect
           ref={bgRectRef}
@@ -170,13 +178,6 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             </div>
           </Html>
         )}
-        {/* Resize indicator overlay (imperative) */}
-        <Rect
-          ref={resizeOverlayRef}
-          x={0} y={0} width={width} height={height}
-          fill="#ef4444" opacity={0.25} cornerRadius={4}
-          listening={false} perfectDrawEnabled={false} visible={false}
-        />
         {(() => {
           const showIllegal = dragState?.draggingId === id && dragState?.illegalDrag;
           const showAction = dragState && dragState.overFrameId === id && dragState.action;
@@ -231,17 +232,14 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             const scaleY = group.scaleY();
             const w = Math.max(100, sizeRef.current.width * scaleX);
             const h = Math.max(80, sizeRef.current.height * scaleY);
-            if (resizeOverlayRef.current) {
-              resizeOverlayRef.current.width(w);
-              resizeOverlayRef.current.height(h);
-              if (onTransformMove) {
-                const illegal = onTransformMove(id, { x: group.x(), y: group.y(), width: w, height: h });
-                resizeOverlayRef.current.visible(!!illegal);
-              }
-            }
+            if (hitRectRef.current) { hitRectRef.current.width(w); hitRectRef.current.height(h); }
+            if (bgRectRef.current) { bgRectRef.current.width(w); bgRectRef.current.height(h); }
+            if (borderRectRef.current) { borderRectRef.current.width(w); borderRectRef.current.height(h); }
+            const tbH = Math.max(32, Math.min(52, h * 0.12));
+            if (titleBarRef.current) { titleBarRef.current.width(w); titleBarRef.current.height(tbH); }
+            if (titleTextRef.current) { titleTextRef.current.width(w - 16); titleTextRef.current.height(tbH); }
           }}
           onTransformEnd={() => {
-            if (resizeOverlayRef.current) resizeOverlayRef.current.visible(false);
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
@@ -274,6 +272,10 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             sizeRef.current = { width: finalW, height: finalH };
             // Imperatively resize the full-frame Rects so outline and background
             // snap to the new size immediately, before React re-renders
+            if (hitRectRef.current) {
+              hitRectRef.current.width(finalW);
+              hitRectRef.current.height(finalH);
+            }
             if (bgRectRef.current) {
               bgRectRef.current.width(finalW);
               bgRectRef.current.height(finalH);
@@ -308,6 +310,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
               if (clamped && (clamped.width !== finalW || clamped.height !== finalH || clamped.x !== finalX || clamped.y !== finalY)) {
                 groupRef.current.x(clamped.x);
                 groupRef.current.y(clamped.y);
+                if (hitRectRef.current) { hitRectRef.current.width(clamped.width); hitRectRef.current.height(clamped.height); }
                 bgRectRef.current.width(clamped.width);
                 bgRectRef.current.height(clamped.height);
                 borderRectRef.current.width(clamped.width);
