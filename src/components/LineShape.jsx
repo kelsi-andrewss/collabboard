@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Line, Group, Transformer, Rect } from 'react-konva';
 
-function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef }) {
+function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
@@ -30,8 +30,8 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
       <Group
         ref={groupRef}
         name={id}
-        x={x}
-        y={y}
+        x={dragPos?.id === id ? dragPos.x : x}
+        y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
         draggable
         onClick={(e) => {

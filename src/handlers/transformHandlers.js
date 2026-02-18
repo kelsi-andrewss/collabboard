@@ -4,16 +4,11 @@ import {
   getLineBounds,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
+import { showErrorTooltip } from '../utils/tooltipUtils.js';
 
 export function makeTransformHandlers({
   board, stageRef, stageScale, stagePos, setResizeTooltip, resizeTooltipTimer,
 }) {
-  const handleTransformMove = (id, proposedBounds) => {
-    const obj = board.objects[id];
-    if (!obj) return false;
-    return hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, obj.frameId || null, board.objects, FRAME_MARGIN);
-  };
-
   const handleTransformEnd = (id, updates) => {
     const obj = board.objects[id];
     if (!obj) { board.updateObject(id, updates); return; }
@@ -39,32 +34,6 @@ export function makeTransformHandlers({
         if (obj.rotation != null) revert.rotation = obj.rotation;
         board.updateObject(id, revert);
         return;
-      }
-    }
-
-    // Clamp child objects to stay within their parent frame
-    if (obj.frameId && obj.type !== 'frame') {
-      const parent = board.objects[obj.frameId];
-      if (parent) {
-        const titleBarH = Math.max(32, Math.min(52, parent.height * 0.12));
-        const minX = parent.x + FRAME_MARGIN;
-        const minY = parent.y + titleBarH + FRAME_MARGIN;
-        const maxRight  = parent.x + parent.width  - FRAME_MARGIN;
-        const maxBottom = parent.y + parent.height - FRAME_MARGIN;
-
-        // Clamp position
-        u.x = Math.max(minX, u.x ?? obj.x);
-        u.y = Math.max(minY, u.y ?? obj.y);
-
-        // Clamp size so right/bottom edges don't exceed parent bounds
-        const maxW = maxRight  - u.x;
-        const maxH = maxBottom - u.y;
-        u.width  = Math.min(u.width  ?? obj.width  ?? 150, maxW);
-        u.height = Math.min(u.height ?? obj.height ?? 150, maxH);
-
-        // Enforce a minimum size so clamping doesn't collapse the object
-        u.width  = Math.max(u.width,  40);
-        u.height = Math.max(u.height, 40);
       }
     }
 
@@ -137,20 +106,20 @@ export function makeTransformHandlers({
   const handleResizeClamped = (id) => {
     const obj = board.objects[id];
     if (!obj) return;
-    const stage = stageRef.current;
-    if (stage) {
-      const frameScreenX = obj.x * stageScale + stagePos.x;
-      const frameScreenY = obj.y * stageScale + stagePos.y;
-      const frameScreenW = (obj.width || 400) * stageScale;
-      clearTimeout(resizeTooltipTimer.current);
-      setResizeTooltip({
-        x: frameScreenX + frameScreenW / 2,
-        y: frameScreenY - 12,
-        msg: 'Parent cannot be smaller than child. Remove child first.',
-      });
-      resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
+    if (stageRef.current) {
+      showErrorTooltip(
+        'Parent cannot be smaller than child. Remove child first.',
+        {
+          screenX: obj.x * stageScale + stagePos.x,
+          screenY: (obj.y * stageScale + stagePos.y) - 12,
+          objW: (obj.width || 400) * stageScale,
+          objH: 0,
+        },
+        setResizeTooltip,
+        resizeTooltipTimer,
+      );
     }
   };
 
-  return { handleTransformEnd, handleTransformMove, handleResizeClamped };
+  return { handleTransformEnd, handleResizeClamped };
 }

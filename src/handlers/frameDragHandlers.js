@@ -8,10 +8,11 @@ import {
   findObjectsToAbsorb,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
+import { showErrorTooltip } from '../utils/tooltipUtils.js';
 
 export function makeFrameDragHandlers({
   board, stageRef, snap, frameDragRef, setDragState, handleDragMove, stagePos, stageScale,
-  setResizeTooltip, resizeTooltipTimer,
+  setResizeTooltip, resizeTooltipTimer, setDragPos,
 }) {
   const handleFrameDragMove = (id, pos) => {
     const frame = board.objects[id];
@@ -96,41 +97,18 @@ export function makeFrameDragHandlers({
           { x: oldParent.x, y: oldParent.y, width: oldParent.width, height: oldParent.height }
         );
         if (stillOverlaps) {
-          const parentCX = oldParent.x + oldParent.width / 2;
-          const parentCY = oldParent.y + oldParent.height / 2;
-          const childCX = snapped.x + childW / 2;
-          const childCY = snapped.y + childH / 2;
-          const dirX = childCX - parentCX;
-          const dirY = childCY - parentCY;
-
-          let snapX, snapY;
-          if (Math.abs(dirX) >= Math.abs(dirY)) {
-            snapX = dirX >= 0 ? oldParent.x + oldParent.width + FRAME_MARGIN : oldParent.x - childW - FRAME_MARGIN;
-            snapY = snapped.y;
-          } else {
-            snapX = snapped.x;
-            snapY = dirY >= 0 ? oldParent.y + oldParent.height + FRAME_MARGIN : oldParent.y - childH - FRAME_MARGIN;
-          }
-
-          const snappedRect = { x: snapX, y: snapY, width: childW, height: childH };
-          const descendantIds = getDescendantIds(id, board.objects);
-          const hasOverlap = Object.values(board.objects).some(o => {
-            if (o.id === id || o.id === frame.frameId || descendantIds.has(o.id)) return false;
-            return rectsOverlap(snappedRect, o);
-          });
-
-          if (!hasOverlap) {
-            snapped.x = snap(snapX);
-            snapped.y = snap(snapY);
-          } else {
-            snapped.x = frameDragRef.current.startX;
-            snapped.y = frameDragRef.current.startY;
-            // Use cursor-based resolution for revert as well, or fallback to center-point
-            const revertOver = cursorCanvas
-              ? findFrameAtPoint(cursorCanvas.x, cursorCanvas.y, candidates)
-              : findOverlappingFrame({ ...frame, x: snapped.x, y: snapped.y }, candidates);
-            newFrameId = revertOver ? revertOver.id : null;
-          }
+          const objRight  = snapped.x + childW;
+          const objBottom = snapped.y + childH;
+          const overlapL = objRight  - oldParent.x;
+          const overlapR = (oldParent.x + oldParent.width)  - snapped.x;
+          const overlapT = objBottom - oldParent.y;
+          const overlapB = (oldParent.y + oldParent.height) - snapped.y;
+          const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
+          if (minOverlap === overlapL) snapped.x = snap(oldParent.x - childW - FRAME_MARGIN);
+          else if (minOverlap === overlapR) snapped.x = snap(oldParent.x + oldParent.width + FRAME_MARGIN);
+          else if (minOverlap === overlapT) snapped.y = snap(oldParent.y - childH - FRAME_MARGIN);
+          else snapped.y = snap(oldParent.y + oldParent.height + FRAME_MARGIN);
+          // Sibling overlap check below will reject and revert if the snapped position conflicts
         }
         // If !stillOverlaps: leave snapped.x/y as-is, sibling overlap check runs below
       }
@@ -180,17 +158,17 @@ export function makeFrameDragHandlers({
       frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };
       setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
       if (setResizeTooltip && resizeTooltipTimer) {
-        const screenX = frame.x * stageScale + stagePos.x;
-        const screenY = frame.y * stageScale + stagePos.y;
-        const flipY = screenY < 40;
-        clearTimeout(resizeTooltipTimer.current);
-        setResizeTooltip({
-          x: screenX + (frame.width || 400) * stageScale / 2,
-          y: flipY ? screenY + (frame.height || 300) * stageScale : screenY,
-          msg: "Can't place here — overlaps another frame.",
-          flipY,
-        });
-        resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
+        showErrorTooltip(
+          "Can't place here — overlaps another frame.",
+          {
+            screenX: frame.x * stageScale + stagePos.x,
+            screenY: frame.y * stageScale + stagePos.y,
+            objW: (frame.width || 400) * stageScale,
+            objH: (frame.height || 300) * stageScale,
+          },
+          setResizeTooltip,
+          resizeTooltipTimer,
+        );
       }
       return;
     }
@@ -213,6 +191,8 @@ export function makeFrameDragHandlers({
       allUpdates.push({ id: absorbId, data: { frameId: id } });
     }
     for (const exp of ancestorExpansions) allUpdates.push(exp);
+    // Set dragPos override so the frame holds its drop position while Firestore catches up
+    if (setDragPos) setDragPos({ id, x: snapped.x, y: snapped.y });
     // Single batch write for all changes
     board.batchUpdateObjects(allUpdates);
     frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };

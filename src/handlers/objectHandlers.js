@@ -6,8 +6,10 @@ import {
   getDescendantIds,
   rectsOverlap,
   getLineBounds,
+  findNonOverlappingPosition,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
+import { showErrorTooltip } from '../utils/tooltipUtils.js';
 
 export function makeObjectHandlers({
   board, stageRef, snap, setDragState, setSelectedId,
@@ -116,18 +118,17 @@ export function makeObjectHandlers({
       stage?.batchDraw();
       setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
       if (setResizeTooltip && resizeTooltipTimer) {
-        const screenX = obj.x * stageScale + stagePos.x;
-        const screenY = obj.y * stageScale + stagePos.y;
-        const objW = (obj.width || 100) * stageScale;
-        const flipY = screenY < 40;
-        clearTimeout(resizeTooltipTimer.current);
-        setResizeTooltip({
-          x: screenX + objW / 2,
-          y: flipY ? screenY + (obj.height || 100) * stageScale : screenY,
-          msg: "Can't place here — overlaps another frame.",
-          flipY,
-        });
-        resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
+        showErrorTooltip(
+          "Can't place here — overlaps another frame.",
+          {
+            screenX: obj.x * stageScale + stagePos.x,
+            screenY: obj.y * stageScale + stagePos.y,
+            objW: (obj.width || 100) * stageScale,
+            objH: (obj.height || 100) * stageScale,
+          },
+          setResizeTooltip,
+          resizeTooltipTimer,
+        );
       }
       return;
     }
@@ -174,7 +175,6 @@ export function makeObjectHandlers({
       board.batchUpdateObjects(allUpdates);
     }
     setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
-    setDragPos(null);
   };
 
   const handleDeleteWithCleanup = (id) => {
@@ -207,24 +207,7 @@ export function makeObjectHandlers({
   const findOpenSpot = (w, h, isFrame = false) => {
     const cx = (window.innerWidth / 2 - stagePos.x) / stageScale;
     const cy = ((window.innerHeight - 50) / 2 - stagePos.y) / stageScale;
-    const allObjs = Object.values(board.objects);
-    const objs = isFrame ? allObjs : allObjs.filter(o => o.type !== 'frame');
-    const overlaps = (x, y) => objs.some(o => {
-      const ow = o.width || 100;
-      const oh = o.height || 100;
-      return x < o.x + ow && x + w > o.x && y < o.y + oh && y + h > o.y;
-    });
-    if (!overlaps(cx - w / 2, cy - h / 2)) return { x: cx - w / 2, y: cy - h / 2 };
-    const step = 50;
-    for (let dist = step; dist < 2000; dist += step) {
-      for (let angle = 0; angle < 360; angle += 30) {
-        const rad = (angle * Math.PI) / 180;
-        const tx = cx - w / 2 + Math.cos(rad) * dist;
-        const ty = cy - h / 2 + Math.sin(rad) * dist;
-        if (!overlaps(tx, ty)) return { x: tx, y: ty };
-      }
-    }
-    return { x: cx - w / 2, y: cy - h / 2 };
+    return findNonOverlappingPosition(cx, cy, w, h, isFrame, board.objects);
   };
 
   const handleAddSticky = () => {

@@ -14,11 +14,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const dragLayerRef = useRef();
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
-    objects, dragState, dragStateRef, presentUsers, currentUserId,
+    objects, dragState, dragStateRef, presentUsers, currentUserId, dragPos,
   } = state;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
-    handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, handleTransformMove,
+    handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
     handleDragMove, handleResizeClamped, setSelectedId,
   } = handlers;
@@ -183,7 +183,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onDragEnd={handleFrameDragEnd}
                   onDragMove={handleFrameDragMove}
                   onTransformEnd={handleTransformEnd}
-                  onTransformMove={handleTransformMove}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
                   dragState={dragState}
@@ -194,6 +193,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onResizeClamped={handleResizeClamped}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
                 />
               );
             }
@@ -206,7 +206,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onSelect={setSelectedId}
                   onDragEnd={handleContainedDragEnd}
                   onTransformEnd={handleTransformEnd}
-                  onTransformMove={handleTransformMove}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
                   onDragMove={handleDragMove}
@@ -215,6 +214,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
                 />
               );
             }
@@ -227,7 +227,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onSelect={setSelectedId}
                   onDragEnd={handleContainedDragEnd}
                   onTransformEnd={handleTransformEnd}
-                  onTransformMove={handleTransformMove}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
                   onDragMove={handleDragMove}
@@ -236,6 +235,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
                 />
               );
             }
@@ -255,6 +255,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
                 />
               );
             }
@@ -281,7 +282,10 @@ function areEqual(prev, next) {
     ps.dragState?.overFrameId === ns.dragState?.overFrameId &&
     ps.dragState?.action === ns.dragState?.action &&
     ps.dragState?.draggingId === ns.dragState?.draggingId &&
-    ps.dragState?.illegalDrag === ns.dragState?.illegalDrag
+    ps.dragState?.illegalDrag === ns.dragState?.illegalDrag &&
+    ps.dragPos?.id === ns.dragPos?.id &&
+    ps.dragPos?.x === ns.dragPos?.x &&
+    ps.dragPos?.y === ns.dragPos?.y
   );
 }
 

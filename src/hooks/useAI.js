@@ -3,6 +3,7 @@ import { ai } from "../firebase/config";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toolDeclarations, systemPrompt } from "../ai/toolDeclarations";
 import { executeToolCall } from "../ai/toolExecutors";
+import { findNonOverlappingPosition } from "../utils/frameUtils";
 
 export function useAI(boardId, boardActions, objects) {
   const [isTyping, setIsTyping] = useState(false);
@@ -48,29 +49,18 @@ export function useAI(boardId, boardActions, objects) {
     return `[Current board objects: ${summaries.join(' | ')}]\n\n`;
   };
 
-  // Find a non-overlapping position for a new object (uses ref for latest objects)
-  // isFrame=true: check against ALL objects (frames must not overlap anything)
-  // isFrame=false: exclude frames (non-frames can be placed inside frames)
+  // Wrapper: find non-overlapping position using the latest objects snapshot.
+  // extraObstacles allows pass-1 frame data (not yet in Firestore) to be considered.
   const findNonOverlappingPos = (x, y, w, h, isFrame = false, extraObstacles = []) => {
-    const allObjs = Object.values(objectsRef.current || {});
-    const filtered = isFrame ? allObjs : allObjs.filter(o => o.type !== 'frame');
-    const obstacles = [...filtered, ...extraObstacles];
-    const overlaps = (px, py) => obstacles.some(o => {
-      const ow = o.width || 150;
-      const oh = o.height || 150;
-      return px < o.x + ow && px + w > o.x && py < o.y + oh && py + h > o.y;
-    });
-    if (!overlaps(x, y)) return { x, y };
-    // Spiral outward in small steps
-    for (let dist = 20; dist < 1500; dist += 20) {
-      for (let angle = 0; angle < 360; angle += 30) {
-        const rad = (angle * Math.PI) / 180;
-        const tx = x + Math.cos(rad) * dist;
-        const ty = y + Math.sin(rad) * dist;
-        if (!overlaps(tx, ty)) return { x: tx, y: ty };
-      }
-    }
-    return { x, y };
+    const baseObjects = objectsRef.current || {};
+    // Merge extra obstacles (locally-created frames) into a temporary objects map
+    const allObjects = extraObstacles.length
+      ? { ...baseObjects, ...Object.fromEntries(extraObstacles.map(o => [o.id, o])) }
+      : baseObjects;
+    // The shared utility takes a center point; pass (x, y) as the center
+    // (caller convention in useAI passes top-left, so shift by half-size first)
+    const pos = findNonOverlappingPosition(x + w / 2, y + h / 2, w, h, isFrame, allObjects);
+    return pos;
   };
 
   // Helper to get latest actions (may change after createBoard navigates)
