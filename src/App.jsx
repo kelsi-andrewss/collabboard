@@ -217,6 +217,15 @@ export function App() {
     return () => window.removeEventListener('keydown', handleUndo);
   }, [board.canUndo, board.undo]);
 
+  // Auto-clear dragPos once Firestore confirms the new position
+  useEffect(() => {
+    if (!dragPos) return;
+    const obj = board.objects[dragPos.id];
+    if (obj && obj.x === dragPos.x && obj.y === dragPos.y) {
+      setDragPos(null);
+    }
+  }, [board.objects, dragPos]);
+
   useEffect(() => {
     if (boardId) {
       localStorage.setItem(`shapeColors_${boardId}`, JSON.stringify(shapeColors));
@@ -265,15 +274,18 @@ export function App() {
 
   const { handleFrameDragMove, handleFrameDragEnd } = makeFrameDragHandlers({
     board, stageRef, snap, frameDragRef, setDragState: updateDragState, handleDragMove, stagePos, stageScale,
-    setResizeTooltip, resizeTooltipTimer,
+    setResizeTooltip, resizeTooltipTimer, setDragPos,
   });
 
-  const { handleTransformEnd, handleTransformMove, handleResizeClamped } = makeTransformHandlers({
+  const { handleTransformEnd, handleResizeClamped } = makeTransformHandlers({
     board, stageRef, stageScale, stagePos, setResizeTooltip, resizeTooltipTimer,
   });
 
+  const objectsRef = useRef(board.objects);
+  objectsRef.current = board.objects;
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
-    setSelectedId, setStagePos, setStageScale, presence, objects: board.objects,
+    setSelectedId, setStagePos, setStageScale, presence, objectsRef,
   });
 
   const isOffCenter = (() => {
@@ -333,8 +345,8 @@ export function App() {
         )}
         <BoardCanvas
           stageRef={stageRef}
-          state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid }}
-          handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, handleTransformMove, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId }}
+          state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos }}
+          handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId }}
         />
         <FABButtons
           state={{ showAI, darkMode, isOffCenter }}

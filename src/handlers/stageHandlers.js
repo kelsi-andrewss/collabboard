@@ -1,7 +1,7 @@
 import { getContentBounds } from '../utils/frameUtils.js';
 
 export function makeStageHandlers({
-  setSelectedId, setStagePos, setStageScale, presence, objects,
+  setSelectedId, setStagePos, setStageScale, presence, objectsRef,
 }) {
   const handleMouseMove = (e) => {
     if (!presence.updateCursor) return;
@@ -45,7 +45,7 @@ export function makeStageHandlers({
   };
 
   const handleRecenter = () => {
-    const bounds = getContentBounds(objects);
+    const bounds = getContentBounds(objectsRef.current);
     if (!bounds) {
       setStagePos({ x: 0, y: 0 });
       setStageScale(1);
