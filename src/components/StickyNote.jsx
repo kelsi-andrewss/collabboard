@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
-
-function darkenHex(hex, amount = 0.3) {
-  if (!hex || !hex.startsWith('#')) return hex;
-  const r = Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount));
-  const g = Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount));
-  const b = Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount));
-  return `rgb(${r},${g},${b})`;
-}
+import { darkenHex } from '../utils/colorUtils.js';
 
 function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId }) {
   const shapeRef = useRef();

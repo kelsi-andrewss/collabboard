@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageSquare, Sun, Moon, Maximize } from 'lucide-react';
+import './FABButtons.css';
 
 function FABButtonsInner({ state, handlers }) {
   const { showAI, darkMode, isOffCenter } = state;
@@ -7,7 +8,7 @@ function FABButtonsInner({ state, handlers }) {
 
   return (
     <>
-      <div style={{ position: 'absolute', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+      <div className="fab-cluster">
         <button
           className="ai-fab"
           onClick={() => setShowAI(!showAI)}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './PresenceAvatars.css';
 
 function PresenceAvatarsInner({ presentUsers, currentUserId, currentUserPhotoURL }) {
   const [showModal, setShowModal] = useState(false);

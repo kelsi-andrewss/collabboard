@@ -3,6 +3,7 @@ import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search } from
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
+import './BoardSwitcher.css';
 import { groupToSlug } from '../utils/slugUtils.js';
 
 function HeaderLeftInner({ state, handlers }) {

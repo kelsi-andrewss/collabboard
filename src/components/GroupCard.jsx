@@ -1,6 +1,7 @@
 import React from 'react';
 import { Folder, Layout } from 'lucide-react';
 import { groupToSlug } from '../utils/slugUtils.js';
+import './GroupCard.css';
 
 export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard }) {
   const slug = groupToSlug(group);

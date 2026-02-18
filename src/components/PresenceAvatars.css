@@ -1,0 +1,129 @@
+.presence-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-stack {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+  margin-right: -8px;
+  transition: transform 0.2s;
+  overflow: hidden;
+}
+
+.avatar-you-wrapper {
+  position: relative;
+  display: inline-flex;
+  transition: transform 0.2s;
+  margin-right: -8px;
+}
+
+.avatar-you-wrapper .avatar-circle {
+  margin-right: 0;
+}
+
+.avatar-stack:hover .avatar-circle,
+.avatar-stack:hover .avatar-you-wrapper {
+  transform: translateX(-4px);
+}
+
+.avatar-circle.large {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  margin-right: 0;
+  overflow: hidden;
+}
+
+.avatar-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #374151;
+  border: 2px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #9ca3af;
+  z-index: 20;
+}
+
+.avatar-you-badge {
+  position: absolute;
+  bottom: -1px;
+  right: -4px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1.5px solid var(--header-bg);
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.presence-modal-card {
+  max-width: 350px;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.modal-header p {
+  margin: 5px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.user-list-detailed {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.user-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+}
+
+.user-detail-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-detail-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-detail-status {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}

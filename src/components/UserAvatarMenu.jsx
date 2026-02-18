@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut } from 'lucide-react';
+import './UserAvatarMenu.css';
 
 export function UserAvatarMenu({ user, logout }) {
   const [open, setOpen] = useState(false);

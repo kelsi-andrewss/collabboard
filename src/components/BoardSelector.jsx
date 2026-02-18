@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { GroupCard } from './GroupCard.jsx';
 import { groupToSlug } from '../utils/slugUtils.js';
+import './BoardSelector.css';
 
 export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout }) {
   const { boards, loading, createBoard } = useBoardsList();

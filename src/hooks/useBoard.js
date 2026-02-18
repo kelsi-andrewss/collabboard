@@ -27,13 +27,11 @@ export function useBoard(boardId, user) {
     const objectsRef = collection(db, 'boards', boardId, 'objects');
     const q = query(objectsRef);
 
-    console.log("Subscribing to board:", boardId);
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newObjects = {};
       snapshot.forEach((doc) => {
         newObjects[doc.id] = { id: doc.id, ...doc.data() };
       });
-      console.log("Received objects update:", Object.keys(newObjects).length);
       setObjects(newObjects);
       setLoading(false);
 
@@ -56,8 +54,7 @@ export function useBoard(boardId, user) {
           hydrationRef.current = true;
         }
       }
-    }, (error) => {
-      console.error("Firestore Snapshot Error:", error);
+    }, () => {
       setLoading(false);
     });
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Send } from 'lucide-react';
+import './AIPanel.css';
 
 function AIPanelInner({ state, handlers }) {
   const { showAI, aiPrompt, isTyping, error } = state;

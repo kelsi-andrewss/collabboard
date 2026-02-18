@@ -7,11 +7,15 @@ import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
 import { useAI } from './hooks/useAI';
 import { useHomeAI } from './hooks/useHomeAI';
+import { useRouting } from './hooks/useRouting';
+import { useCanvasViewport } from './hooks/useCanvasViewport';
+import { useShapeColors } from './hooks/useShapeColors';
 import { GroupPage } from './components/GroupPage.jsx';
 import { groupToSlug } from './utils/slugUtils.js';
 import { Tutorial } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
 import { makeObjectHandlers } from './handlers/objectHandlers.js';
+import { makeObjectCreationHandlers } from './handlers/objectCreationHandlers.js';
 import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
 import { makeStageHandlers } from './handlers/stageHandlers.js';
@@ -29,54 +33,13 @@ import './App.css';
 
 export function App() {
   const { user, loading, login, logout } = useAuth();
+  const { groupSlug, setGroupSlug, boardId, setBoardId, boardName, setBoardName,
+          navigateHome, navigateToGroup, navigateToBoard } = useRouting();
 
-  // Parse multi-segment hash: groupSlug/boardId or groupSlug or empty
-  const parseHash = () => {
-    const hash = window.location.hash.slice(1);
-    if (!hash) return { groupSlug: null, boardId: null };
-    const parts = hash.split('/');
-    if (parts.length >= 2) return { groupSlug: parts[0], boardId: parts[1] };
-    // Single segment: could be a bare boardId (legacy) or a groupSlug
-    // Treat as boardId if we have it in localStorage with same value
-    const savedBoardId = localStorage.getItem('collaboard_boardId');
-    if (savedBoardId === parts[0]) return { groupSlug: null, boardId: parts[0] };
-    return { groupSlug: parts[0], boardId: null };
-  };
-
-  const [groupSlug, setGroupSlug] = useState(() => parseHash().groupSlug);
-  const [boardId, setBoardId] = useState(() => {
-    const { boardId: hashBoard } = parseHash();
-    return hashBoard || localStorage.getItem('collaboard_boardId') || null;
-  });
-  const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
   const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
-
-  const navigateHome = () => { setGroupSlug(null); setBoardId(null); setBoardName(''); };
-  const navigateToGroup = (slug) => { setGroupSlug(slug); setBoardId(null); };
-  const navigateToBoard = (slug, id, name) => { setGroupSlug(slug); setBoardId(id); setBoardName(name || id); };
-
-  useEffect(() => {
-    if (boardId && groupSlug) {
-      window.location.hash = `${groupSlug}/${boardId}`;
-      localStorage.setItem('collaboard_boardId', boardId);
-      localStorage.setItem('collaboard_boardName', boardName);
-    } else if (groupSlug) {
-      window.location.hash = groupSlug;
-      localStorage.removeItem('collaboard_boardId');
-      localStorage.removeItem('collaboard_boardName');
-    } else if (boardId) {
-      // Legacy: no groupSlug yet
-      window.location.hash = boardId;
-      localStorage.setItem('collaboard_boardId', boardId);
-      localStorage.setItem('collaboard_boardName', boardName);
-    } else {
-      history.pushState('', document.title, window.location.pathname);
-      localStorage.removeItem('collaboard_boardId');
-      localStorage.removeItem('collaboard_boardName');
-    }
-  }, [boardId, boardName, groupSlug]);
+  const handleRecenterRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -88,6 +51,9 @@ export function App() {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
+  const { stagePos, setStagePos, stageScale, setStageScale } = useCanvasViewport(boardId, handleRecenterRef);
+  const { shapeColors, setShapeColors, colorHistory, updateColorHistory } = useShapeColors(boardId);
 
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
@@ -151,46 +117,6 @@ export function App() {
 
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
-  const [stagePos, setStagePos] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
-      if (saved) { const v = JSON.parse(saved); return { x: v.x ?? 0, y: v.y ?? 0 }; }
-    } catch {}
-    return { x: 0, y: 0 };
-  });
-  const [stageScale, setStageScale] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
-      if (saved) { const v = JSON.parse(saved); return v.scale ?? 1; }
-    } catch {}
-    return 1;
-  });
-  const [shapeColors, setShapeColors] = useState(() => {
-    const saved = localStorage.getItem(`shapeColors_${boardId}`);
-    const defaults = {
-      sticky: { active: '#fef08a' },
-      shapes: { active: '#bfdbfe' },
-      rectangle: { active: '#bfdbfe' },
-      circle: { active: '#fbcfe8' },
-      triangle: { active: '#e9d5ff' },
-      line: { active: '#3b82f6' }
-    };
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return { ...defaults, ...parsed };
-    }
-    return defaults;
-  });
-  const [colorHistory, setColorHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('collaboard_colorHistory') || '[]'); } catch { return []; }
-  });
-  const updateColorHistory = (color) => {
-    setColorHistory(prev => {
-      const next = [color, ...prev.filter(c => c !== color)].slice(0, 10);
-      localStorage.setItem('collaboard_colorHistory', JSON.stringify(next));
-      return next;
-    });
-  };
   const [showColorPicker, setShowColorPicker] = useState(null);
   const [showSelectedColorPicker, setShowSelectedColorPicker] = useState(false);
   const [activeShapeType, setActiveShapeType] = useState('rectangle');
@@ -204,8 +130,6 @@ export function App() {
   const resizeTooltipTimer = useRef(null);
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
-  const snapSize = (val, min) => snapToGrid ? Math.max(min, Math.round(val / GRID_SIZE) * GRID_SIZE) : val;
-
   useEffect(() => {
     if (!showColorPicker) return;
     const handleClickOutside = (e) => {
@@ -279,50 +203,28 @@ export function App() {
     }
   }, [board.objects, dragPos]);
 
-  useEffect(() => {
-    if (boardId) {
-      localStorage.setItem(`shapeColors_${boardId}`, JSON.stringify(shapeColors));
-    }
-  }, [shapeColors, boardId]);
-
-  useEffect(() => {
-    if (boardId) {
-      localStorage.setItem(`collaboard_view_${boardId}`, JSON.stringify({ x: stagePos.x, y: stagePos.y, scale: stageScale }));
-    }
-  }, [stagePos, stageScale, boardId]);
-
-  useEffect(() => {
-    if (!boardId) return;
-    try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
-      if (saved) {
-        const v = JSON.parse(saved);
-        setStagePos({ x: v.x ?? 0, y: v.y ?? 0 });
-        setStageScale(v.scale ?? 1);
-        return;
-      }
-    } catch {}
-    handleRecenterRef.current?.();
-  }, [boardId]);
-
   const {
     updateActiveColor,
     handleDragMove,
     handleContainedDragEnd,
     handleDeleteWithCleanup,
-    handleBringToFront,
-    handleSendToBack,
     handleSelectAndRaise,
+  } = makeObjectHandlers({
+    board, stageRef, snap, setDragState: updateDragState, setSelectedId,
+    stagePos, stageScale, setShapeColors,
+    setDragPos, updateColorHistory,
+    setResizeTooltip, resizeTooltipTimer,
+  });
+
+  const {
     handleAddSticky,
     handleAddShape,
     handleAddFrame,
     handleAddLine,
     handleAISubmit,
-  } = makeObjectHandlers({
-    board, stageRef, snap, setDragState: updateDragState, setSelectedId,
-    stagePos, stageScale, shapeColors, user, setShapeColors,
-    ai, aiPrompt, setAiPrompt, setDragPos, updateColorHistory,
-    setResizeTooltip, resizeTooltipTimer,
+  } = makeObjectCreationHandlers({
+    board, stagePos, stageScale, shapeColors, user,
+    ai, aiPrompt, setAiPrompt,
   });
 
   const { handleFrameDragMove, handleFrameDragEnd } = makeFrameDragHandlers({
@@ -336,7 +238,6 @@ export function App() {
 
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
-  const handleRecenterRef = useRef(null);
 
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
     setSelectedId, setStagePos, setStageScale, presence, objectsRef,
@@ -398,12 +299,21 @@ export function App() {
       <div className="app-content">
         {!user && (
           <div className="login-content">
-            <p className="login-tagline">Real-time collaborative whiteboard with AI agent</p>
-            <button className="login-google-btn" onClick={() => login()}>Sign in with Google</button>
+            <div className="login-card">
+              <div className="login-card-banner" />
+              <div className="login-card-body">
+                <h2>Welcome to CollabBoard</h2>
+                <p>Real-time collaborative whiteboard with AI</p>
+                <button className="login-google-btn" onClick={() => login()}>
+                  <img src="https://www.google.com/favicon.ico" width={18} height={18} alt="" />
+                  Sign in with Google
+                </button>
+              </div>
+            </div>
           </div>
         )}
         {user && !boardId && (
-          <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+          <div className="home-content">
             {groupSlug ? (
               <GroupPage
                 groupSlug={groupSlug}

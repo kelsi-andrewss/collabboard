@@ -1,0 +1,102 @@
+.ai-panel {
+  position: absolute;
+  bottom: 85px;
+  right: 20px;
+  width: 320px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  z-index: 100;
+  animation: ai-panel-in 0.18s ease;
+}
+
+@keyframes ai-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-header {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ai-input-area {
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.ai-input-area input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+  outline: none;
+  font-size: 0.85rem;
+}
+
+.ai-input-area input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.ai-input-area button {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-input-area button:hover {
+  background: var(--accent-hover);
+}
+
+.ai-input-area button:disabled {
+  background: #9ca3af;
+}
+
+.ai-status {
+  padding: 0 15px 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.ai-error {
+  padding: 8px 15px;
+  margin: 0 10px 10px;
+  font-size: 0.75rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  word-break: break-word;
+}
+
+.ai-error-dismiss {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.ai-error:hover {
+  background: rgba(239, 68, 68, 0.15);
+}

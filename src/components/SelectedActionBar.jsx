@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Palette, Trash2 } from 'lucide-react';
 import { getContrastColor } from '../utils/colorUtils.js';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
+import './SelectedActionBar.css';
 
 function SelectedActionBarInner({ state, handlers }) {
   const { selectedId, objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory } = state;

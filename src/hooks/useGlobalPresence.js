@@ -8,7 +8,6 @@ export function useGlobalPresence() {
   useEffect(() => {
     const presenceRef = ref(rtdb, 'boards');
 
-    console.log("Initializing Global Presence Listener...");
     const unsubscribe = onValue(presenceRef, (snapshot) => {
       if (snapshot.exists()) {
         const boardsData = snapshot.val();
@@ -27,8 +26,6 @@ export function useGlobalPresence() {
       } else {
         setGlobalPresence({});
       }
-    }, (error) => {
-      console.error("Global Presence Error:", error);
     });
 
     return () => unsubscribe();

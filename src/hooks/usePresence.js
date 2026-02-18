@@ -27,15 +27,12 @@ export function usePresence(boardId, currentUser) {
 
     // Listen for other users
     const unsubscribe = onValue(boardPresenceRef, (snapshot) => {
-      console.log("Internal Board Presence Data:", snapshot.val());
       if (snapshot.exists()) {
         const val = snapshot.val();
         setPresentUsers(val);
       } else {
         setPresentUsers({});
       }
-    }, (error) => {
-      console.error("RTDB Presence Error:", error);
     });
 
     return () => {

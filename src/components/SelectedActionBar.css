@@ -1,0 +1,62 @@
+.selected-actions {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  z-index: 1000;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-fab {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 22px;
+  background: var(--toolbar-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.action-fab:hover {
+  transform: scale(1.1);
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.action-fab.delete-action {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.action-fab.delete-action:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.selected-color-picker-wrapper {
+  position: relative;
+}
+
+.selected-color-dropdown {
+  position: absolute;
+  left: 56px;
+  top: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+}

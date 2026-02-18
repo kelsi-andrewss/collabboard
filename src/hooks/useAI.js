@@ -70,26 +70,20 @@ export function useAI(boardId, boardActions, objects) {
   const sendCommand = async (prompt) => {
     if (!chat) return "AI is not initialized.";
     const contextPrompt = buildBoardContext() + prompt;
-    console.log("AI Prompt Sent:", contextPrompt);
     setIsTyping(true);
     setError(null);
     try {
       const result = await chat.sendMessage(contextPrompt);
-      console.log("AI Response Received:", result.response);
-
       let calls = null;
       try {
         calls = result.response.functionCalls();
       } catch (e) {
-        console.log(e);
         if (result.response.candidates?.[0]?.content?.parts) {
           calls = result.response.candidates[0].content.parts
             .filter(part => part.functionCall)
             .map(part => part.functionCall);
         }
       }
-
-      console.log("Extracted Tool Calls:", calls);
 
       if (calls && calls.length > 0) {
         const localFrames = [];
@@ -194,7 +188,6 @@ export function useAI(boardId, boardActions, objects) {
             posY = pos.y;
           }
 
-          console.log("Executing Tool: createFrame", call.args);
           const ref = await act().addObject({
             type: 'frame', color: '#6366f1',
             ...frameArgs, x: posX, y: posY, width: w, height: h,
@@ -216,17 +209,13 @@ export function useAI(boardId, boardActions, objects) {
           ITEM_W, ITEM_H, ITEM_GAP, FRAME_PAD, TITLE_H,
         };
         for (const call of otherCalls) {
-          console.log("Executing Tool:", call.name, call.args);
           await executeToolCall(call.name, call.args, { ...sharedContext, _call: call });
         }
       } else {
-        const textResponse = result.response.text();
-        console.log("AI returned text instead of tool call:", textResponse);
       }
 
       return result.response.text();
     } catch (err) {
-      console.error("AI Error:", err);
       const msg = err?.message || "Unknown error occurred";
       setError(msg);
       return `Error: ${msg}`;

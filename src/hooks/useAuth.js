@@ -12,9 +12,7 @@ export function useAuth() {
       setLoading(false);
     });
 
-    // Check for redirect result
     getRedirectResult(auth).catch((error) => {
-      console.error("Redirect login failed", error);
       alert("Redirect login failed: " + error.message);
     });
 
@@ -23,18 +21,12 @@ export function useAuth() {
 
   const login = async () => {
     try {
-      console.log("Attempting login with popup...");
       await signInWithPopup(auth, googleProvider);
-      console.log("Login popup completed");
     } catch (error) {
-      console.error("Login popup failed", error);
-      
       if (error.code === 'auth/popup-blocked') {
-        console.log("Popup blocked, trying redirect...");
         try {
           await signInWithRedirect(auth, googleProvider);
         } catch (redirectError) {
-          console.error("Redirect failed", redirectError);
           alert("Redirect failed: " + redirectError.message);
         }
       } else if (error.code === 'auth/operation-not-allowed') {
@@ -48,9 +40,8 @@ export function useAuth() {
   const logout = async () => {
     try {
       await signOut(auth);
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
+    } catch {}
+
   };
 
   return { user, loading, login, logout };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { parseColorForInput, parseOpacity, hexToRgba, SUGGESTED_COLORS } from '../utils/colorUtils.js';
+import './ColorPicker.css';
 
 const SHAPE_SVGS = {
   rectangle: (

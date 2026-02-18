@@ -17,8 +17,7 @@ export function useBoardsList() {
       }));
       setBoards(list);
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching boards:", error);
+    }, () => {
       setLoading(false);
     });
 

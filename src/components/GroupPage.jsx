@@ -3,6 +3,7 @@ import { ArrowLeft, Layout, Search } from 'lucide-react';
 import { findGroupBySlug } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
+import './GroupPage.css';
 
 export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
   const { boards } = useBoardsList();
@@ -34,7 +35,10 @@ export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
           <ArrowLeft size={16} />
           All Groups
         </button>
-        <h1 className="group-page-title">{groupName || 'Ungrouped'}</h1>
+        <h1 className="group-page-title">
+          {groupName || 'Ungrouped'}
+          <span className="group-page-count">{groupBoards.length} board{groupBoards.length !== 1 ? 's' : ''}</span>
+        </h1>
         <div className="dashboard-search" style={{ marginTop: 0 }}>
           <Search size={16} className="dashboard-search-icon" />
           <input

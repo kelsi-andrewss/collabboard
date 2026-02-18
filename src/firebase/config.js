@@ -19,7 +19,6 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize App Check with reCAPTCHA Enterprise
 if (import.meta.env.VITE_RECAPTCHA_API_KEY) {
-  console.log("Initializing App Check with key:", import.meta.env.VITE_RECAPTCHA_API_KEY.substring(0, 5) + "...");
   initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(import.meta.env.VITE_RECAPTCHA_API_KEY),
     isTokenAutoRefreshEnabled: true

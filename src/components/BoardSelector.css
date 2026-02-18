@@ -1,0 +1,67 @@
+.board-selector-container {
+  padding: 40px;
+  background: var(--bg-primary);
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.selector-header h1 {
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.selector-header p {
+  color: var(--text-secondary);
+}
+
+.create-board-fab {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, box-shadow 0.15s ease;
+  z-index: 1000;
+}
+
+.create-board-fab:hover {
+  background: var(--accent-hover);
+  transform: scale(1.1);
+}
+
+.card-avatars {
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.mini-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: bold;
+  color: white;
+  margin-left: -8px;
+  overflow: hidden;
+}
+
+.mini-chip {
+  background: #374151;
+  color: #9ca3af;
+  font-size: 0.6rem;
+}
