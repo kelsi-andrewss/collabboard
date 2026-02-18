@@ -169,6 +169,13 @@ export function useBoard(boardId, user) {
     }
     deleteIds.forEach(id => {
       batch.delete(doc(db, 'boards', boardId, 'objects', id));
+      const deletedObj = objects[id];
+      if (deletedObj?.frameId) {
+        batch.update(
+          doc(db, 'boards', boardId, 'objects', deletedObj.frameId),
+          { childIds: arrayRemove(id), updatedAt: serverTimestamp() }
+        );
+      }
     });
     await batch.commit();
   };

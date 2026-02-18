@@ -7,12 +7,12 @@ function ResizeTooltipInner({ state }) {
 
   return (
     <div
-      className="resize-tooltip"
+      className="error-tooltip"
       style={{
         position: 'fixed',
         left: resizeTooltip.x,
         top: resizeTooltip.y,
-        transform: 'translate(-50%, -100%)',
+        transform: resizeTooltip.flipY ? 'translate(-50%, 8px)' : 'translate(-50%, -100%)',
         zIndex: 2000,
       }}
     >

@@ -10,26 +10,12 @@ function FABButtonsInner({ state, handlers }) {
       <div style={{ position: 'absolute', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
         <button
           className="ai-fab"
-          disabled
-          style={{ opacity: 0.45, cursor: 'not-allowed', position: 'static' }}
+          onClick={() => setShowAI(!showAI)}
+          title="Toggle AI Assistant"
+          style={{ position: 'static' }}
         >
           <MessageSquare size={24} />
         </button>
-        <div style={{
-          maxWidth: 220,
-          fontSize: '0.75rem',
-          lineHeight: '1.4',
-          color: '#fca5a5',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '6px',
-          padding: '8px 15px',
-          textAlign: 'right',
-          pointerEvents: 'none',
-          wordBreak: 'break-word',
-        }}>
-          AI Currently Disabled Due to Billing Issues: Firebase Doesn't Like Virtual Cards :(
-        </div>
       </div>
 
       <button

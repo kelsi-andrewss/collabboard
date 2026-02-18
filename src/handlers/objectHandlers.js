@@ -5,6 +5,7 @@ import {
   computeAncestorExpansions,
   getDescendantIds,
   rectsOverlap,
+  getLineBounds,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
 
@@ -12,6 +13,7 @@ export function makeObjectHandlers({
   board, stageRef, snap, setDragState, setSelectedId,
   stagePos, stageScale, shapeColors, user, setShapeColors,
   ai, aiPrompt, setAiPrompt, setDragPos, updateColorHistory,
+  setResizeTooltip, resizeTooltipTimer,
 }) {
   const updateActiveColor = (type, color) => {
     setShapeColors(prev => {
@@ -61,7 +63,13 @@ export function makeObjectHandlers({
       overFrameId = currentFrameId;
       action = 'remove';
     }
-    setDragState({ draggingId: id, overFrameId, action });
+    let illegalDrag = false;
+    const newFrameIdForCheck = overFrame ? overFrame.id : null;
+    const bounds = obj.type === 'line'
+      ? getLineBounds({ ...obj, x: pos.x, y: pos.y })
+      : { x: pos.x, y: pos.y, width: obj.width || 150, height: obj.height || 150 };
+    illegalDrag = hasDisallowedSiblingOverlap(id, obj.type, bounds, newFrameIdForCheck, board.objects, FRAME_MARGIN);
+    setDragState({ draggingId: id, overFrameId, action, illegalDrag });
     setDragPos({ id, x: pos.x, y: pos.y });
   };
 
@@ -90,23 +98,38 @@ export function makeObjectHandlers({
       snapped.y = Math.max(minY, snapped.y);
     }
 
-    // Overlap check: stickies/shapes cannot overlap sibling frames
-    const ow = obj.width || 150;
-    const oh = obj.height || 150;
-    if (obj.type !== 'line') {
-      const objectsForOverlapCheck = (oldFrameId && !newFrameId)
-        ? Object.fromEntries(Object.entries(board.objects).filter(([k]) => k !== oldFrameId))
-        : board.objects;
-      const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
-      if (hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, newFrameId || null, objectsForOverlapCheck, FRAME_MARGIN)) {
-        // Reject: snap back to pre-drag position
-        const stage = stageRef.current;
-        const node = stage?.findOne('.' + id);
-        if (node) { node.x(obj.x); node.y(obj.y); }
-        stage?.batchDraw();
-        setDragState({ draggingId: null, overFrameId: null, action: null });
-        return;
+    // Compute bounding box (lines use points array, others use width/height)
+    const lineBounds = obj.type === 'line' ? getLineBounds({ ...obj, x: snapped.x, y: snapped.y }) : null;
+    const ow = lineBounds ? lineBounds.width : (obj.width || 150);
+    const oh = lineBounds ? lineBounds.height : (obj.height || 150);
+
+    // Overlap check: objects cannot overlap sibling frames
+    const objectsForOverlapCheck = (oldFrameId && !newFrameId)
+      ? Object.fromEntries(Object.entries(board.objects).filter(([k]) => k !== oldFrameId))
+      : board.objects;
+    const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
+    if (hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, newFrameId || null, objectsForOverlapCheck, FRAME_MARGIN)) {
+      // Reject: snap back to pre-drag position
+      const stage = stageRef.current;
+      const node = stage?.findOne('.' + id);
+      if (node) { node.x(obj.x); node.y(obj.y); }
+      stage?.batchDraw();
+      setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+      if (setResizeTooltip && resizeTooltipTimer) {
+        const screenX = obj.x * stageScale + stagePos.x;
+        const screenY = obj.y * stageScale + stagePos.y;
+        const objW = (obj.width || 100) * stageScale;
+        const flipY = screenY < 40;
+        clearTimeout(resizeTooltipTimer.current);
+        setResizeTooltip({
+          x: screenX + objW / 2,
+          y: flipY ? screenY + (obj.height || 100) * stageScale : screenY,
+          msg: "Can't place here — overlaps another frame.",
+          flipY,
+        });
+        resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
       }
+      return;
     }
 
     // Snap object fully outside frame when exiting
@@ -150,7 +173,7 @@ export function makeObjectHandlers({
     } else {
       board.batchUpdateObjects(allUpdates);
     }
-    setDragState({ draggingId: null, overFrameId: null, action: null });
+    setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
     setDragPos(null);
   };
 

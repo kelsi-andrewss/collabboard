@@ -10,11 +10,12 @@ function darkenHex(hex, amount = 0.3) {
   return `rgb(${r},${g},${b})`;
 }
 
-function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragLayerRef, mainLayerRef }) {
+function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onTransformMove, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
+  const resizeOverlayRef = useRef();
   const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
   const [isDark, setIsDark] = useState(document.documentElement.getAttribute('data-theme') === 'dark');
@@ -106,6 +107,17 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
           stroke={isSelected ? '#2563eb' : darkenHex(color, 0.2)}
           strokeWidth={2}
           perfectDrawEnabled={false}
+        />
+        {dragState?.draggingId === id && dragState?.illegalDrag && (
+          <Rect x={0} y={0} width={width} height={height}
+            fill="#ef4444" opacity={0.35} cornerRadius={4}
+            listening={false} perfectDrawEnabled={false} />
+        )}
+        <Rect
+          ref={resizeOverlayRef}
+          x={0} y={0} width={width} height={height}
+          fill="#ef4444" opacity={0.35} cornerRadius={4}
+          listening={false} perfectDrawEnabled={false} visible={false}
         />
         {!isEditing ? (
           <Text
@@ -199,7 +211,23 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             if (newBox.width < 50 || newBox.height < 50) return oldBox;
             return newBox;
           }}
+          onTransform={() => {
+            const group = groupRef.current;
+            const scaleX = group.scaleX();
+            const scaleY = group.scaleY();
+            const w = Math.max(50, sizeRef.current.w * scaleX);
+            const h = Math.max(50, sizeRef.current.h * scaleY);
+            if (resizeOverlayRef.current) {
+              resizeOverlayRef.current.width(w);
+              resizeOverlayRef.current.height(h);
+              if (onTransformMove) {
+                const illegal = onTransformMove(id, { x: group.x(), y: group.y(), width: w, height: h });
+                resizeOverlayRef.current.visible(!!illegal);
+              }
+            }
+          }}
           onTransformEnd={() => {
+            if (resizeOverlayRef.current) resizeOverlayRef.current.visible(false);
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();

@@ -3,13 +3,14 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 
-function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef }) {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onTransformMove, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef }) {
   const groupRef = useRef();
   const trRef = useRef();
   const bgRectRef = useRef();
   const borderRectRef = useRef();
   const titleBarRef = useRef();
   const titleTextRef = useRef();
+  const resizeOverlayRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
   // Track committed dimensions imperatively so consecutive resizes use the latest values
   const sizeRef = useRef({ width, height });
@@ -169,34 +170,47 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             </div>
           </Html>
         )}
-        {/* Drag indicator overlay */}
-        {dragState && dragState.overFrameId === id && dragState.action && (
-          <>
-            <Rect
-              width={width}
-              height={height}
-              fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
-              opacity={0.15}
-              cornerRadius={4}
-              listening={false}
-              perfectDrawEnabled={false}
-            />
-            <Text
-              text={dragState.action === 'add' ? '+' : '-'}
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fontSize={48}
-              fontStyle="bold"
-              fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
-              opacity={0.6}
-              align="center"
-              verticalAlign="middle"
-              listening={false}
-            />
-          </>
-        )}
+        {/* Resize indicator overlay (imperative) */}
+        <Rect
+          ref={resizeOverlayRef}
+          x={0} y={0} width={width} height={height}
+          fill="#ef4444" opacity={0.25} cornerRadius={4}
+          listening={false} perfectDrawEnabled={false} visible={false}
+        />
+        {(() => {
+          const showIllegal = dragState?.draggingId === id && dragState?.illegalDrag;
+          const showAction = dragState && dragState.overFrameId === id && dragState.action;
+          if (!showIllegal && !showAction) return null;
+          return (
+            <>
+              <Rect
+                width={width}
+                height={height}
+                fill={showIllegal ? '#ef4444' : (dragState.action === 'add' ? '#22c55e' : '#ef4444')}
+                opacity={showIllegal ? 0.25 : 0.15}
+                cornerRadius={4}
+                listening={false}
+                perfectDrawEnabled={false}
+              />
+              {!showIllegal && (
+                <Text
+                  text={dragState.action === 'add' ? '+' : '-'}
+                  x={0}
+                  y={0}
+                  width={width}
+                  height={height}
+                  fontSize={48}
+                  fontStyle="bold"
+                  fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
+                  opacity={0.6}
+                  align="center"
+                  verticalAlign="middle"
+                  listening={false}
+                />
+              )}
+            </>
+          );
+        })()}
       </Group>
       {isSelected && !isEditing && (
         <Transformer
@@ -211,7 +225,23 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             if (newBox.width < 50 || newBox.height < 40) return oldBox;
             return newBox;
           }}
+          onTransform={() => {
+            const group = groupRef.current;
+            const scaleX = group.scaleX();
+            const scaleY = group.scaleY();
+            const w = Math.max(100, sizeRef.current.width * scaleX);
+            const h = Math.max(80, sizeRef.current.height * scaleY);
+            if (resizeOverlayRef.current) {
+              resizeOverlayRef.current.width(w);
+              resizeOverlayRef.current.height(h);
+              if (onTransformMove) {
+                const illegal = onTransformMove(id, { x: group.x(), y: group.y(), width: w, height: h });
+                resizeOverlayRef.current.visible(!!illegal);
+              }
+            }
+          }}
           onTransformEnd={() => {
+            if (resizeOverlayRef.current) resizeOverlayRef.current.visible(false);
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();

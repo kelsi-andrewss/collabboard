@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Line, Group, Transformer } from 'react-konva';
+import { Line, Group, Transformer, Rect } from 'react-konva';
 
-function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, dragLayerRef, mainLayerRef }) {
+function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
@@ -22,6 +22,8 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, onDelete, id]);
+
+  const snap = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
 
   return (
     <>
@@ -49,7 +51,9 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          const pos = { x: e.target.x(), y: e.target.y() };
+          const rawX = e.target.x();
+          const rawY = e.target.y();
+          const pos = { x: snap(rawX), y: snap(rawY) };
           if (mainLayerRef?.current && groupRef.current) {
             groupRef.current.moveTo(mainLayerRef.current);
             mainLayerRef.current.batchDraw();
@@ -90,11 +94,27 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           lineJoin="round"
           perfectDrawEnabled={false}
         />
+        {dragState?.draggingId === id && dragState?.illegalDrag && (() => {
+          const pts = points || [0, 0, 200, 0];
+          let minPx = Infinity, minPy = Infinity, maxPx = -Infinity, maxPy = -Infinity;
+          for (let i = 0; i < pts.length; i += 2) {
+            minPx = Math.min(minPx, pts[i]); maxPx = Math.max(maxPx, pts[i]);
+            minPy = Math.min(minPy, pts[i + 1]); maxPy = Math.max(maxPy, pts[i + 1]);
+          }
+          return (
+            <Rect x={minPx} y={minPy}
+              width={Math.max(maxPx - minPx, strokeWidth || 3)}
+              height={Math.max(maxPy - minPy, strokeWidth || 3)}
+              fill="#ef4444" opacity={0.35}
+              listening={false} perfectDrawEnabled={false} />
+          );
+        })()}
       </Group>
       {isSelected && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}
+          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['middle-left', 'middle-right']}
           anchorSize={10}
           anchorStrokeWidth={2}

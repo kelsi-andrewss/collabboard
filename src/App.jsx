@@ -11,6 +11,7 @@ import { makeObjectHandlers } from './handlers/objectHandlers.js';
 import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
 import { makeStageHandlers } from './handlers/stageHandlers.js';
+import { getContentBounds } from './utils/frameUtils.js';
 import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
 import { ResizeTooltip } from './components/ResizeTooltip.jsx';
@@ -145,8 +146,8 @@ export function App() {
   const [showColorPicker, setShowColorPicker] = useState(null);
   const [showSelectedColorPicker, setShowSelectedColorPicker] = useState(false);
   const [activeShapeType, setActiveShapeType] = useState('rectangle');
-  const [dragState, setDragState] = useState({ draggingId: null, overFrameId: null, action: null });
-  const dragStateRef = useRef({ draggingId: null, overFrameId: null, action: null });
+  const [dragState, setDragState] = useState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+  const dragStateRef = useRef({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
   const updateDragState = (next) => { dragStateRef.current = next; setDragState(next); };
   const [snapToGrid, setSnapToGrid] = useState(() => localStorage.getItem('snapToGrid') === 'true');
   const [showTutorial, setShowTutorial] = useState(() => Tutorial.shouldShow());
@@ -259,13 +260,15 @@ export function App() {
     board, stageRef, snap, setDragState: updateDragState, setSelectedId,
     stagePos, stageScale, shapeColors, user, setShapeColors,
     ai, aiPrompt, setAiPrompt, setDragPos, updateColorHistory,
+    setResizeTooltip, resizeTooltipTimer,
   });
 
   const { handleFrameDragMove, handleFrameDragEnd } = makeFrameDragHandlers({
     board, stageRef, snap, frameDragRef, setDragState: updateDragState, handleDragMove, stagePos, stageScale,
+    setResizeTooltip, resizeTooltipTimer,
   });
 
-  const { handleTransformEnd, handleResizeClamped } = makeTransformHandlers({
+  const { handleTransformEnd, handleTransformMove, handleResizeClamped } = makeTransformHandlers({
     board, stageRef, stageScale, stagePos, setResizeTooltip, resizeTooltipTimer,
   });
 
@@ -273,7 +276,26 @@ export function App() {
     setSelectedId, setStagePos, setStageScale, presence, objects: board.objects,
   });
 
-  const isOffCenter = stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1;
+  const isOffCenter = (() => {
+    if (stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1) return true;
+    const bounds = getContentBounds(board.objects);
+    if (!bounds) return false;
+    const { minX, minY, maxX, maxY } = bounds;
+    const HEADER_HEIGHT = 50;
+    const PADDING = 60;
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight - HEADER_HEIGHT;
+    const screenLeft   = minX * stageScale + stagePos.x;
+    const screenTop    = minY * stageScale + stagePos.y;
+    const screenRight  = maxX * stageScale + stagePos.x;
+    const screenBottom = maxY * stageScale + stagePos.y;
+    return (
+      screenLeft   < PADDING ||
+      screenTop    < PADDING ||
+      screenRight  > viewW - PADDING ||
+      screenBottom > viewH - PADDING
+    );
+  })();
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -303,7 +325,7 @@ export function App() {
           handlers={{ setShowTutorial, logout }}
         />
       </div>
-      <div className="board-wrapper">
+  <div className="board-wrapper">
         {board.loading && (
           <div className="board-loading">
             <div className="board-loading-spinner" />
@@ -312,7 +334,7 @@ export function App() {
         <BoardCanvas
           stageRef={stageRef}
           state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid }}
-          handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId }}
+          handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, handleTransformMove, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId }}
         />
         <FABButtons
           state={{ showAI, darkMode, isOffCenter }}

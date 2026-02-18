@@ -1,3 +1,5 @@
+import { getContentBounds } from '../utils/frameUtils.js';
+
 export function makeStageHandlers({
   setSelectedId, setStagePos, setStageScale, presence, objects,
 }) {
@@ -43,35 +45,33 @@ export function makeStageHandlers({
   };
 
   const handleRecenter = () => {
-    const items = Object.values(objects);
-    if (!items.length) {
+    const bounds = getContentBounds(objects);
+    if (!bounds) {
       setStagePos({ x: 0, y: 0 });
       setStageScale(1);
       return;
     }
+    const { minX, minY, maxX, maxY } = bounds;
     const HEADER_HEIGHT = 50;
     const PADDING = 60;
     const viewW = window.innerWidth;
     const viewH = window.innerHeight - HEADER_HEIGHT;
-
-    const minX = Math.min(...items.map(o => o.x));
-    const minY = Math.min(...items.map(o => o.y));
-    const maxX = Math.max(...items.map(o => o.x + (o.width ?? 150)));
-    const maxY = Math.max(...items.map(o => o.y + (o.height ?? 150)));
-
     const contentW = maxX - minX;
     const contentH = maxY - minY;
-
+    if (contentW <= 0 || contentH <= 0) {
+      setStagePos({ x: 0, y: 0 });
+      setStageScale(1);
+      return;
+    }
     const scale = Math.min(
       (viewW - PADDING * 2) / contentW,
       (viewH - PADDING * 2) / contentH,
       1
     );
-
     setStageScale(scale);
     setStagePos({
       x: (viewW - contentW * scale) / 2 - minX * scale,
-      y: (viewH - contentH * scale) / 2 - minY * scale + HEADER_HEIGHT,
+      y: (viewH - contentH * scale) / 2 - minY * scale,
     });
   };
 

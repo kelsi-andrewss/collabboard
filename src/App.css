@@ -1237,19 +1237,20 @@
   background: transparent;
 }
 
-.resize-tooltip {
-  background: #1f2937;
-  color: #f9fafb;
+.error-tooltip {
+  background: #7f1d1d;
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.5);
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 6px;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  animation: resize-tooltip-fade 2.5s ease forwards;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  animation: error-tooltip-fade 2.5s ease forwards;
 }
 
-@keyframes resize-tooltip-fade {
+@keyframes error-tooltip-fade {
   0%   { opacity: 1; }
   70%  { opacity: 1; }
   100% { opacity: 0; }

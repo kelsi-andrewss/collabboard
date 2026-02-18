@@ -11,6 +11,7 @@ import {
 
 export function makeFrameDragHandlers({
   board, stageRef, snap, frameDragRef, setDragState, handleDragMove, stagePos, stageScale,
+  setResizeTooltip, resizeTooltipTimer,
 }) {
   const handleFrameDragMove = (id, pos) => {
     const frame = board.objects[id];
@@ -59,7 +60,9 @@ export function makeFrameDragHandlers({
       action = 'remove';
       dragOverFrameId = currentFrameId;  // Point to parent so highlight renders
     }
-    setDragState({ draggingId: id, overFrameId: dragOverFrameId, action });
+    const droppedRect = { x: pos.x, y: pos.y, width: frame.width || 400, height: frame.height || 300 };
+    const illegalDrag = hasDisallowedSiblingOverlap(id, 'frame', droppedRect, overFrameId || null, candidates, FRAME_MARGIN);
+    setDragState({ draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag });
   };
 
   const handleFrameDragEnd = (id, updates) => {
@@ -139,11 +142,14 @@ export function makeFrameDragHandlers({
     const ow = frame.width || 400;
     const oh = frame.height || 300;
     if (overFrame) {
-      const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
-      const minX = overFrame.x + FRAME_MARGIN;
-      const minY = overFrame.y + titleBar + FRAME_MARGIN;
-      snapped.x = Math.max(minX, snapped.x);
-      snapped.y = Math.max(minY, snapped.y);
+      const isNewParent = frame.frameId !== overFrame.id;
+      if (isNewParent) {
+        const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
+        const minX = overFrame.x + FRAME_MARGIN;
+        const minY = overFrame.y + titleBar + FRAME_MARGIN;
+        snapped.x = Math.max(minX, snapped.x);
+        snapped.y = Math.max(minY, snapped.y);
+      }
 
       ancestorExpansions = computeAncestorExpansions(
         snapped.x, snapped.y, ow, oh, overFrame.id, board.objects, FRAME_MARGIN
@@ -172,7 +178,20 @@ export function makeFrameDragHandlers({
       }
       stage?.batchDraw();
       frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };
-      setDragState({ draggingId: null, overFrameId: null, action: null });
+      setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+      if (setResizeTooltip && resizeTooltipTimer) {
+        const screenX = frame.x * stageScale + stagePos.x;
+        const screenY = frame.y * stageScale + stagePos.y;
+        const flipY = screenY < 40;
+        clearTimeout(resizeTooltipTimer.current);
+        setResizeTooltip({
+          x: screenX + (frame.width || 400) * stageScale / 2,
+          y: flipY ? screenY + (frame.height || 300) * stageScale : screenY,
+          msg: "Can't place here — overlaps another frame.",
+          flipY,
+        });
+        resizeTooltipTimer.current = setTimeout(() => setResizeTooltip(null), 2500);
+      }
       return;
     }
 
@@ -197,7 +216,7 @@ export function makeFrameDragHandlers({
     // Single batch write for all changes
     board.batchUpdateObjects(allUpdates);
     frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };
-    setDragState({ draggingId: null, overFrameId: null, action: null });
+    setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
   };
 
   return { handleFrameDragMove, handleFrameDragEnd };
