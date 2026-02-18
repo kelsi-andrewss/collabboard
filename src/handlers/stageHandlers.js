@@ -1,5 +1,7 @@
 import { getContentBounds } from '../utils/frameUtils.js';
 
+const HEADER_HEIGHT = 60;
+
 export function makeStageHandlers({
   setSelectedId, setStagePos, setStageScale, presence, objectsRef,
 }) {
@@ -52,7 +54,6 @@ export function makeStageHandlers({
       return;
     }
     const { minX, minY, maxX, maxY } = bounds;
-    const HEADER_HEIGHT = 50;
     const PADDING = 60;
     const viewW = window.innerWidth;
     const viewH = window.innerHeight - HEADER_HEIGHT;

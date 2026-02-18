@@ -11,6 +11,8 @@ import {
 } from '../utils/frameUtils.js';
 import { showErrorTooltip } from '../utils/tooltipUtils.js';
 
+const HEADER_HEIGHT = 60;
+
 export function makeObjectHandlers({
   board, stageRef, snap, setDragState, setSelectedId,
   stagePos, stageScale, shapeColors, user, setShapeColors,
@@ -202,6 +204,12 @@ export function makeObjectHandlers({
     board.updateObject(id, { zIndex: maxZ + 1 });
   };
 
+  const handleSelectAndRaise = (id) => {
+    const maxZ = Math.max(0, ...Object.values(board.objects).map(o => o.zIndex || 0));
+    board.updateObject(id, { zIndex: maxZ + 1 });
+    setSelectedId(id);
+  };
+
   const handleSendToBack = (id) => {
     const minZ = Math.min(0, ...Object.values(board.objects).map(o => o.zIndex || 0));
     board.updateObject(id, { zIndex: minZ - 1 });
@@ -209,7 +217,7 @@ export function makeObjectHandlers({
 
   const findOpenSpot = (w, h, isFrame = false) => {
     const cx = (window.innerWidth / 2 - stagePos.x) / stageScale;
-    const cy = ((window.innerHeight - 50) / 2 - stagePos.y) / stageScale;
+    const cy = ((window.innerHeight - HEADER_HEIGHT) / 2 - stagePos.y) / stageScale;
     return findNonOverlappingPosition(cx, cy, w, h, isFrame, board.objects);
   };
 
@@ -240,7 +248,7 @@ export function makeObjectHandlers({
 
   const handleAddFrame = () => {
     const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-    const fh = Math.round((window.innerHeight - 50) * 0.55 / stageScale);
+    const fh = Math.round((window.innerHeight - HEADER_HEIGHT) * 0.55 / stageScale);
     const pos = findOpenSpot(fw, fh, true);
     board.addObject({
       type: 'frame',
@@ -282,6 +290,7 @@ export function makeObjectHandlers({
     handleDeleteWithCleanup,
     handleBringToFront,
     handleSendToBack,
+    handleSelectAndRaise,
     findOpenSpot,
     handleAddSticky,
     handleAddShape,

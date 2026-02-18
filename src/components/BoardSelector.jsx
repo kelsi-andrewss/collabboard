@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Search, Folder, Layout, Sun, Moon } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useBoardsList } from '../hooks/useBoardsList';
-import { useGlobalPresence } from '../hooks/useGlobalPresence';
-import { UserAvatarMenu } from './UserAvatarMenu.jsx';
+import { GroupCard } from './GroupCard.jsx';
+import { groupToSlug } from '../utils/slugUtils.js';
 
-export function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logout }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout }) {
   const { boards, loading, createBoard } = useBoardsList();
-  const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
@@ -96,10 +95,6 @@ export function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logo
   return (
     <div className="board-selector-container">
       <div className="selector-header">
-        <div className="dashboard-top">
-          <h1>CollabBoard</h1>
-          <UserAvatarMenu user={user} logout={logout} />
-        </div>
         <p>Everyone can see and edit all boards</p>
         <div className="dashboard-search">
           <Search size={16} className="dashboard-search-icon" />
@@ -116,65 +111,23 @@ export function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logo
         </div>
       </div>
 
-      <div className="groups-list">
+      <div className="group-cards-grid">
         {sortedGroupEntries.map(([groupKey, groupBoards]) => (
-          <div key={groupKey} className="board-group">
-            {groupKey !== 'null' && (
-              <h2 className="group-title">
-                <Folder size={20} /> {groupKey}
-              </h2>
-            )}
-            <div className="boards-grid">
-              {groupBoards.map(board => (
-                <div
-                  key={board.id}
-                  className="board-card"
-                  onClick={() => onSelectBoard(board.id, board.name)}
-                >
-                  <div className="board-card-preview">
-                    <Layout size={40} />
-                  </div>
-                  <div className="board-card-info">
-                    <h3>{board.name}</h3>
-                    <div className="board-card-footer">
-                      <p>Updated {board.updatedAt ? new Date(board.updatedAt.toDate()).toLocaleDateString() : 'Just now'}</p>
-                      {globalPresence[board.id] && globalPresence[board.id].length > 0 && (
-                        <div className="card-avatars">
-                          {globalPresence[board.id].slice(0, 3).map((u, i) => (
-                            <div
-                              key={i}
-                              className="mini-avatar"
-                              style={{ backgroundColor: u.color }}
-                              title={u.name}
-                            >
-                              {u.photoURL
-                                ? <img src={u.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                                : u.name.charAt(0).toUpperCase()
-                              }
-                            </div>
-                          ))}
-                          {globalPresence[board.id].length > 3 && (
-                            <div className="mini-avatar mini-chip">
-                              +{globalPresence[board.id].length - 3}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <GroupCard
+            key={groupKey}
+            group={groupKey === 'null' ? null : groupKey}
+            boards={groupBoards}
+            onNavigateToGroup={onNavigateToGroup || (() => {})}
+            onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
+          />
         ))}
         {boards.length === 0 && (
-          <div className="empty-state">
-            <Layout size={64} />
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <p>No boards yet. Hit the + button to create your first one!</p>
           </div>
         )}
         {boards.length > 0 && sortedGroupEntries.length === 0 && (
-          <div className="empty-state">
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <p>No boards match &ldquo;{searchQuery}&rdquo;</p>
           </div>
         )}
@@ -182,14 +135,6 @@ export function BoardSelector({ onSelectBoard, darkMode, setDarkMode, user, logo
 
       <button className="create-board-fab" onClick={() => setShowModal(true)} title="Create New Board">
         <Plus size={32} />
-      </button>
-
-      <button
-        className="theme-fab"
-        onClick={() => setDarkMode(!darkMode)}
-        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-      >
-        {darkMode ? <Sun size={24} /> : <Moon size={24} />}
       </button>
 
       {showModal && (

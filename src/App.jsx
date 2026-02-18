@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
 import { useAI } from './hooks/useAI';
+import { useHomeAI } from './hooks/useHomeAI';
+import { GroupPage } from './components/GroupPage.jsx';
+import { groupToSlug } from './utils/slugUtils.js';
 import { Tutorial } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
 import { makeObjectHandlers } from './handlers/objectHandlers.js';
@@ -16,35 +20,63 @@ import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
 import { ResizeTooltip } from './components/ResizeTooltip.jsx';
 import { HeaderRight } from './components/HeaderRight.jsx';
-import { FramePropsPanel } from './components/FramePropsPanel.jsx';
 import { SelectedActionBar } from './components/SelectedActionBar.jsx';
 import { HeaderLeft } from './components/HeaderLeft.jsx';
 import { BoardCanvas } from './components/BoardCanvas.jsx';
+import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
+import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
 import './App.css';
 
 export function App() {
   const { user, loading, login, logout } = useAuth();
-  const [boardId, setBoardId] = useState(() => {
-    // URL hash takes priority (for shareable links), then localStorage
+
+  // Parse multi-segment hash: groupSlug/boardId or groupSlug or empty
+  const parseHash = () => {
     const hash = window.location.hash.slice(1);
-    return hash || localStorage.getItem('collaboard_boardId') || null;
+    if (!hash) return { groupSlug: null, boardId: null };
+    const parts = hash.split('/');
+    if (parts.length >= 2) return { groupSlug: parts[0], boardId: parts[1] };
+    // Single segment: could be a bare boardId (legacy) or a groupSlug
+    // Treat as boardId if we have it in localStorage with same value
+    const savedBoardId = localStorage.getItem('collaboard_boardId');
+    if (savedBoardId === parts[0]) return { groupSlug: null, boardId: parts[0] };
+    return { groupSlug: parts[0], boardId: null };
+  };
+
+  const [groupSlug, setGroupSlug] = useState(() => parseHash().groupSlug);
+  const [boardId, setBoardId] = useState(() => {
+    const { boardId: hashBoard } = parseHash();
+    return hashBoard || localStorage.getItem('collaboard_boardId') || null;
   });
   const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
   const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
 
+  const navigateHome = () => { setGroupSlug(null); setBoardId(null); setBoardName(''); };
+  const navigateToGroup = (slug) => { setGroupSlug(slug); setBoardId(null); };
+  const navigateToBoard = (slug, id, name) => { setGroupSlug(slug); setBoardId(id); setBoardName(name || id); };
+
   useEffect(() => {
-    if (boardId) {
+    if (boardId && groupSlug) {
+      window.location.hash = `${groupSlug}/${boardId}`;
       localStorage.setItem('collaboard_boardId', boardId);
       localStorage.setItem('collaboard_boardName', boardName);
-      window.location.hash = boardId;
-    } else {
+    } else if (groupSlug) {
+      window.location.hash = groupSlug;
       localStorage.removeItem('collaboard_boardId');
       localStorage.removeItem('collaboard_boardName');
+    } else if (boardId) {
+      // Legacy: no groupSlug yet
+      window.location.hash = boardId;
+      localStorage.setItem('collaboard_boardId', boardId);
+      localStorage.setItem('collaboard_boardName', boardName);
+    } else {
       history.pushState('', document.title, window.location.pathname);
+      localStorage.removeItem('collaboard_boardId');
+      localStorage.removeItem('collaboard_boardName');
     }
-  }, [boardId, boardName]);
+  }, [boardId, boardName, groupSlug]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -63,16 +95,20 @@ export function App() {
   const board = useUndoStack(rawBoard);
   const { boards: allBoards, createBoard: createNewBoard } = useBoardsList();
 
-  // When loading from a shared URL hash, look up the board name from the boards list
+  // When loading from a shared URL hash, look up the board name and group from the boards list
   useEffect(() => {
-    if (boardId && !boardName && allBoards.length > 0) {
+    if (boardId && (!boardName || !groupSlug) && allBoards.length > 0) {
       const found = allBoards.find(b => b.id === boardId);
-      if (found) setBoardName(found.name);
+      if (found) {
+        if (!boardName) setBoardName(found.name);
+        if (!groupSlug) setGroupSlug(groupToSlug(found.group || null));
+      }
     }
-  }, [boardId, boardName, allBoards]);
+  }, [boardId, boardName, groupSlug, allBoards]);
 
   const aiCreateBoard = async (name, group) => {
     const ref = await createNewBoard(name, group);
+    setGroupSlug(groupToSlug(group || null));
     setBoardId(ref.id);
     setBoardName(name);
     // Small delay to let board subscription initialize
@@ -86,6 +122,18 @@ export function App() {
     createBoard: aiCreateBoard,
     getBoards: () => allBoards
   }, board?.objects);
+
+  const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
+  const [showHomeAI, setShowHomeAI] = useState(false);
+  const [homeAiPrompt, setHomeAiPrompt] = useState('');
+
+  const handleHomeAISubmit = async (e) => {
+    e.preventDefault();
+    if (!homeAiPrompt.trim()) return;
+    const prompt = homeAiPrompt;
+    setHomeAiPrompt('');
+    await homeAI.sendCommand(prompt);
+  };
 
   const [selectedId, setSelectedId] = useState(null);
 
@@ -254,8 +302,7 @@ export function App() {
         return;
       }
     } catch {}
-    setStagePos({ x: 0, y: 0 });
-    setStageScale(1);
+    handleRecenterRef.current?.();
   }, [boardId]);
 
   const {
@@ -265,6 +312,7 @@ export function App() {
     handleDeleteWithCleanup,
     handleBringToFront,
     handleSendToBack,
+    handleSelectAndRaise,
     handleAddSticky,
     handleAddShape,
     handleAddFrame,
@@ -288,17 +336,19 @@ export function App() {
 
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
+  const handleRecenterRef = useRef(null);
 
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
     setSelectedId, setStagePos, setStageScale, presence, objectsRef,
   });
+  handleRecenterRef.current = handleRecenter;
 
   const isOffCenter = (() => {
     if (stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1) return true;
     const bounds = getContentBounds(board.objects);
     if (!bounds) return false;
     const { minX, minY, maxX, maxY } = bounds;
-    const HEADER_HEIGHT = 50;
+    const HEADER_HEIGHT = 60;
     const PADDING = 60;
     const viewW = window.innerWidth;
     const viewH = window.innerHeight - HEADER_HEIGHT;
@@ -316,62 +366,102 @@ export function App() {
 
   if (loading) return <div className="loading">Loading...</div>;
 
-  if (!user) {
-    return (
-      <div className="login-container">
-        <h1>CollabBoard</h1>
-        <p>Real-time collaborative whiteboard with AI agent</p>
-        <button onClick={() => login()}>Sign in with Google</button>
-      </div>
-    );
-  }
-
-  if (!boardId) {
-    return <BoardSelector onSelectBoard={(id, name) => { setBoardId(id); setBoardName(name || id); }} darkMode={darkMode} setDarkMode={setDarkMode} user={user} logout={logout} />;
-  }
-
   return (
     <div className="app-container">
       <div className="header">
         <HeaderLeft
-          state={{ boardName, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory }}
-          handlers={{ setBoardId, setBoardName, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType }}
+          state={{ boardName, boardId, boards: allBoards, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId }}
+          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType }}
         />
-        <HeaderRight
-          state={{ presentUsers: presence.presentUsers, currentUserId: user.uid, user }}
-          handlers={{ setShowTutorial, logout }}
-        />
+        <div className="header-right">
+          {user && boardId && (
+            <HeaderRight
+              state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
+              handlers={{ setShowTutorial, logout }}
+            />
+          )}
+          {(!boardId) && (
+            <>
+              <button className="help-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'}>
+                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              {user && (
+                <>
+                  <span className="header-divider" />
+                  <UserAvatarMenu user={user} logout={logout} />
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
-  <div className="board-wrapper">
-        {board.loading && (
-          <div className="board-loading">
-            <div className="board-loading-spinner" />
+      <div className="app-content">
+        {!user && (
+          <div className="login-content">
+            <p className="login-tagline">Real-time collaborative whiteboard with AI agent</p>
+            <button className="login-google-btn" onClick={() => login()}>Sign in with Google</button>
           </div>
         )}
-        <BoardCanvas
-          stageRef={stageRef}
-          state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos }}
-          handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId }}
-        />
-        <FABButtons
-          state={{ showAI, darkMode, isOffCenter }}
-          handlers={{ setShowAI, setDarkMode, handleRecenter }}
-        />
-        <ResizeTooltip state={{ resizeTooltip }} />
-        <SelectedActionBar
-          state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory }}
-          handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, handleBringToFront, handleSendToBack, handleDeleteWithCleanup, updateActiveColor }}
-        />
-        <FramePropsPanel
-          state={{ selectedId, objects: board.objects }}
-          handlers={{ updateObject: board.updateObject }}
-        />
-        <AIPanel
-          state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error }}
-          handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
-        />
-        {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
+        {user && !boardId && (
+          <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+            {groupSlug ? (
+              <GroupPage
+                groupSlug={groupSlug}
+                onBack={navigateHome}
+                onOpenBoard={navigateToBoard}
+              />
+            ) : (
+              <BoardSelector
+                onSelectBoard={(id, name) => { setBoardId(id); setBoardName(name || id); }}
+                onNavigateToGroup={navigateToGroup}
+                onNavigateToBoard={navigateToBoard}
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+                user={user}
+                logout={logout}
+              />
+            )}
+            <FABButtons
+              state={{ showAI: showHomeAI, darkMode, isOffCenter: false }}
+              handlers={{ setShowAI: setShowHomeAI, setDarkMode, handleRecenter: () => {} }}
+            />
+            <AIPanel
+              state={{ showAI: showHomeAI, aiPrompt: homeAiPrompt, isTyping: homeAI.isTyping, error: homeAI.error }}
+              handlers={{ handleAISubmit: handleHomeAISubmit, setAiPrompt: setHomeAiPrompt, clearError: homeAI.clearError }}
+            />
+          </div>
+        )}
+        {user && boardId && (
+          <div className="board-wrapper">
+            {board.loading && (
+              <div className="board-loading">
+                <div className="board-loading-spinner" />
+              </div>
+            )}
+            <BoardCanvas
+              stageRef={stageRef}
+              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise }}
+            />
+            <FABButtons
+              state={{ showAI, darkMode, isOffCenter }}
+              handlers={{ setShowAI, setDarkMode, handleRecenter }}
+            />
+            <ResizeTooltip state={{ resizeTooltip }} />
+            <SelectedActionBar
+              state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory }}
+              handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, handleDeleteWithCleanup, updateActiveColor }}
+            />
+            <AIPanel
+              state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error }}
+              handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
+            />
+            <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={darkMode} />
+            {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

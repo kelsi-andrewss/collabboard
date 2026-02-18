@@ -8,6 +8,7 @@ import { Cursors } from './Cursors';
 import { FRAME_MARGIN } from '../utils/frameUtils.js';
 
 const GRID_SIZE = 50;
+const HEADER_HEIGHT = 60;
 
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
@@ -27,7 +28,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     <Stage
       ref={stageRef}
       width={window.innerWidth}
-      height={window.innerHeight - 50}
+      height={window.innerHeight - HEADER_HEIGHT}
       onMouseMove={handleMouseMove}
       onClick={handleStageClick}
       draggable={!selectedId}
@@ -51,14 +52,14 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           x={-stagePos.x / stageScale}
           y={-stagePos.y / stageScale}
           width={window.innerWidth / stageScale}
-          height={(window.innerHeight - 50) / stageScale}
+          height={(window.innerHeight - HEADER_HEIGHT) / stageScale}
           fill={darkMode ? '#111827' : '#ffffff'}
         />
         {snapToGrid && (() => {
           const left = -stagePos.x / stageScale;
           const top = -stagePos.y / stageScale;
           const right = left + window.innerWidth / stageScale;
-          const bottom = top + (window.innerHeight - 50) / stageScale;
+          const bottom = top + (window.innerHeight - HEADER_HEIGHT) / stageScale;
           const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
           const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
           const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
@@ -86,8 +87,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           );
         })()}
         {Object.keys(objects).length === 0 && (() => {
-          const cx = window.innerWidth / 2;
-          const cy = (window.innerHeight - 50) / 2;
+          const cx = (window.innerWidth / 2 - stagePos.x) / stageScale;
+          const cy = ((window.innerHeight - HEADER_HEIGHT) / 2 - stagePos.y) / stageScale;
           const boldColor = darkMode ? '#d1d5db' : '#374151';
           const textColor = darkMode ? '#9ca3af' : '#6b7280';
           const dimColor = darkMode ? '#6b7280' : '#9ca3af';
@@ -98,7 +99,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             { key: 'Click', desc: ' to select' },
           ];
           const mc = document.createElement('canvas').getContext('2d');
-          const fontSize = 13;
+          const fontSize = 14;
           const segments = tips.map(tip => {
             mc.font = `bold ${fontSize}px ${font}`;
             const boldW = mc.measureText(tip.key).width;
@@ -111,15 +112,15 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const totalLineW = segments.reduce((sum, s, i) =>
             sum + s.boldW + s.normalW + (i < segments.length - 1 ? s.sepW : 0), 0);
           let curX = cx - totalLineW / 2;
-          const tipsY = cy + 38;
+          const tipsY = cy + 52;
           return (
             <>
               <Text
-                x={cx - 260}
+                x={cx - 300}
                 y={cy - 20}
-                width={520}
+                width={600}
                 text="Your board is empty"
-                fontSize={22}
+                fontSize={30}
                 fontStyle="bold"
                 fontFamily={font}
                 fill={boldColor}
@@ -127,11 +128,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                 listening={false}
               />
               <Text
-                x={cx - 260}
-                y={cy + 14}
-                width={520}
+                x={cx - 300}
+                y={cy + 20}
+                width={600}
                 text="Pick a tool from the toolbar above to get started"
-                fontSize={14}
+                fontSize={16}
                 fontFamily={font}
                 fill={textColor}
                 align="center"

@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
-import { Palette, ArrowUpToLine, ArrowDownToLine, Trash2 } from 'lucide-react';
+import { Palette, Trash2 } from 'lucide-react';
 import { getContrastColor } from '../utils/colorUtils.js';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 
 function SelectedActionBarInner({ state, handlers }) {
   const { selectedId, objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory } = state;
-  const { setShowSelectedColorPicker, updateObject, handleBringToFront, handleSendToBack, handleDeleteWithCleanup, updateActiveColor } = handlers;
+  const { setShowSelectedColorPicker, updateObject, handleDeleteWithCleanup, updateActiveColor } = handlers;
 
   const toolbarRef = useRef();
 
@@ -16,7 +16,7 @@ function SelectedActionBarInner({ state, handlers }) {
   const posX = (dragPos?.id === selectedId ? dragPos.x : obj.x);
   const posY = (dragPos?.id === selectedId ? dragPos.y : obj.y);
   const screenX = posX * stageScale + stagePos.x;
-  const HEADER_HEIGHT = 50;
+  const HEADER_HEIGHT = 60;
   const screenY = posY * stageScale + stagePos.y + HEADER_HEIGHT;
   const screenW = (obj.width ?? 150) * stageScale;
   const screenH = (obj.height ?? 150) * stageScale;
@@ -64,20 +64,6 @@ function SelectedActionBarInner({ state, handlers }) {
           </div>
         )}
       </div>
-      <button
-        className="action-fab"
-        onClick={() => handleBringToFront(selectedId)}
-        title="Bring to Front"
-      >
-        <ArrowUpToLine size={16} />
-      </button>
-      <button
-        className="action-fab"
-        onClick={() => handleSendToBack(selectedId)}
-        title="Send to Back"
-      >
-        <ArrowDownToLine size={16} />
-      </button>
       <button
         className="action-fab delete-action"
         onClick={() => handleDeleteWithCleanup(selectedId)}
