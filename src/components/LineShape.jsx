@@ -34,6 +34,7 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
         draggable
+        dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);

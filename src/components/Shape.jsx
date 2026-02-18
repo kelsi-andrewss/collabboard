@@ -71,6 +71,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
         draggable={!isEditing}
+        dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);

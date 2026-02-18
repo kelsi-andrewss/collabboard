@@ -217,7 +217,12 @@ export function App() {
     return () => window.removeEventListener('keydown', handleUndo);
   }, [board.canUndo, board.undo]);
 
-  // Auto-clear dragPos once Firestore confirms the new position
+  // Auto-clear dragPos once Firestore confirms the new position.
+  // IMPORTANT: Do NOT call setDragPos(null) in drag-end handlers (objectHandlers or
+  // frameDragHandlers). This effect is the sole clearing mechanism. Manual clearing
+  // before Firestore confirms causes a flash to the old position. To prevent phantom
+  // onDragStart events on clicks from re-setting dragPos, all draggable Konva nodes
+  // must use dragDistance={3} (see StickyNote, Shape, Frame, LineShape).
   useEffect(() => {
     if (!dragPos) return;
     const obj = board.objects[dragPos.id];

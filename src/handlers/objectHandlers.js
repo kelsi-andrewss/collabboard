@@ -175,7 +175,9 @@ export function makeObjectHandlers({
       board.batchUpdateObjects(allUpdates);
     }
     setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
-    setDragPos(null);
+    // Do NOT call setDragPos(null) here. The auto-clear useEffect in App.jsx clears it
+    // once Firestore confirms the new position. Clearing here prematurely causes a
+    // visual flash back to the old position while the write is in-flight (~50-200ms).
   };
 
   const handleDeleteWithCleanup = (id) => {

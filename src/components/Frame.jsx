@@ -49,6 +49,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={0}
         draggable={!isEditing}
+        dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);

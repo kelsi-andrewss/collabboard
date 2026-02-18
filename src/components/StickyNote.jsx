@@ -64,6 +64,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
         draggable={!isEditing}
+        dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);
