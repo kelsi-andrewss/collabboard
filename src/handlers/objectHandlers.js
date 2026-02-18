@@ -175,6 +175,7 @@ export function makeObjectHandlers({
       board.batchUpdateObjects(allUpdates);
     }
     setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+    setDragPos(null);
   };
 
   const handleDeleteWithCleanup = (id) => {
