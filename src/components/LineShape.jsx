@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Line, Group, Transformer } from 'react-konva';
 
-export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove }) => {
+function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, dragLayerRef, mainLayerRef }) {
   const lineRef = useRef();
+  const groupRef = useRef();
   const trRef = useRef();
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
   return (
     <>
       <Group
+        ref={groupRef}
         name={id}
         x={x}
         y={y}
@@ -38,11 +40,21 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragStart={() => {
+          if (dragLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(dragLayerRef.current);
+          }
+        }}
         onDragMove={(e) => {
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          onDragEnd(id, { x: e.target.x(), y: e.target.y() });
+          const pos = { x: e.target.x(), y: e.target.y() };
+          if (mainLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(mainLayerRef.current);
+            mainLayerRef.current.batchDraw();
+          }
+          onDragEnd(id, pos);
         }}
         onTransformEnd={(e) => {
           const node = lineRef.current;
@@ -76,6 +88,7 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
           hitStrokeWidth={20}
           lineCap="round"
           lineJoin="round"
+          perfectDrawEnabled={false}
         />
       </Group>
       {isSelected && (
@@ -97,4 +110,6 @@ export const LineShape = ({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6'
       )}
     </>
   );
-};
+}
+
+export const LineShape = React.memo(LineShapeInner);

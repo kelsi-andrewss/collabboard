@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ref, onValue, set, onDisconnect, serverTimestamp } from 'firebase/database';
 import { rtdb } from '../firebase/config';
+import { getUserColor } from '../utils/colorUtils.js';
 
 export function usePresence(boardId, currentUser) {
   const [presentUsers, setPresentUsers] = useState({});
@@ -15,6 +16,7 @@ export function usePresence(boardId, currentUser) {
     set(presenceRef, {
       name: currentUser.displayName || 'Anonymous',
       color: getUserColor(currentUser.uid),
+      photoURL: currentUser.photoURL || null,
       lastSeen: serverTimestamp(),
       x: 0,
       y: 0
@@ -43,12 +45,17 @@ export function usePresence(boardId, currentUser) {
     };
   }, [boardId, currentUser]);
 
+  const lastCursorWrite = useRef(0);
   const updateCursor = (x, y) => {
     if (!boardId || !currentUser) return;
+    const now = Date.now();
+    if (now - lastCursorWrite.current < 50) return;
+    lastCursorWrite.current = now;
     const presenceRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
     set(presenceRef, {
       name: currentUser.displayName || 'Anonymous',
       color: getUserColor(currentUser.uid),
+      photoURL: currentUser.photoURL || null,
       lastSeen: serverTimestamp(),
       x,
       y
@@ -56,18 +63,4 @@ export function usePresence(boardId, currentUser) {
   };
 
   return { presentUsers, updateCursor };
-}
-
-function getUserColor(uid) {
-  const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'];
-  const index = Math.abs(hashCode(uid)) % colors.length;
-  return colors[index];
-}
-
-function hashCode(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return hash;
 }

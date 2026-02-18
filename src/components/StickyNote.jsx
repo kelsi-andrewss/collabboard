@@ -10,7 +10,7 @@ function darkenHex(hex, amount = 0.3) {
   return `rgb(${r},${g},${b})`;
 }
 
-export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50 }) => {
+function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragLayerRef, mainLayerRef }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -76,11 +76,21 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragStart={() => {
+          if (dragLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(dragLayerRef.current);
+          }
+        }}
         onDragMove={(e) => {
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          onDragEnd(id, { x: e.target.x(), y: e.target.y() });
+          const pos = { x: e.target.x(), y: e.target.y() };
+          if (mainLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(mainLayerRef.current);
+            mainLayerRef.current.batchDraw();
+          }
+          onDragEnd(id, pos);
         }}
       >
         <Rect
@@ -88,12 +98,14 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
           width={width}
           height={height}
           fill={color}
-          shadowBlur={5}
-          shadowOpacity={0.3}
+          shadowEnabled={isSelected}
+          shadowBlur={isSelected ? 5 : 0}
+          shadowOpacity={isSelected ? 0.3 : 0}
+          shadowColor={color}
           cornerRadius={4}
           stroke={isSelected ? '#2563eb' : darkenHex(color, 0.2)}
           strokeWidth={2}
-          shadowColor={color}
+          perfectDrawEnabled={false}
         />
         {!isEditing ? (
           <Text
@@ -238,4 +250,6 @@ export const StickyNote = ({ id, x, y, width = 150, height = 150, text, color = 
       )}
     </>
   );
-};
+}
+
+export const StickyNote = React.memo(StickyNoteInner);

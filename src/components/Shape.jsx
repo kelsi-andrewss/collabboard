@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50 }) => {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragLayerRef, mainLayerRef }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -83,11 +83,21 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragStart={() => {
+          if (dragLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(dragLayerRef.current);
+          }
+        }}
         onDragMove={(e) => {
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          onDragEnd(id, { x: e.target.x(), y: e.target.y() });
+          const pos = { x: e.target.x(), y: e.target.y() };
+          if (mainLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(mainLayerRef.current);
+            mainLayerRef.current.batchDraw();
+          }
+          onDragEnd(id, pos);
         }}
       >
         {type === 'rectangle' && (
@@ -97,6 +107,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             height={height}
             fill={color}
             cornerRadius={4}
+            perfectDrawEnabled={false}
           />
         )}
         {type === 'circle' && (
@@ -107,6 +118,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             radiusX={width / 2}
             radiusY={height / 2}
             fill={color}
+            perfectDrawEnabled={false}
           />
         )}
         {type === 'triangle' && (
@@ -115,6 +127,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             width={width}
             height={height}
             fill={color}
+            perfectDrawEnabled={false}
             sceneFunc={(ctx, shape) => {
               const w = shape.width();
               const h = shape.height();
@@ -148,8 +161,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             lineHeight={1.2}
             onClick={(e) => {
               e.cancelBubble = true;
-              if (text) setIsEditing(true);
-              else onSelect(id);
+              onSelect(id);
             }}
             onDblClick={(e) => {
               e.cancelBubble = true;
@@ -157,8 +169,7 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
             }}
             onTap={(e) => {
               e.cancelBubble = true;
-              if (text) setIsEditing(true);
-              else onSelect(id);
+              onSelect(id);
             }}
           />
         ) : (
@@ -271,4 +282,6 @@ export const Shape = ({ id, type, x, y, width = 100, height = 100, text = '', co
       )}
     </>
   );
-};
+}
+
+export const Shape = React.memo(ShapeInner);

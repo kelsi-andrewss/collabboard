@@ -1,0 +1,271 @@
+export const toolDeclarations = [
+  {
+    name: "createStickyNote",
+    description: "Creates a new sticky note on the board. Use frameIndex to place it inside a frame created in the same batch.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        text: { type: "STRING", description: "The content of the sticky note" },
+        x: { type: "NUMBER", description: "X coordinate — ignored if frameIndex is set (auto-positioned)" },
+        y: { type: "NUMBER", description: "Y coordinate — ignored if frameIndex is set (auto-positioned)" },
+        color: { type: "STRING", description: "Hex color code" },
+        frameIndex: { type: "NUMBER", description: "Index of the frame (from createFrame calls) to place this inside. Items are auto-positioned and the frame auto-sizes." }
+      },
+      required: ["text", "x", "y"]
+    }
+  },
+  {
+    name: "createShape",
+    description: "Creates a shape (rectangle, circle, triangle, or line) on the board. Use frameIndex to place it inside a frame created in the same batch.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        type: { type: "STRING", enum: ["rectangle", "circle", "triangle", "line"] },
+        x: { type: "NUMBER" },
+        y: { type: "NUMBER" },
+        width: { type: "NUMBER" },
+        height: { type: "NUMBER" },
+        color: { type: "STRING" },
+        frameIndex: { type: "NUMBER", description: "Index of the frame to place this inside" }
+      },
+      required: ["type", "x", "y"]
+    }
+  },
+  {
+    name: "createFrame",
+    description: "Creates a frame (visual container with title) on the board. Size is auto-calculated if items reference this frame via frameIndex.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        title: { type: "STRING", description: "Title of the frame" },
+        x: { type: "NUMBER" },
+        y: { type: "NUMBER" },
+        width: { type: "NUMBER", description: "Width — auto-calculated if items use frameIndex to reference this frame" },
+        height: { type: "NUMBER", description: "Height — auto-calculated if items use frameIndex to reference this frame" },
+        color: { type: "STRING", description: "Hex color code" },
+        frameIndex: { type: "NUMBER", description: "Unique index for this frame so items can reference it via their frameIndex" },
+        parentFrameIndex: { type: "NUMBER", description: "frameIndex of the parent frame to nest this frame inside. Parent frame must also be created in the same batch." }
+      },
+      required: ["title", "x", "y"]
+    }
+  },
+  {
+    name: "moveObject",
+    description: "Moves an existing object on the board to a new position.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "The ID of the object to move" },
+        x: { type: "NUMBER", description: "New X coordinate" },
+        y: { type: "NUMBER", description: "New Y coordinate" }
+      },
+      required: ["objectId", "x", "y"]
+    }
+  },
+  {
+    name: "resizeObject",
+    description: "Resizes an existing object on the board.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "The ID of the object to resize" },
+        width: { type: "NUMBER", description: "New width" },
+        height: { type: "NUMBER", description: "New height" }
+      },
+      required: ["objectId", "width", "height"]
+    }
+  },
+  {
+    name: "changeObjectColor",
+    description: "Changes the color of an existing object on the board.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "The ID of the object to recolor" },
+        color: { type: "STRING", description: "New hex color code" }
+      },
+      required: ["objectId", "color"]
+    }
+  },
+  {
+    name: "createGrid",
+    description: "Creates a grid of objects on the board. Use this when the user asks for a grid, table, matrix, or organized layout of multiple objects.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectType: { type: "STRING", enum: ["sticky", "rectangle", "circle", "triangle"], description: "Type of object to create in each cell" },
+        rows: { type: "NUMBER", description: "Number of rows" },
+        columns: { type: "NUMBER", description: "Number of columns" },
+        startX: { type: "NUMBER", description: "X coordinate of top-left cell (default 100)" },
+        startY: { type: "NUMBER", description: "Y coordinate of top-left cell (default 100)" },
+        cellWidth: { type: "NUMBER", description: "Width of each cell (default 150)" },
+        cellHeight: { type: "NUMBER", description: "Height of each cell (default 150)" },
+        gapX: { type: "NUMBER", description: "Horizontal gap between cells (default 20)" },
+        gapY: { type: "NUMBER", description: "Vertical gap between cells (default 20)" },
+        color: { type: "STRING", description: "Color for all objects" },
+        labels: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Text labels for each cell in row-major order"
+        }
+      },
+      required: ["objectType", "rows", "columns"]
+    }
+  },
+  {
+    name: "arrangeInGrid",
+    description: "Rearranges EXISTING objects on the board into a grid layout. Use this when the user says 'arrange these in a grid', 'organize these notes', or 'lay these out'. This MOVES existing objects — it does NOT create new ones.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectIds: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "IDs of existing objects to arrange"
+        },
+        columns: { type: "NUMBER", description: "Number of columns (default: auto-calculated)" },
+        startX: { type: "NUMBER", description: "X of top-left (default 100)" },
+        startY: { type: "NUMBER", description: "Y of top-left (default 100)" },
+        gapX: { type: "NUMBER", description: "Horizontal gap (default 20)" },
+        gapY: { type: "NUMBER", description: "Vertical gap (default 20)" }
+      },
+      required: ["objectIds"]
+    }
+  },
+  {
+    name: "spaceEvenly",
+    description: "Spaces existing objects evenly along a direction. Use when the user says 'space these evenly', 'distribute evenly', or 'spread out'.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectIds: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "IDs of objects to space"
+        },
+        direction: { type: "STRING", enum: ["horizontal", "vertical"], description: "Direction to space (default horizontal)" }
+      },
+      required: ["objectIds"]
+    }
+  },
+  {
+    name: "deleteObject",
+    description: "Deletes an object from the board.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "ID of the object to delete" }
+      },
+      required: ["objectId"]
+    }
+  },
+  {
+    name: "resolveOverlaps",
+    description: "Resolves overlapping objects with MINIMAL movement. Nudges overlapping items apart with a small 15px gap — does NOT scatter them widely. Use when the user says 'make items not overlap', 'fix overlaps', 'untangle', or 'spread out a little'.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectIds: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "IDs of objects to de-overlap. If empty, all non-frame objects are used."
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "arrangeByType",
+    description: "Groups ALL objects (including frames, shapes, stickies, lines) by their type and arranges each group in a neat cluster. Resets rotation to 0 and makes non-frame objects uniform size within each type group. Use when the user says 'arrange by object', 'group by type', 'organize by kind', 'sort by shape', or 'arrange everything by type'.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        gap: { type: "NUMBER", description: "Gap between objects within a group (default 15)" },
+        groupGap: { type: "NUMBER", description: "Gap between type groups (default 60)" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "fitFrameToContents",
+    description: "Resizes AND repositions a frame to tightly fit all objects inside it with padding. Use when the user says 'resize frame to fit', 'fit frame to contents', 'shrink frame to fit'. This handles both position and size adjustment correctly.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        frameId: { type: "STRING", description: "ID of the frame to fit" },
+        padding: { type: "NUMBER", description: "Padding around contents (default 30)" }
+      },
+      required: ["frameId"]
+    }
+  },
+  {
+    name: "createBoard",
+    description: "Creates a brand new board and navigates to it. Use when the user says 'create a board', 'make a new board', 'set up a board for...'. After creating, you can add objects to it with other tools.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING", description: "Name of the new board" },
+        group: { type: "STRING", description: "Optional group/folder name" }
+      },
+      required: ["name"]
+    }
+  }
+];
+
+export const systemPrompt = `You are a whiteboard assistant. You can create, move, resize, recolor, delete, and arrange objects on the board.
+
+CRITICAL RULE: NEVER ask the user for clarification, details, coordinates, labels, colors, sizes, or any other information. ALWAYS use your best judgment and act immediately.
+
+DUPLICATES ARE ALLOWED: Objects are identified by their unique IDs, NOT by their title or text. If the user asks to create something that already exists on the board (same title, text, or type), ALWAYS create it anyway. Never refuse or skip creation because a similar object already exists. Board name deduplication is handled automatically — just use the requested name.
+
+TOOLS AVAILABLE:
+- createStickyNote: Create a new sticky note (auto-avoids overlaps)
+- createShape: Create a shape (auto-avoids overlaps)
+- createFrame: Create a frame container (auto-avoids overlaps). Frames CAN be moved and resized.
+- moveObject: Move ANY object (sticky, shape, frame, line) to new coordinates
+- resizeObject: Resize ANY object (sticky, shape, frame, line) — works on frames too
+- changeObjectColor: Change any object's color
+- createGrid: Create a NEW grid of objects from scratch
+- arrangeInGrid: Rearrange EXISTING objects into a grid (does NOT create new objects)
+- spaceEvenly: Space existing objects evenly (horizontal or vertical)
+- deleteObject: Delete an object
+- resolveOverlaps: Minimally nudge overlapping objects apart with 15px gaps
+- arrangeByType: Group ALL objects (frames, shapes, stickies, lines) by type into neat clusters. Resets rotation and normalizes sizes.
+- fitFrameToContents: Resize AND reposition a frame to tightly fit all objects inside it. Use this instead of manual resizeObject+moveObject for frames.
+- createBoard: Create a new board and navigate to it
+
+FRAME-ITEM ASSOCIATION (frameIndex):
+When creating frames with items inside them, use frameIndex to link them by document ID:
+- Give each createFrame a unique frameIndex (0, 1, 2, ...)
+- Give each createStickyNote/createShape a matching frameIndex to place it in that frame
+- Items with frameIndex are AUTO-POSITIONED inside the frame in a grid layout — do NOT specify x/y for them
+- Frame sizes are AUTO-CALCULATED based on item count — do NOT specify width/height for frames with items
+- This links items to frames by their Firestore document ID, NOT by title
+
+FRAME NESTING (parentFrameIndex):
+- To nest a frame inside another frame, set parentFrameIndex on the child frame to the parent's frameIndex
+- Parent frames must be created in the same batch
+- Parent frames auto-size to include both items AND child frames
+- Example: parentFrameIndex: 0 nests a frame inside the frame with frameIndex: 0
+
+CRITICAL TOOL SELECTION RULES:
+- "Make items not overlap" / "fix overlaps" → use resolveOverlaps.
+- "Arrange by object/type" / "group by type" / "organize by kind" → use arrangeByType. This includes ALL objects: frames, shapes, stickies, lines. Do NOT exclude any type.
+- "Arrange notes in a grid" → use arrangeInGrid with existing IDs.
+- "Space evenly" / "distribute" → use spaceEvenly.
+- "Resize frame to fit" / "fit frame to contents" → use fitFrameToContents (NOT resizeObject + moveObject).
+- Frames are fully transformable: moveObject and resizeObject both work on frames.
+
+EXAMPLES (act immediately without asking):
+- "Arrange everything by type" → use arrangeByType (includes frames, shapes, stickies, all types).
+- "Make all items not overlap" → use resolveOverlaps.
+- "Resize the frame to fit its contents" → use fitFrameToContents with the frame's ID.
+- "Create a grid of project tasks" → Use createGrid with sensible labels.
+- When the user asks to set up any structured board (retrospective, kanban, SWOT, pros/cons, sprint planning, categories, etc.), create frames for each column/section and use frameIndex to place sticky notes inside them. Choose appropriate titles, colors, and example items based on the prompt.
+
+DEFAULTS:
+- Coordinates: x: 500, y: 500 if not specified
+- Colors: '#fef08a' for sticky notes, '#3b82f6' for shapes, '#6366f1' for frames
+- Always provide sensible labels — never leave cells empty
+
+The user's message includes a summary of current board objects with their IDs, types, positions, sizes, and text. Use object IDs from context. Match objects by text, type, or position.`;

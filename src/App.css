@@ -280,6 +280,16 @@
   overflow: hidden;
   transition: transform 0.15s;
   border: 2px solid rgba(255,255,255,0.2);
+  outline: none;
+  box-shadow: none;
+  background-color: var(--bg-tertiary);
+}
+
+.user-avatar-circle:focus,
+.user-avatar-circle:active,
+.user-avatar-circle:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .user-avatar-circle:hover {
@@ -451,6 +461,10 @@
   color: var(--text-primary);
 }
 
+.groups-list {
+  margin-top: 32px;
+}
+
 .board-group {
   margin-bottom: 40px;
 }
@@ -529,7 +543,7 @@
 .mini-avatar {
   width: 24px;
   height: 24px;
-  border-radius: 12px;
+  border-radius: 50%;
   border: 2px solid var(--bg-secondary);
   display: flex;
   align-items: center;
@@ -538,6 +552,7 @@
   font-weight: bold;
   color: white;
   margin-left: -8px;
+  overflow: hidden;
 }
 
 .mini-chip {
@@ -644,17 +659,18 @@
 
 .selected-actions {
   position: fixed;
-  bottom: 180px;
-  left: 40px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  padding: 8px 6px;
+  border-radius: 10px;
   z-index: 1000;
 }
 
 .action-fab {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border-radius: 22px;
   background: var(--toolbar-bg);
   color: var(--text-primary);
@@ -669,9 +685,9 @@
 
 .action-fab:hover {
   transform: scale(1.1);
-  background: var(--accent-color);
+  background: var(--accent-primary);
   color: white;
-  border-color: var(--accent-color);
+  border-color: var(--accent-primary);
 }
 
 .action-fab.delete-action {
@@ -699,7 +715,6 @@
   padding: 10px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   z-index: 1000;
-  width: 160px;
 }
 
 
@@ -728,10 +743,20 @@
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 100px;
   color: var(--text-tertiary);
   font-style: italic;
+  min-height: calc(100vh - 220px);
+  gap: 16px;
+}
+
+.empty-state p {
+  font-size: 1.25rem;
+  margin: 0;
 }
 
 .presence-avatars {
@@ -749,7 +774,7 @@
 .avatar-circle {
   width: 32px;
   height: 32px;
-  border-radius: 16px;
+  border-radius: 50%;
   border: 2px solid #1f2937;
   display: flex;
   align-items: center;
@@ -759,24 +784,38 @@
   color: white;
   margin-right: -8px;
   transition: transform 0.2s;
+  overflow: hidden;
 }
 
-.avatar-stack:hover .avatar-circle {
+.avatar-you-wrapper {
+  position: relative;
+  display: inline-flex;
+  transition: transform 0.2s;
+  margin-right: -8px;
+}
+
+.avatar-you-wrapper .avatar-circle {
+  margin-right: 0;
+}
+
+.avatar-stack:hover .avatar-circle,
+.avatar-stack:hover .avatar-you-wrapper {
   transform: translateX(-4px);
 }
 
 .avatar-circle.large {
   width: 48px;
   height: 48px;
-  border-radius: 24px;
+  border-radius: 50%;
   font-size: 1.2rem;
   margin-right: 0;
+  overflow: hidden;
 }
 
 .avatar-chip {
   width: 32px;
   height: 32px;
-  border-radius: 16px;
+  border-radius: 50%;
   background: #374151;
   border: 2px solid #1f2937;
   display: flex;
@@ -1112,6 +1151,59 @@
   border: none;
 }
 
+.shape-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shape-btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+.shape-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.shape-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.shape-btn.active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #ffffff;
+  border-radius: 8px;
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
 /* Snap to grid toggle */
 .snap-toggle {
   background: transparent;
@@ -1346,4 +1438,22 @@
 
 .tutorial-next:hover {
   background: var(--accent-hover);
+}
+
+.avatar-you-badge {
+  position: absolute;
+  bottom: -1px;
+  right: -4px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1.5px solid var(--header-bg);
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 20;
 }

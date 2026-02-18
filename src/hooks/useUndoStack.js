@@ -1,0 +1,136 @@
+import { useState, useCallback, useRef } from 'react';
+
+const MAX_STACK = 50;
+
+export function useUndoStack(board) {
+  const [stack, setStack] = useState([]);
+  const stackRef = useRef([]);
+  stackRef.current = stack;
+
+  const push = useCallback((entry) => {
+    setStack(prev => [...prev.slice(-(MAX_STACK - 1)), entry]);
+  }, []);
+
+  const addObject = useCallback(async (data) => {
+    const ref = await board.addObject(data);
+    if (ref) {
+      push({ type: 'add', objectId: ref.id });
+    }
+    return ref;
+  }, [board.addObject, push]);
+
+  const updateObject = useCallback(async (objectId, updates) => {
+    // Snapshot the keys being changed for rollback
+    const current = board.objects[objectId];
+    if (current) {
+      const rollback = {};
+      for (const key of Object.keys(updates)) {
+        rollback[key] = current[key] !== undefined ? current[key] : null;
+      }
+      push({ type: 'update', objectId, rollback });
+    }
+    return board.updateObject(objectId, updates);
+  }, [board.updateObject, board.objects, push]);
+
+  const deleteObject = useCallback(async (objectId) => {
+    const current = board.objects[objectId];
+    if (current) {
+      const { id, ...snapshot } = current;
+      push({ type: 'delete', objectId, snapshot });
+    }
+    return board.deleteObject(objectId);
+  }, [board.deleteObject, board.objects, push]);
+
+  const batchUpdateObjects = useCallback(async (updates) => {
+    // Snapshot all changed keys for each object
+    const rollbacks = updates.map(({ id, data }) => {
+      const current = board.objects[id];
+      if (!current) return null;
+      const rollback = {};
+      for (const key of Object.keys(data)) {
+        rollback[key] = current[key] !== undefined ? current[key] : null;
+      }
+      return { id, rollback };
+    }).filter(Boolean);
+    if (rollbacks.length > 0) {
+      push({ type: 'batch', rollbacks });
+    }
+    return board.batchUpdateObjects(updates);
+  }, [board.batchUpdateObjects, board.objects, push]);
+
+  const batchWriteAndDelete = useCallback(async (updates, deleteIds) => {
+    // Snapshot deleted objects for rollback
+    const deletedSnapshots = deleteIds.map(id => {
+      const current = board.objects[id];
+      if (!current) return null;
+      const { id: _id, ...snapshot } = current;
+      return { id, snapshot };
+    }).filter(Boolean);
+
+    // Snapshot updated objects for rollback
+    const rollbacks = updates.map(({ id, data }) => {
+      const current = board.objects[id];
+      if (!current) return null;
+      const rollback = {};
+      for (const key of Object.keys(data)) {
+        rollback[key] = current[key] !== undefined ? current[key] : null;
+      }
+      return { id, rollback };
+    }).filter(Boolean);
+
+    if (rollbacks.length > 0 || deletedSnapshots.length > 0) {
+      push({ type: 'batchWriteAndDelete', rollbacks, deletedSnapshots });
+    }
+    return board.batchWriteAndDelete(updates, deleteIds);
+  }, [board.batchWriteAndDelete, board.objects, push]);
+
+  const undo = useCallback(async () => {
+    const current = stackRef.current;
+    if (current.length === 0) return;
+    const entry = current[current.length - 1];
+    setStack(prev => prev.slice(0, -1));
+
+    switch (entry.type) {
+      case 'add':
+        await board.deleteObject(entry.objectId);
+        break;
+      case 'update':
+        await board.updateObject(entry.objectId, entry.rollback);
+        break;
+      case 'delete':
+        await board.addObject(entry.snapshot);
+        break;
+      case 'batch':
+        if (entry.rollbacks.length > 0) {
+          await board.batchUpdateObjects(
+            entry.rollbacks.map(({ id, rollback }) => ({ id, data: rollback }))
+          );
+        }
+        break;
+      case 'batchWriteAndDelete':
+        // Re-create deleted objects
+        for (const { snapshot } of (entry.deletedSnapshots || [])) {
+          await board.addObject(snapshot);
+        }
+        // Rollback updated objects
+        if (entry.rollbacks.length > 0) {
+          await board.batchUpdateObjects(
+            entry.rollbacks.map(({ id, rollback }) => ({ id, data: rollback }))
+          );
+        }
+        break;
+    }
+  }, [board.deleteObject, board.updateObject, board.addObject, board.batchUpdateObjects]);
+
+  return {
+    objects: board.objects,
+    loading: board.loading,
+    addObject,
+    updateObject,
+    deleteObject,
+    batchUpdateObjects,
+    batchWriteAndDelete,
+    undo,
+    canUndo: stack.length > 0,
+  };
+}

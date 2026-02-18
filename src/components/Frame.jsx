@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 
-export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80 }) => {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef }) {
   const groupRef = useRef();
   const trRef = useRef();
   const bgRectRef = useRef();
@@ -46,7 +46,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
         name={id}
         x={x}
         y={y}
-        rotation={rotation}
+        rotation={0}
         draggable={!isEditing}
         onClick={(e) => {
           e.cancelBubble = true;
@@ -56,11 +56,21 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           e.cancelBubble = true;
           onSelect(id);
         }}
+        onDragStart={() => {
+          if (dragLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(dragLayerRef.current);
+          }
+        }}
         onDragMove={(e) => {
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          onDragEnd(id, { x: e.target.x(), y: e.target.y() });
+          const pos = { x: e.target.x(), y: e.target.y() };
+          if (mainLayerRef?.current && groupRef.current) {
+            groupRef.current.moveTo(mainLayerRef.current);
+            mainLayerRef.current.batchDraw();
+          }
+          onDragEnd(id, pos);
         }}
       >
         {/* Translucent background fill derived from frame color */}
@@ -72,6 +82,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           opacity={0.06}
           cornerRadius={4}
           listening={false}
+          perfectDrawEnabled={false}
         />
         {/* Frame body - dashed border */}
         <Rect
@@ -83,6 +94,8 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           strokeWidth={2}
           dash={[8, 4]}
           cornerRadius={4}
+          listening={false}
+          perfectDrawEnabled={false}
         />
         {/* Title bar */}
         <Rect
@@ -92,6 +105,8 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
           fill={color}
           opacity={0.25}
           cornerRadius={[4, 4, 0, 0]}
+          listening={false}
+          perfectDrawEnabled={false}
         />
         {/* Title text */}
         {!isEditing ? (
@@ -109,6 +124,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
             fontFamily="sans-serif"
             ellipsis={true}
             wrap="none"
+            perfectDrawEnabled={false}
             onDblClick={(e) => {
               e.cancelBubble = true;
               setIsEditing(true);
@@ -163,6 +179,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
               opacity={0.15}
               cornerRadius={4}
               listening={false}
+              perfectDrawEnabled={false}
             />
             <Text
               text={dragState.action === 'add' ? '+' : '-'}
@@ -184,8 +201,7 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
       {isSelected && !isEditing && (
         <Transformer
           ref={trRef}
-          rotateEnabled={true}
-          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
+          rotateEnabled={false}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           anchorSize={10}
           anchorStrokeWidth={2}
@@ -251,17 +267,35 @@ export const Frame = ({ id, x, y, width = 400, height = 300, title = 'Frame', co
               onResizeClamped(id);
             }
             if (onTransformEnd) {
-              onTransformEnd(id, {
+              const clamped = onTransformEnd(id, {
                 x: finalX,
                 y: finalY,
-                rotation: group.rotation(),
+                rotation: 0,
                 width: finalW,
                 height: finalH,
               });
+
+              if (clamped && (clamped.width !== finalW || clamped.height !== finalH || clamped.x !== finalX || clamped.y !== finalY)) {
+                groupRef.current.x(clamped.x);
+                groupRef.current.y(clamped.y);
+                bgRectRef.current.width(clamped.width);
+                bgRectRef.current.height(clamped.height);
+                borderRectRef.current.width(clamped.width);
+                borderRectRef.current.height(clamped.height);
+                const clampedTitleBarH = Math.max(32, Math.min(52, clamped.height * 0.12));
+                titleBarRef.current.width(clamped.width);
+                titleBarRef.current.height(clampedTitleBarH);
+                titleTextRef.current.width(clamped.width - 16);
+                titleTextRef.current.height(clampedTitleBarH);
+                trRef.current?.nodes([groupRef.current]);
+                groupRef.current.getLayer()?.batchDraw();
+              }
             }
           }}
         />
       )}
     </>
   );
-};
+}
+
+export const Frame = React.memo(FrameInner);

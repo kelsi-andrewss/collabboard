@@ -1,13 +1,13 @@
 import React from 'react';
 import { Circle, Text, Group, Rect } from 'react-konva';
 
-export const Cursors = ({ presentUsers, userId }) => {
+function CursorsInner({ presentUsers, userId }) {
   return (
     <>
       {Object.entries(presentUsers).map(([id, data]) => {
         if (id === userId) return null;
         return (
-          <Group key={id} x={data.x} y={data.y}>
+          <Group key={id} x={data.x} y={data.y} listening={false}>
             <Circle
               radius={5}
               fill={data.color}
@@ -34,4 +34,20 @@ export const Cursors = ({ presentUsers, userId }) => {
       })}
     </>
   );
-};
+}
+
+// Update this comparator if new state props are added
+function cursorsEqual(prev, next) {
+  if (prev.userId !== next.userId) return false;
+  const pu = prev.presentUsers, nu = next.presentUsers;
+  const pk = Object.keys(pu), nk = Object.keys(nu);
+  if (pk.length !== nk.length) return false;
+  for (const k of pk) {
+    if (!nu[k]) return false;
+    if (pu[k].x !== nu[k].x || pu[k].y !== nu[k].y ||
+        pu[k].color !== nu[k].color || pu[k].name !== nu[k].name) return false;
+  }
+  return true;
+}
+
+export const Cursors = React.memo(CursorsInner, cursorsEqual);
