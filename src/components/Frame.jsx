@@ -91,7 +91,12 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           opacity={0.06}
           cornerRadius={4}
           listening={false}
-          perfectDrawEnabled={false}
+          shadowEnabled={true}
+          shadowBlur={14}
+          shadowOffsetX={3}
+          shadowOffsetY={5}
+          shadowOpacity={0.18}
+          shadowColor="#000000"
         />
         {/* Frame body - dashed border */}
         <Rect

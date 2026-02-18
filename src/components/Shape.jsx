@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onTransformMove, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef }) {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
-  const resizeOverlayRef = useRef();
   const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -68,8 +67,8 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
       <Group
         ref={groupRef}
         name={id}
-        x={x}
-        y={y}
+        x={dragPos?.id === id ? dragPos.x : x}
+        y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
         draggable={!isEditing}
         onClick={(e) => {
@@ -108,7 +107,12 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             height={height}
             fill={color}
             cornerRadius={4}
-            perfectDrawEnabled={false}
+            shadowEnabled={true}
+            shadowBlur={frameId ? 6 : 18}
+            shadowOffsetX={frameId ? 1 : 4}
+            shadowOffsetY={frameId ? 2 : 6}
+            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowColor="#000000"
           />
         )}
         {type === 'circle' && (
@@ -119,7 +123,12 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             radiusX={width / 2}
             radiusY={height / 2}
             fill={color}
-            perfectDrawEnabled={false}
+            shadowEnabled={true}
+            shadowBlur={frameId ? 6 : 18}
+            shadowOffsetX={frameId ? 1 : 4}
+            shadowOffsetY={frameId ? 2 : 6}
+            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowColor="#000000"
           />
         )}
         {type === 'triangle' && (
@@ -128,7 +137,12 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             width={width}
             height={height}
             fill={color}
-            perfectDrawEnabled={false}
+            shadowEnabled={true}
+            shadowBlur={frameId ? 6 : 18}
+            shadowOffsetX={frameId ? 1 : 4}
+            shadowOffsetY={frameId ? 2 : 6}
+            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowColor="#000000"
             sceneFunc={(ctx, shape) => {
               const w = shape.width();
               const h = shape.height();
@@ -152,12 +166,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             fill="#ef4444" opacity={0.35} cornerRadius={4}
             listening={false} perfectDrawEnabled={false} />
         )}
-        <Rect
-          ref={resizeOverlayRef}
-          x={0} y={0} width={width} height={height}
-          fill="#ef4444" opacity={0.35} cornerRadius={4}
-          listening={false} perfectDrawEnabled={false} visible={false}
-        />
         {!isEditing ? (
           <Text
             ref={textRef}
@@ -248,23 +256,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             if (newBox.width < 5 || newBox.height < 5) return oldBox;
             return newBox;
           }}
-          onTransform={() => {
-            const group = groupRef.current;
-            const scaleX = group.scaleX();
-            const scaleY = group.scaleY();
-            const w = Math.max(5, sizeRef.current.w * scaleX);
-            const h = Math.max(5, sizeRef.current.h * scaleY);
-            if (resizeOverlayRef.current) {
-              resizeOverlayRef.current.width(w);
-              resizeOverlayRef.current.height(h);
-              if (onTransformMove) {
-                const illegal = onTransformMove(id, { x: group.x(), y: group.y(), width: w, height: h });
-                resizeOverlayRef.current.visible(!!illegal);
-              }
-            }
-          }}
           onTransformEnd={() => {
-            if (resizeOverlayRef.current) resizeOverlayRef.current.visible(false);
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
