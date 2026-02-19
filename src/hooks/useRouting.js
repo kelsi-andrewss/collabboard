@@ -23,6 +23,17 @@ export function useRouting() {
   const navigateToBoard = (slug, id, name) => { setGroupSlug(slug); setBoardId(id); setBoardName(name || id); };
 
   useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseHash();
+      setGroupSlug(parsed.groupSlug);
+      setBoardId(parsed.boardId || null);
+      if (!parsed.boardId) setBoardName('');
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
     if (boardId && groupSlug) {
       window.location.hash = `${groupSlug}/${boardId}`;
       localStorage.setItem('collaboard_boardId', boardId);

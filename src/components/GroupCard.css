@@ -18,13 +18,31 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+.group-card[draggable=true] {
+  cursor: grab;
+}
+
+.group-card.dragging {
+  opacity: 0.4;
+}
+
+.group-card.drag-over {
+  box-shadow: 0 -3px 0 0 var(--accent-primary);
+}
+
 .group-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 14px 16px 10px;
+  gap: 7px;
+  padding: 12px 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.group-card-chevron {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 .group-card-icon {
@@ -44,6 +62,177 @@
   color: var(--text-tertiary);
 }
 
+.group-card-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.group-card-header:hover .group-card-delete-btn {
+  opacity: 1;
+}
+
+.group-card-delete-btn:hover {
+  color: #ef4444;
+}
+
+/* Board cards grid inside each group */
+.board-cards-grid {
+  display: grid;
+  /* columns set via inline style based on board count */
+}
+
+.board-card {
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+.board-card:last-child {
+  border-right: none;
+}
+
+.board-card:hover {
+  background: var(--bg-tertiary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+.board-card-thumbnail {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.board-card-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.board-card-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--border-color) 100%);
+}
+
+.board-card-info {
+  padding: 8px 10px;
+}
+
+.board-card-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.board-card-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.board-card:hover .board-card-delete-btn {
+  opacity: 1;
+}
+
+.board-card-delete-btn:hover {
+  color: #ef4444;
+}
+
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.board-card-date {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.board-card-online {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+}
+
+.board-card-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: bold;
+  color: white;
+  margin-left: -5px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.board-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.board-card-avatar-extra {
+  background: #374151;
+  color: #9ca3af;
+  font-size: 0.5rem;
+}
+
+.board-cards-see-all {
+  grid-column: 1 / -1;
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+  padding: 6px 4px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.board-cards-see-all:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Legacy - kept for backward compat */
 .group-card-boards {
   padding: 8px 8px 10px;
   display: flex;
@@ -88,4 +277,20 @@
 
 .group-card-see-all:hover {
   background: var(--bg-tertiary);
+}
+
+.danger-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.danger-btn:hover {
+  background: #dc2626;
 }
