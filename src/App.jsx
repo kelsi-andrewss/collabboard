@@ -74,7 +74,7 @@ export function App() {
   const rawBoard = useBoard(boardId, user);
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
-  const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings } = useGroupsList(user, effectiveAdminView);
+  const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected } = useGroupsList(user, effectiveAdminView);
   const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
 
   const currentBoard = boardId ? allBoards.find(b => b.id === boardId) || null : null;
@@ -482,6 +482,7 @@ export function App() {
                 groups={groups}
                 onBack={navigateHome}
                 onOpenBoard={navigateToBoard}
+                onNavigateToGroup={navigateToGroup}
                 user={user}
                 isAdmin={isAdmin}
                 adminViewActive={adminViewActive}
@@ -501,6 +502,9 @@ export function App() {
                 isAdmin={isAdmin}
                 adminViewActive={adminViewActive}
                 migrateGroupStrings={migrateGroupStrings}
+                createSubgroup={createSubgroup}
+                deleteGroupCascade={deleteGroupCascade}
+                setGroupProtected={setGroupProtected}
               />
             )}
             <FABButtons

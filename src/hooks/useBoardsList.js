@@ -126,5 +126,9 @@ export function useBoardsList(currentUser, { isAdminView = false, groups = [] } 
     }
   };
 
-  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard };
+  const setBoardProtected = async (boardId, bool) => {
+    await updateDoc(doc(db, 'boards', boardId), { protected: bool, updatedAt: serverTimestamp() });
+  };
+
+  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, setBoardProtected };
 }

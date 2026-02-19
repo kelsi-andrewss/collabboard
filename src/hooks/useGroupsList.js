@@ -3,6 +3,13 @@ import { collection, onSnapshot, query, where, addDoc, serverTimestamp, doc, upd
 import { db } from '../firebase/config';
 import { toSlug } from '../utils/slugUtils.js';
 
+function getDescendants(groupId, allGroups) {
+  const children = allGroups.filter(g => g.parentGroupId === groupId);
+  return children.reduce((acc, child) => {
+    return [...acc, child.id, ...getDescendants(child.id, allGroups)];
+  }, []);
+}
+
 export function useGroupsList(currentUser, isAdminView = false) {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,5 +144,65 @@ export function useGroupsList(currentUser, isAdminView = false) {
     await batch.commit();
   };
 
-  return { groups, loading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings };
+  const createSubgroup = async (parentGroupId, name, visibility = 'private') => {
+    const slug = toSlug(name);
+    let finalSlug = slug;
+    const existing = groups.filter(g => g.slug === slug || g.slug?.startsWith(slug + '-'));
+    if (existing.length > 0) {
+      finalSlug = `${slug}-${existing.length + 1}`;
+    }
+
+    const groupsRef = collection(db, 'groups');
+    const ref = await addDoc(groupsRef, {
+      name,
+      slug: finalSlug,
+      visibility,
+      parentGroupId,
+      ownerId: currentUser?.uid || null,
+      members: currentUser ? { [currentUser.uid]: 'admin' } : {},
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return ref;
+  };
+
+  const deleteGroupCascade = async (groupId, allGroups, allBoards) => {
+    const descendantIds = getDescendants(groupId, allGroups);
+    const allGroupIds = [groupId, ...descendantIds];
+
+    const blockedItems = [];
+    for (const gId of allGroupIds) {
+      const g = allGroups.find(gr => gr.id === gId);
+      if (g?.protected) blockedItems.push({ name: g.name, type: 'group' });
+    }
+    for (const b of allBoards) {
+      if (allGroupIds.includes(b.groupId) && b.protected) {
+        blockedItems.push({ name: b.name, type: 'board' });
+      }
+    }
+    if (blockedItems.length > 0) {
+      throw { blocked: true, items: blockedItems };
+    }
+
+    const affectedBoards = allBoards.filter(b => allGroupIds.includes(b.groupId));
+    const objectSnaps = await Promise.all(
+      affectedBoards.map(b => getDocs(collection(db, 'boards', b.id, 'objects')))
+    );
+
+    const batch = writeBatch(db);
+    for (let i = 0; i < affectedBoards.length; i++) {
+      objectSnaps[i].docs.forEach(d => batch.delete(d.ref));
+      batch.delete(doc(db, 'boards', affectedBoards[i].id));
+    }
+    for (const gId of allGroupIds) {
+      batch.delete(doc(db, 'groups', gId));
+    }
+    await batch.commit();
+  };
+
+  const setGroupProtected = async (groupId, bool) => {
+    await updateDoc(doc(db, 'groups', groupId), { protected: bool, updatedAt: serverTimestamp() });
+  };
+
+  return { groups, loading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected };
 }

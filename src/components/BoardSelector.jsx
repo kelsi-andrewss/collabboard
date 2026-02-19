@@ -55,9 +55,9 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected }) {
   const effectiveAdminView = isAdmin && adminViewActive;
-  const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
+  const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
   const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -445,7 +445,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
       {(() => {
         const ungroupedEntry = sortedGroupEntries.find(([k]) => k === null || k === 'null');
-        const groupedEntries = sortedGroupEntries.filter(([k]) => k !== null && k !== 'null');
+        const rootGroupIds = new Set(groupsProp.filter(g => !g.parentGroupId).map(g => g.id));
+        const groupedEntries = sortedGroupEntries.filter(([k]) => k !== null && k !== 'null' && rootGroupIds.has(k));
         const ungroupedBoards = ungroupedEntry ? ungroupedEntry[1] : [];
 
         const allItems = [
@@ -510,11 +511,16 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         key={item.key}
                         group={item.groupObj}
                         boards={item.boards}
+                        subgroups={groupsProp.filter(g => g.parentGroupId === item.groupObj?.id)}
+                        allGroups={groupsProp}
                         onNavigateToGroup={onNavigateToGroup || (() => {})}
                         onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
                         globalPresence={globalPresence}
                         onDeleteBoard={deleteBoard}
-                        onDeleteGroup={deleteGroup}
+                        onDeleteGroup={(id) => deleteGroupCascade(id, groupsProp, boards)}
+                        onCreateSubgroup={createSubgroup}
+                        onSetGroupProtected={setGroupProtected}
+                        onSetBoardProtected={setBoardProtected}
                         onGroupDragOver={(e) => handleGroupDragOver(e, item.groupObj?.id)}
                         onGroupDrop={(e) => handleGroupDrop(e, item.groupObj?.id)}
                         onGroupDragLeave={(e) => handleGroupDragLeave(e, item.groupObj?.id)}

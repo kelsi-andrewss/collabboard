@@ -391,3 +391,99 @@
 .danger-btn:hover {
   background: #dc2626;
 }
+
+.group-card--nested {
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.group-card--nested .group-card-header {
+  padding: 10px 12px;
+  padding-left: calc(12px + var(--depth, 0) * 12px);
+}
+
+.group-card-subgroup-section {
+  padding: 8px 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.group-card-add-subgroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 8px;
+}
+
+.group-card-add-subgroup input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  flex: 1;
+  outline: none;
+}
+
+.group-card-protect-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.group-card-header:hover .group-card-protect-btn {
+  opacity: 1;
+}
+
+.group-card-protect-btn:hover {
+  color: var(--accent-primary);
+}
+
+.board-card-protect-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.board-card:hover .board-card-protect-btn {
+  opacity: 1;
+}
+
+.board-card-protect-btn:hover {
+  color: var(--accent-primary);
+}
+
+.shield-badge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent-primary);
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.board-card-delete-btn--disabled,
+.group-card-delete-btn--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}

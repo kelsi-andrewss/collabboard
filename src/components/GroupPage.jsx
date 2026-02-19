@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Layout, Search, LayoutGrid, Lock } from 'lucide-react';
+import { ArrowLeft, Layout, Search, LayoutGrid, Lock, Folder, ChevronRight } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
-import { findGroupBySlug } from '../utils/slugUtils.js';
+import { findGroupBySlug, groupToSlug } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
 import './GroupPage.css';
 
-export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, isAdmin, adminViewActive }) {
+function buildAncestorChain(groupObj, groups) {
+  const chain = [];
+  let current = groupObj;
+  while (current?.parentGroupId) {
+    const parent = groups.find(g => g.id === current.parentGroupId);
+    if (!parent) break;
+    chain.unshift(parent);
+    current = parent;
+  }
+  return chain;
+}
+
+export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
   const globalPresence = useGlobalPresence();
@@ -15,6 +27,9 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, i
   const groupObj = findGroupBySlug(groups, groupSlug);
   const groupName = groupObj?.name || null;
   const groupId = groupObj?.id || null;
+
+  const ancestors = groupObj ? buildAncestorChain(groupObj, groups) : [];
+  const childGroups = groups.filter(g => g.parentGroupId === groupId);
 
   // Check if user is a member of this group (for private groups)
   const isMember = groupObj && user && (
@@ -39,13 +54,24 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, i
     return bTime - aTime;
   });
 
+  const handleBack = () => {
+    if (groupObj?.parentGroupId) {
+      const parent = groups.find(g => g.id === groupObj.parentGroupId);
+      if (parent && onNavigateToGroup) {
+        onNavigateToGroup(groupToSlug(parent));
+        return;
+      }
+    }
+    onBack();
+  };
+
   if (isPrivateAndNotMember) {
     return (
       <div className="group-page">
         <div className="group-page-header">
-          <button className="group-page-back" onClick={onBack}>
+          <button className="group-page-back" onClick={handleBack}>
             <ArrowLeft size={16} />
-            All Groups
+            {groupObj?.parentGroupId ? 'Parent Group' : 'All Groups'}
           </button>
           <h1 className="group-page-title">
             <Lock size={20} />
@@ -63,10 +89,27 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, i
   return (
     <div className="group-page">
       <div className="group-page-header">
-        <button className="group-page-back" onClick={onBack}>
+        <button className="group-page-back" onClick={handleBack}>
           <ArrowLeft size={16} />
-          All Groups
+          {groupObj?.parentGroupId ? 'Parent Group' : 'All Groups'}
         </button>
+        {ancestors.length > 0 && (
+          <div className="group-page-breadcrumb">
+            <button className="group-page-breadcrumb-item" onClick={onBack}>
+              All Groups
+            </button>
+            {ancestors.map(a => (
+              <React.Fragment key={a.id}>
+                <ChevronRight size={12} className="group-page-breadcrumb-sep" />
+                <button className="group-page-breadcrumb-item" onClick={() => onNavigateToGroup?.(groupToSlug(a))}>
+                  {a.name}
+                </button>
+              </React.Fragment>
+            ))}
+            <ChevronRight size={12} className="group-page-breadcrumb-sep" />
+            <span className="group-page-breadcrumb-current">{groupName}</span>
+          </div>
+        )}
         <h1 className="group-page-title">
           {groupName || 'Ungrouped'}
           <span className="group-page-count">{groupBoards.length} board{groupBoards.length !== 1 ? 's' : ''}</span>
@@ -87,6 +130,21 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, i
       </div>
 
       <div className="boards-grid" style={{ padding: '0 40px 40px' }}>
+        {childGroups.length > 0 && (
+          <div className="group-page-subgroups">
+            {childGroups.map(sub => (
+              <button
+                key={sub.id}
+                className="group-page-subgroup-card"
+                onClick={() => onNavigateToGroup?.(groupToSlug(sub))}
+              >
+                <Folder size={16} className="group-card-icon" />
+                <span>{sub.name}</span>
+                <ChevronRight size={14} className="group-page-subgroup-arrow" />
+              </button>
+            ))}
+          </div>
+        )}
         {sorted.map(board => (
           <div
             key={board.id}
@@ -121,7 +179,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, i
             </div>
           </div>
         ))}
-        {sorted.length === 0 && (
+        {sorted.length === 0 && childGroups.length === 0 && (
           <div className="empty-state">
             <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
             <p className="empty-state-title">
