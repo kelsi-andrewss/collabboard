@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const parseHash = () => {
   const hash = window.location.hash.slice(1);
@@ -18,22 +18,32 @@ export function useRouting() {
   });
   const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
 
+  const skipNextHashSync = useRef(false);
+
   const navigateHome = () => { setGroupSlug(null); setBoardId(null); setBoardName(''); };
   const navigateToGroup = (slug) => { setGroupSlug(slug); setBoardId(null); };
   const navigateToBoard = (slug, id, name) => { setGroupSlug(slug); setBoardId(id); setBoardName(name || id); };
 
   useEffect(() => {
-    const onHashChange = () => {
+    const syncFromUrl = () => {
       const parsed = parseHash();
       setGroupSlug(parsed.groupSlug);
       setBoardId(parsed.boardId || null);
       if (!parsed.boardId) setBoardName('');
     };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    window.addEventListener('hashchange', syncFromUrl);
+    window.addEventListener('popstate', syncFromUrl);
+    return () => {
+      window.removeEventListener('hashchange', syncFromUrl);
+      window.removeEventListener('popstate', syncFromUrl);
+    };
   }, []);
 
   useEffect(() => {
+    if (skipNextHashSync.current) {
+      skipNextHashSync.current = false;
+      return;
+    }
     if (boardId && groupSlug) {
       window.location.hash = `${groupSlug}/${boardId}`;
       localStorage.setItem('collaboard_boardId', boardId);

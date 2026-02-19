@@ -23,35 +23,60 @@ const TOOLS = [
   { key: 'undo', label: 'Undo last action' },
 ];
 
-function Arrow({ x1, y1, x2, y2, color }) {
+function HandDrawnArrow({ x1, y1, x2, y2, color }) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy);
   if (len < 1) return null;
-  const id = `arrowhead-${Math.round(x1)}-${Math.round(y1)}`;
+
+  // Seed wobble from coordinates for deterministic curves
+  const seed = Math.abs(Math.sin(x1 * 73 + y1 * 37 + x2 * 17 + y2 * 53)) * 0.5 + 0.3;
+  const perpX = -dy / len;
+  const perpY = dx / len;
+  const offset = len * 0.2 * seed;
+
+  // Control points for cubic bezier
+  const cp1x = x1 + dx * 0.25 + perpX * offset * 1.2;
+  const cp1y = y1 + dy * 0.25 + perpY * offset * 1.2;
+  const cp2x = x1 + dx * 0.75 + perpX * offset * 0.8;
+  const cp2y = y1 + dy * 0.75 + perpY * offset * 0.8;
+
+  // Arrowhead at end — two short lines
+  const endAngle = Math.atan2(y2 - cp2y, x2 - cp2x);
+  const headLen = 10;
+  const headAngle = 0.45;
+  const ah1x = x2 - headLen * Math.cos(endAngle - headAngle);
+  const ah1y = y2 - headLen * Math.sin(endAngle - headAngle);
+  const ah2x = x2 - headLen * Math.cos(endAngle + headAngle);
+  const ah2y = y2 - headLen * Math.sin(endAngle + headAngle);
+
   return (
     <svg
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <marker id={id} markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-          <polygon points="0 0, 7 3.5, 0 7" fill={color} opacity="0.5" />
-        </marker>
-      </defs>
-      <line
-        x1={x1} y1={y1} x2={x2} y2={y2}
+      <path
+        d={`M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`}
+        fill="none"
         stroke={color}
         strokeWidth="1.5"
-        strokeOpacity="0.5"
-        strokeDasharray="5,4"
-        markerEnd={`url(#${id})`}
+        strokeOpacity="0.4"
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${ah1x} ${ah1y} L ${x2} ${y2} L ${ah2x} ${ah2y}`}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeOpacity="0.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-export function EmptyStateOverlay({ isEmpty, darkMode }) {
+export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
   const [positions, setPositions] = useState({});
 
   useLayoutEffect(() => {
@@ -69,11 +94,10 @@ export function EmptyStateOverlay({ isEmpty, darkMode }) {
     setPositions(map);
   }, [isEmpty]);
 
-  if (!isEmpty) return null;
+  if (!isEmpty || !canEdit) return null;
 
   const arrowColor = darkMode ? '#c4b5fd' : '#6366f1';
-  const labelBg = darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.92)';
-  const labelColor = darkMode ? '#e5e7eb' : '#374151';
+  const labelColor = darkMode ? 'rgba(196, 181, 253, 0.6)' : 'rgba(99, 102, 241, 0.5)';
 
   // Label positions: spread below toolbar (for toolbar items) or near ghost FAB
   const labelOffsets = {
@@ -95,17 +119,16 @@ export function EmptyStateOverlay({ isEmpty, darkMode }) {
       </div>
 
       {/* SVG layer for arrows */}
-      {[...TOOLS, { key: 'recenter', label: 'Fit board to screen' }].map(({ key, label }) => {
+      {[...TOOLS, { key: 'recenter', label: 'Fit board to screen' }].map(({ key }) => {
         const target = positions[key];
         const off = labelOffsets[key];
         if (!target || !off) return null;
-        // Arrow from label to target
         const lx = off.lx + 60;
         const ly = off.ly + 10;
-        return <Arrow key={key} x1={lx} y1={ly} x2={target.x} y2={target.y} color={arrowColor} />;
+        return <HandDrawnArrow key={key} x1={lx} y1={ly} x2={target.x} y2={target.y} color={arrowColor} />;
       })}
 
-      {/* Labels */}
+      {/* Labels — plain italic text, no chip/background */}
       {[...TOOLS, { key: 'recenter', label: 'Fit board to screen' }].map(({ key, label }) => {
         const off = labelOffsets[key];
         if (!off) return null;
@@ -116,15 +139,11 @@ export function EmptyStateOverlay({ isEmpty, darkMode }) {
               position: 'fixed',
               left: off.lx,
               top: off.ly,
-              background: labelBg,
               color: labelColor,
               fontSize: '0.75rem',
-              fontWeight: 500,
-              padding: '4px 10px',
-              borderRadius: 6,
+              fontWeight: 400,
+              fontStyle: 'italic',
               whiteSpace: 'nowrap',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
               pointerEvents: 'none',
             }}
           >

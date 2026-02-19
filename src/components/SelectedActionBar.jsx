@@ -5,12 +5,12 @@ import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import './SelectedActionBar.css';
 
 function SelectedActionBarInner({ state, handlers }) {
-  const { selectedId, objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory } = state;
+  const { selectedId, objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit } = state;
   const { setShowSelectedColorPicker, updateObject, handleDeleteWithCleanup, updateActiveColor } = handlers;
 
   const toolbarRef = useRef();
 
-  if (!selectedId || !objects[selectedId]) return null;
+  if (!selectedId || !objects[selectedId] || !canEdit) return null;
 
   const MARGIN = 12;
   const obj = objects[selectedId];
@@ -90,7 +90,8 @@ function areEqual(prev, next) {
     ps.dragPos?.x === ns.dragPos?.x &&
     ps.dragPos?.y === ns.dragPos?.y &&
     ps.shapeColors === ns.shapeColors &&
-    ps.colorHistory === ns.colorHistory
+    ps.colorHistory === ns.colorHistory &&
+    ps.canEdit === ns.canEdit
   );
 }
 

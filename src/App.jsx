@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Eye } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
+import { useGroupsList } from './hooks/useGroupsList';
 import { useAI } from './hooks/useAI';
 import { useHomeAI } from './hooks/useHomeAI';
 import { useRouting } from './hooks/useRouting';
@@ -34,7 +35,8 @@ import { BoardSettings } from './components/BoardSettings.jsx';
 import './App.css';
 
 export function App() {
-  const { user, loading, login, logout } = useAuth();
+  const { user, loading, login, logout, isAdmin } = useAuth();
+  const [adminViewActive, setAdminViewActive] = useState(true);
   const { groupSlug, setGroupSlug, boardId, setBoardId, boardName, setBoardName,
           navigateHome, navigateToGroup, navigateToBoard } = useRouting();
 
@@ -44,10 +46,11 @@ export function App() {
   const handleRecenterRef = useRef(null);
 
   const captureThumbnail = (bId) => {
+    if (document.visibilityState !== 'visible') return;
     const stage = stageRef.current;
     if (!stage || !bId) return;
     try {
-      const dataUrl = stage.toDataURL({ pixelRatio: 1, mimeType: 'image/jpeg', quality: 0.7 });
+      const dataUrl = stage.toDataURL({ pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 });
       saveThumbnail(bId, dataUrl).catch(() => {});
     } catch {}
   };
@@ -63,14 +66,28 @@ export function App() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const { stagePos, setStagePos, stageScale, setStageScale } = useCanvasViewport(boardId, handleRecenterRef);
+  const { stagePos, setStagePos, stageScale, setStageScale } = useCanvasViewport(boardId, handleRecenterRef, user?.uid);
   const { shapeColors, setShapeColors, colorHistory, updateColorHistory } = useShapeColors(boardId);
 
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
   const rawBoard = useBoard(boardId, user);
   const board = useUndoStack(rawBoard);
-  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember } = useBoardsList(user);
+  const effectiveAdminView = isAdmin && adminViewActive;
+  const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings } = useGroupsList(user, effectiveAdminView);
+  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
+
+  const currentBoard = boardId ? allBoards.find(b => b.id === boardId) || null : null;
+  const boardGroup = currentBoard?.groupId ? groups.find(g => g.id === currentBoard.groupId) : null;
+  const isGroupAdmin = boardGroup?.members?.[user?.uid] === 'admin';
+  const canEdit = !boardId || currentBoard?.ownerId === user?.uid
+    || currentBoard?.members?.[user?.uid] === 'editor'
+    || currentBoard?.visibility === 'open'
+    || isGroupAdmin
+    || (isAdmin && adminViewActive);
+
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
 
   // Thumbnail: 5-minute interval capture while on a board
   const boardIdRef = useRef(boardId);
@@ -97,14 +114,18 @@ export function App() {
       const found = allBoards.find(b => b.id === boardId);
       if (found) {
         if (!boardName) setBoardName(found.name);
-        if (!groupSlug) setGroupSlug(groupToSlug(found.group || null));
+        if (!groupSlug) {
+          const boardGroup = found.groupId ? groups.find(g => g.id === found.groupId) : null;
+          setGroupSlug(groupToSlug(boardGroup));
+        }
       }
     }
-  }, [boardId, boardName, groupSlug, allBoards]);
+  }, [boardId, boardName, groupSlug, allBoards, groups]);
 
-  const aiCreateBoard = async (name, group) => {
-    const ref = await createNewBoard(name, group);
-    setGroupSlug(groupToSlug(group || null));
+  const aiCreateBoard = async (name, groupId) => {
+    const ref = await createNewBoard(name, groupId);
+    const boardGroup = groupId ? groups.find(g => g.id === groupId) : null;
+    setGroupSlug(groupToSlug(boardGroup));
     setBoardId(ref.id);
     setBoardName(name);
     // Small delay to let board subscription initialize
@@ -145,6 +166,14 @@ export function App() {
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!canEdit && selectedId) {
+      setSelectedId(null);
+      const tr = stageRef.current?.findOne('Transformer');
+      if (tr) { tr.nodes([]); stageRef.current.batchDraw(); }
+    }
+  }, [canEdit]);
+
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(null);
@@ -160,6 +189,16 @@ export function App() {
   const resizeTooltipTimer = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
   const [showBoardSettings, setShowBoardSettings] = useState(false);
+  const [activeTool, setActiveTool] = useState('pan');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const selectedIdsRef = useRef(new Set());
+  selectedIdsRef.current = selectedIds;
+  const [pendingTool, setPendingTool] = useState(null);
+  const [pendingToolCount, setPendingToolCount] = useState(0);
+  const pendingToolRef = useRef(null);
+  const pendingToolCountRef = useRef(0);
+  pendingToolRef.current = pendingTool;
+  pendingToolCountRef.current = pendingToolCount;
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
   useEffect(() => {
@@ -224,6 +263,7 @@ export function App() {
       const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (!canEditRef.current) return;
         e.preventDefault();
         const b = boardRef.current;
         if (b.canUndo) b.undo();
@@ -233,6 +273,14 @@ export function App() {
       if (isEditing) return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!canEditRef.current) return;
+        const ids = selectedIdsRef.current;
+        if (ids.size > 0) {
+          e.preventDefault();
+          for (const id of ids) handleDeleteRef.current?.(id);
+          setSelectedIds(new Set());
+          return;
+        }
         const id = selectedIdRef.current;
         if (id) {
           e.preventDefault();
@@ -242,6 +290,17 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (pendingToolRef.current) {
+          e.preventDefault();
+          setPendingTool(null);
+          setPendingToolCount(0);
+          return;
+        }
+        if (selectedIdsRef.current.size > 0) {
+          e.preventDefault();
+          setSelectedIds(new Set());
+          return;
+        }
         const id = selectedIdRef.current;
         if (id) {
           e.preventDefault();
@@ -254,6 +313,7 @@ export function App() {
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        if (!canEditRef.current) return;
         e.preventDefault();
         const id = selectedIdRef.current;
         if (id) handleDuplicateRef.current?.(id);
@@ -323,8 +383,26 @@ export function App() {
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
 
+  const onPendingToolPlace = (toolType, canvasX, canvasY) => {
+    if (!canEditRef.current) return;
+    const defaults = { userId: user.uid };
+    if (toolType === 'sticky') {
+      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: canvasX - 75, y: canvasY - 75, color: shapeColors.sticky.active, ...defaults });
+    } else if (toolType === 'line') {
+      board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, 200, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+    } else if (toolType === 'frame') {
+      const fw = Math.round(window.innerWidth * 0.55 / stageScale);
+      const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+      board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: '#6366f1', ...defaults });
+    } else {
+      board.addObject({ type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults });
+    }
+    setPendingToolCount(c => c + 1);
+  };
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
     setSelectedId, setStagePos, setStageScale, presence, objectsRef,
+    pendingToolRef, pendingToolCountRef, onPendingToolPlace,
   });
   handleRecenterRef.current = handleRecenter;
 
@@ -355,8 +433,8 @@ export function App() {
     <div className="app-container">
       <div className="header">
         <HeaderLeft
-          state={{ boardName, boardId, boards: allBoards, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId }}
-          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType }}
+          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit }}
+          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool }}
         />
         <div className="header-right">
           {user && boardId && (
@@ -373,7 +451,7 @@ export function App() {
               {user && (
                 <>
                   <span className="header-divider" />
-                  <UserAvatarMenu user={user} logout={logout} />
+                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} />
                 </>
               )}
             </>
@@ -401,8 +479,12 @@ export function App() {
             {groupSlug ? (
               <GroupPage
                 groupSlug={groupSlug}
+                groups={groups}
                 onBack={navigateHome}
                 onOpenBoard={navigateToBoard}
+                user={user}
+                isAdmin={isAdmin}
+                adminViewActive={adminViewActive}
               />
             ) : (
               <BoardSelector
@@ -413,6 +495,12 @@ export function App() {
                 setDarkMode={setDarkMode}
                 user={user}
                 logout={logout}
+                groups={groups}
+                createGroup={createGroup}
+                deleteGroupDoc={deleteGroupDoc}
+                isAdmin={isAdmin}
+                adminViewActive={adminViewActive}
+                migrateGroupStrings={migrateGroupStrings}
               />
             )}
             <FABButtons
@@ -426,7 +514,7 @@ export function App() {
           </div>
         )}
         {user && boardId && (
-          <div className="board-wrapper">
+          <div className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
             {board.loading && (
               <div className="board-loading">
                 <div className="board-loading-spinner" />
@@ -434,38 +522,41 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu }}
+              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds }}
             />
             <FABButtons
-              state={{ showAI, darkMode, isOffCenter }}
+              state={{ showAI, darkMode, isOffCenter, canEdit }}
               handlers={{ setShowAI, setDarkMode, handleRecenter }}
             />
             <ResizeTooltip state={{ resizeTooltip }} />
             <SelectedActionBar
-              state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory }}
+              state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit }}
               handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, handleDeleteWithCleanup, updateActiveColor }}
             />
-            <AIPanel
-              state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error }}
-              handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
-            />
-            <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={darkMode} />
+            {canEdit && (
+              <AIPanel
+                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error }}
+                handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
+              />
+            )}
+            <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={darkMode} canEdit={canEdit} />
+            {!canEdit && (
+              <div className="view-only-banner"><Eye size={14} /> View only</div>
+            )}
             {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
-            {showBoardSettings && (() => {
-              const currentBoard = allBoards.find(b => b.id === boardId) || null;
-              return (
-                <BoardSettings
-                  board={currentBoard}
-                  currentUserId={user?.uid}
-                  onUpdateSettings={(patches) => updateBoardSettings(boardId, patches)}
-                  onInviteMember={(uid, role) => inviteMember(boardId, uid, role)}
-                  onRemoveMember={(uid) => removeMember(boardId, uid)}
-                  onClose={() => setShowBoardSettings(false)}
-                />
-              );
-            })()}
-            {contextMenu && (() => {
+            {showBoardSettings && (
+              <BoardSettings
+                board={currentBoard}
+                currentUserId={user?.uid}
+                onUpdateSettings={(patches) => updateBoardSettings(boardId, patches)}
+                onInviteMember={(uid, role) => inviteMember(boardId, uid, role)}
+                onRemoveMember={(uid) => removeMember(boardId, uid)}
+                onClose={() => setShowBoardSettings(false)}
+                isGroupAdmin={isGroupAdmin}
+              />
+            )}
+            {contextMenu && canEdit && (() => {
               const obj = contextMenu.targetId ? board.objects[contextMenu.targetId] : null;
               const items = obj
                 ? [

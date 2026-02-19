@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Line, Group, Transformer, Rect } from 'react-konva';
 
-function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos }) {
+function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
@@ -33,7 +33,7 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
         x={dragPos?.id === id ? dragPos.x : x}
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
-        draggable
+        draggable={canEdit}
         dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
@@ -88,8 +88,8 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
         <Line
           ref={lineRef}
           points={points}
-          stroke={color}
-          strokeWidth={strokeWidth}
+          stroke={isMultiSelected ? '#6366f1' : color}
+          strokeWidth={isMultiSelected ? strokeWidth + 2 : strokeWidth}
           hitStrokeWidth={20}
           lineCap="round"
           lineJoin="round"
@@ -111,7 +111,7 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           );
         })()}
       </Group>
-      {isSelected && (
+      {isSelected && canEdit && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}

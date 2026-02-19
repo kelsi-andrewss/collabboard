@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../firebase/config';
 
 async function writeUserProfile(user) {
@@ -16,12 +16,13 @@ async function writeUserProfile(user) {
 export function useAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
-      if (user) writeUserProfile(user).catch(() => {});
+      if (u) writeUserProfile(u).catch(() => {});
     });
 
     getRedirectResult(auth).catch((error) => {
@@ -30,6 +31,14 @@ export function useAuth() {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) { setUserRole(null); return; }
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      setUserRole(snap.data()?.role || null);
+    });
+    return unsub;
+  }, [user?.uid]);
 
   const login = async () => {
     try {
@@ -56,5 +65,7 @@ export function useAuth() {
 
   };
 
-  return { user, loading, login, logout };
+  const isAdmin = userRole === 'admin';
+
+  return { user, loading, login, logout, isAdmin };
 }

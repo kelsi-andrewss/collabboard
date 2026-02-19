@@ -3,21 +3,20 @@ import { MessageSquare, Sun, Moon, Maximize } from 'lucide-react';
 import './FABButtons.css';
 
 function FABButtonsInner({ state, handlers }) {
-  const { showAI, darkMode, isOffCenter } = state;
+  const { showAI, darkMode, isOffCenter, canEdit } = state;
   const { setShowAI, setDarkMode, handleRecenter } = handlers;
 
   return (
     <>
-      <div className="fab-cluster">
+      {canEdit !== false && (
         <button
           className="ai-fab"
           onClick={() => setShowAI(!showAI)}
           title="Toggle AI Assistant"
-          style={{ position: 'static' }}
         >
           <MessageSquare size={24} />
         </button>
-      </div>
+      )}
 
       <button
         className="theme-fab"
@@ -46,7 +45,8 @@ function areEqual(prev, next) {
   return (
     ps.showAI === ns.showAI &&
     ps.darkMode === ns.darkMode &&
-    ps.isOffCenter === ns.isOffCenter
+    ps.isOffCenter === ns.isOffCenter &&
+    ps.canEdit === ns.canEdit
   );
 }
 

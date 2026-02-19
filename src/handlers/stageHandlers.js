@@ -4,13 +4,13 @@ const HEADER_HEIGHT = 60;
 
 export function makeStageHandlers({
   setSelectedId, setStagePos, setStageScale, presence, objectsRef,
+  pendingToolRef, pendingToolCountRef, onPendingToolPlace,
 }) {
   const handleMouseMove = (e) => {
     if (!presence.updateCursor) return;
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
     if (pointer) {
-      // Correct for panning and zooming
       const pos = {
         x: (pointer.x - stage.x()) / stage.scaleX(),
         y: (pointer.y - stage.y()) / stage.scaleY(),
@@ -42,6 +42,17 @@ export function makeStageHandlers({
 
   const handleStageClick = (e) => {
     if (e.target === e.target.getStage() || e.target.name() === 'bg-rect') {
+      if (pendingToolRef?.current && onPendingToolPlace) {
+        const stage = e.target.getStage();
+        const pointer = stage.getPointerPosition();
+        if (pointer) {
+          const canvasX = (pointer.x - stage.x()) / stage.scaleX();
+          const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+          const count = pendingToolCountRef?.current || 0;
+          onPendingToolPlace(pendingToolRef.current, canvasX + count * 20, canvasY + count * 20);
+        }
+        return;
+      }
       setSelectedId(null);
     }
   };
@@ -49,7 +60,6 @@ export function makeStageHandlers({
   const handleRecenter = () => {
     const bounds = getContentBounds(objectsRef.current);
     if (!bounds) {
-      // Board is empty — nothing to center on, leave viewport as-is
       return;
     }
     const { minX, minY, maxX, maxY } = bounds;

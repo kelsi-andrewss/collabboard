@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
+import { Avatar } from './Avatar.jsx';
 import './UserAvatarMenu.css';
 
-export function UserAvatarMenu({ user, logout }) {
+export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,24 +27,29 @@ export function UserAvatarMenu({ user, logout }) {
 
   return (
     <div className="user-avatar-menu">
-      <div
+      <Avatar
+        photoURL={user.photoURL}
+        name={user.displayName || user.email}
+        size="md"
         className="user-avatar-circle"
         onClick={() => setOpen(!open)}
-        title={user.displayName || user.email}
         tabIndex={-1}
-      >
-        {user.photoURL ? (
-          <img src={user.photoURL} alt="" className="user-avatar-img" referrerPolicy="no-referrer" />
-        ) : (
-          initial
-        )}
-      </div>
+      />
       {open && (
         <div className="user-avatar-dropdown">
           <div className="dropdown-user-info">
             <span className="dropdown-user-name">{user.displayName}</span>
             <span className="dropdown-user-email">{user.email}</span>
           </div>
+          {isAdmin && (
+            <>
+              <div className="dropdown-divider" />
+              <button className="dropdown-item" onClick={onToggleAdminView}>
+                <Shield size={16} />
+                {adminViewActive ? 'Switch to User View' : 'Switch to Admin View'}
+              </button>
+            </>
+          )}
           <div className="dropdown-divider" />
           <button className="dropdown-item" onClick={logout}>
             <LogOut size={16} />

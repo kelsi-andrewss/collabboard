@@ -1,11 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Shape as KonvaShape } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
 import { LineShape } from './LineShape';
 import { Cursors } from './Cursors';
-import { FRAME_MARGIN } from '../utils/frameUtils.js';
+import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
@@ -15,23 +15,87 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const dragLayerRef = useRef();
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
-    objects, dragState, dragStateRef, presentUsers, currentUserId, dragPos,
+    objects, dragState, presentUsers, currentUserId, dragPos,
+    activeTool, selectedIds, canEdit,
   } = state;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
-    handleDragMove, handleResizeClamped, setSelectedId, onContextMenu,
+    handleDragMove, handleResizeClamped, setSelectedId, onContextMenu, onTypingChange,
+    setSelectedIds,
   } = handlers;
+
+  const [selRect, setSelRect] = useState(null);
+  const selStartRef = useRef(null);
+
+  const isSelectMode = activeTool === 'select';
+
+  const handleMouseDown = (e) => {
+    if (!isSelectMode) return;
+    const target = e.target;
+    const stage = target.getStage();
+    if (target !== stage && target.name() !== 'bg-rect') return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const canvasX = (pointer.x - stage.x()) / stage.scaleX();
+    const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+    selStartRef.current = { x: canvasX, y: canvasY };
+    setSelRect({ x: canvasX, y: canvasY, width: 0, height: 0 });
+  };
+
+  const handleMouseMoveWrapped = (e) => {
+    handleMouseMove(e);
+    if (!selStartRef.current || !isSelectMode) return;
+    const stage = e.target.getStage();
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const canvasX = (pointer.x - stage.x()) / stage.scaleX();
+    const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+    const start = selStartRef.current;
+    setSelRect({
+      x: Math.min(start.x, canvasX),
+      y: Math.min(start.y, canvasY),
+      width: Math.abs(canvasX - start.x),
+      height: Math.abs(canvasY - start.y),
+    });
+  };
+
+  const handleMouseUp = () => {
+    if (!selStartRef.current || !isSelectMode) return;
+    const rect = selRect;
+    selStartRef.current = null;
+    setSelRect(null);
+    if (!rect || rect.width < 5 || rect.height < 5) return;
+    const hit = new Set();
+    for (const obj of Object.values(objects)) {
+      if (obj.type === 'frame') continue;
+      let ox, oy, ow, oh;
+      if (obj.type === 'line') {
+        const lb = getLineBounds(obj);
+        ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+      } else {
+        ox = obj.x ?? 0; oy = obj.y ?? 0;
+        ow = obj.width ?? 150; oh = obj.height ?? 150;
+      }
+      if (ox + ow >= rect.x && ox <= rect.x + rect.width &&
+          oy + oh >= rect.y && oy <= rect.y + rect.height) {
+        hit.add(obj.id);
+      }
+    }
+    if (setSelectedIds) setSelectedIds(hit);
+  };
 
   return (
     <Stage
       ref={stageRef}
       width={window.innerWidth}
       height={window.innerHeight - HEADER_HEIGHT}
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleMouseMoveWrapped}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       onClick={handleStageClick}
-      draggable={!selectedId}
+      draggable={activeTool === 'pan' && !selectedId}
       x={stagePos.x}
       y={stagePos.y}
       scaleX={stageScale}
@@ -53,7 +117,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const isStageOrBg = e.target === stage || e.target.name() === 'bg-rect';
           onContextMenu({
             screenX: pointer.x,
-            screenY: pointer.y + 60, // offset for header
+            screenY: pointer.y + 60,
             canvasX: (pointer.x - stage.x()) / stage.scaleX(),
             canvasY: (pointer.y - stage.y()) / stage.scaleY(),
             targetId: isStageOrBg ? null : e.target.id() || e.target.parent?.id(),
@@ -102,8 +166,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           );
         })()}
         {Object.keys(objects).length === 0 && (() => {
-          const cx = (window.innerWidth / 2 - stagePos.x) / stageScale;
-          const cy = ((window.innerHeight - HEADER_HEIGHT) / 2 - stagePos.y) / stageScale;
+          const cx = window.innerWidth / 2;
+          const cy = (window.innerHeight - HEADER_HEIGHT) / 2;
           const boldColor = darkMode ? '#d1d5db' : '#374151';
           const textColor = darkMode ? '#9ca3af' : '#6b7280';
           const dimColor = darkMode ? '#6b7280' : '#9ca3af';
@@ -167,7 +231,44 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             </>
           );
         })()}
-        {Object.values(objects)
+        {(() => {
+          const pad = 200;
+          const vLeft = -stagePos.x / stageScale - pad;
+          const vTop = -stagePos.y / stageScale - pad;
+          const vRight = vLeft + window.innerWidth / stageScale + pad * 2;
+          const vBottom = vTop + (window.innerHeight - HEADER_HEIGHT) / stageScale + pad * 2;
+          const allObjs = Object.values(objects);
+          const objMap = objects;
+          const visibleIds = new Set();
+          for (const obj of allObjs) {
+            let ox, oy, ow, oh;
+            if (obj.type === 'line') {
+              const lb = getLineBounds(obj);
+              ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+            } else {
+              ox = obj.x ?? 0; oy = obj.y ?? 0;
+              ow = obj.width ?? 150; oh = obj.height ?? 150;
+            }
+            if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
+              visibleIds.add(obj.id);
+              if (obj.type === 'frame' && obj.childIds) {
+                for (const cid of obj.childIds) visibleIds.add(cid);
+              }
+              if (obj.frameId) {
+                let fid = obj.frameId;
+                while (fid) {
+                  visibleIds.add(fid);
+                  const parent = objMap[fid];
+                  fid = parent?.frameId || null;
+                }
+              }
+            }
+          }
+          if (selectedId) visibleIds.add(selectedId);
+          if (dragState?.draggingId) visibleIds.add(dragState.draggingId);
+          return allObjs
+            .filter(obj => visibleIds.has(obj.id));
+        })()
           .sort((a, b) => {
             const aFrame = a.type === 'frame' ? 0 : 1;
             const bFrame = b.type === 'frame' ? 0 : 1;
@@ -180,6 +281,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             return (a.zIndex || 0) - (b.zIndex || 0);
           })
           .map((obj) => {
+            const isMultiSelected = selectedIds?.has(obj.id);
             if (obj.type === 'frame') {
               const frameChildren = Object.values(objects).filter(o => o.frameId === obj.id);
               let frameMinW = 100;
@@ -210,6 +312,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  canEdit={canEdit}
                 />
               );
             }
@@ -219,6 +322,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   key={obj.id}
                   {...obj}
                   isSelected={obj.id === selectedId}
+                  isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
                   onDragEnd={handleContainedDragEnd}
                   onTransformEnd={handleTransformEnd}
@@ -231,6 +335,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  onTypingChange={onTypingChange}
+                  canEdit={canEdit}
                 />
               );
             }
@@ -240,6 +346,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   key={obj.id}
                   {...obj}
                   isSelected={obj.id === selectedId}
+                  isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
                   onDragEnd={handleContainedDragEnd}
                   onTransformEnd={handleTransformEnd}
@@ -252,6 +359,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  canEdit={canEdit}
                 />
               );
             }
@@ -261,6 +369,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   key={obj.id}
                   {...obj}
                   isSelected={obj.id === selectedId}
+                  isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
                   onDragEnd={handleContainedDragEnd}
                   onTransformEnd={handleTransformEnd}
@@ -272,11 +381,25 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  canEdit={canEdit}
                 />
               );
             }
             return null;
           })}
+        {selRect && (
+          <Rect
+            x={selRect.x}
+            y={selRect.y}
+            width={selRect.width}
+            height={selRect.height}
+            fill="rgba(99, 102, 241, 0.1)"
+            stroke="#6366f1"
+            strokeWidth={1 / stageScale}
+            dash={[6 / stageScale, 3 / stageScale]}
+            listening={false}
+          />
+        )}
         <Cursors presentUsers={presentUsers} userId={currentUserId} />
       </Layer>
       <Layer ref={dragLayerRef} />
@@ -301,7 +424,10 @@ function areEqual(prev, next) {
     ps.dragState?.illegalDrag === ns.dragState?.illegalDrag &&
     ps.dragPos?.id === ns.dragPos?.id &&
     ps.dragPos?.x === ns.dragPos?.x &&
-    ps.dragPos?.y === ns.dragPos?.y
+    ps.dragPos?.y === ns.dragPos?.y &&
+    ps.activeTool === ns.activeTool &&
+    ps.selectedIds === ns.selectedIds &&
+    ps.canEdit === ns.canEdit
   );
 }
 

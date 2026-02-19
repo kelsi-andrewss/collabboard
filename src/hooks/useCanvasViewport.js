@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 
-export function useCanvasViewport(boardId, handleRecenterRef) {
+export function useCanvasViewport(boardId, handleRecenterRef, userId) {
+  const storageKey = userId ? `collaboard_view_${userId}_${boardId}` : `collaboard_view_${boardId}`;
+
   const [stagePos, setStagePos] = useState(() => {
     try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      const saved = localStorage.getItem(storageKey);
       if (saved) { const v = JSON.parse(saved); return { x: v.x ?? 0, y: v.y ?? 0 }; }
     } catch {}
     return { x: 0, y: 0 };
   });
   const [stageScale, setStageScale] = useState(() => {
     try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      const saved = localStorage.getItem(storageKey);
       if (saved) { const v = JSON.parse(saved); return v.scale ?? 1; }
     } catch {}
     return 1;
@@ -18,14 +20,14 @@ export function useCanvasViewport(boardId, handleRecenterRef) {
 
   useEffect(() => {
     if (boardId) {
-      localStorage.setItem(`collaboard_view_${boardId}`, JSON.stringify({ x: stagePos.x, y: stagePos.y, scale: stageScale }));
+      localStorage.setItem(storageKey, JSON.stringify({ x: stagePos.x, y: stagePos.y, scale: stageScale }));
     }
-  }, [stagePos, stageScale, boardId]);
+  }, [stagePos, stageScale, boardId, userId]);
 
   useEffect(() => {
     if (!boardId) return;
     try {
-      const saved = localStorage.getItem(`collaboard_view_${boardId}`);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const v = JSON.parse(saved);
         setStagePos({ x: v.x ?? 0, y: v.y ?? 0 });
@@ -40,7 +42,7 @@ export function useCanvasViewport(boardId, handleRecenterRef) {
       }
       return prev;
     });
-  }, [boardId]);
+  }, [boardId, userId]);
 
   return { stagePos, setStagePos, stageScale, setStageScale };
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId }) {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -70,13 +70,14 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
         x={dragPos?.id === id ? dragPos.x : x}
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
-        draggable={!isEditing}
+        draggable={canEdit && !isEditing}
         dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);
         }}
         onDblClick={(e) => {
+          if (!canEdit) return;
           e.cancelBubble = true;
           setIsEditing(true);
         }}
@@ -114,6 +115,8 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             shadowOffsetY={frameId ? 2 : 6}
             shadowOpacity={frameId ? 0.12 : 0.22}
             shadowColor="#000000"
+            stroke={isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isMultiSelected ? 3 : 0}
           />
         )}
         {type === 'circle' && (
@@ -130,6 +133,8 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             shadowOffsetY={frameId ? 2 : 6}
             shadowOpacity={frameId ? 0.12 : 0.22}
             shadowColor="#000000"
+            stroke={isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isMultiSelected ? 3 : 0}
           />
         )}
         {type === 'triangle' && (
@@ -144,6 +149,8 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             shadowOffsetY={frameId ? 2 : 6}
             shadowOpacity={frameId ? 0.12 : 0.22}
             shadowColor="#000000"
+            stroke={isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isMultiSelected ? 3 : 0}
             sceneFunc={(ctx, shape) => {
               const w = shape.width();
               const h = shape.height();
@@ -185,6 +192,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
               onSelect(id);
             }}
             onDblClick={(e) => {
+              if (!canEdit) return;
               e.cancelBubble = true;
               setIsEditing(true);
             }}
@@ -245,7 +253,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && (
+      {isSelected && !isEditing && canEdit && (
         <Transformer
           ref={trRef}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}

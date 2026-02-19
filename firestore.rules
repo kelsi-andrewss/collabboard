@@ -2,10 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isGlobalAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // User profiles — users can read all profiles (for invite lookup), write only their own
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId
+        && !('role' in request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == userId
+        && (request.resource.data.role == resource.data.role || isGlobalAdmin());
     }
 
     // Boards
@@ -19,15 +26,24 @@ service cloud.firestore {
       function isPublic() {
         return resource.data.visibility == 'public';
       }
+      function isOpen() {
+        return resource.data.visibility == 'open';
+      }
       function isLegacyBoard() {
         // Legacy boards without ownerId/visibility were open to all authenticated users
         return !('ownerId' in resource.data) || resource.data.ownerId == null;
       }
+      function isGroupAdmin() {
+        return resource.data.groupId != null
+          && exists(/databases/$(database)/documents/groups/$(resource.data.groupId))
+          && get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.members != null
+          && get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.members[request.auth.uid] == 'admin';
+      }
 
-      allow read: if request.auth != null && (isLegacyBoard() || isPublic() || isOwner() || isMember());
+      allow read: if request.auth != null && (isGlobalAdmin() || isLegacyBoard() || isPublic() || isOpen() || isOwner() || isMember() || isGroupAdmin());
       allow create: if request.auth != null;
-      allow update: if request.auth != null && (isLegacyBoard() || isOwner() || (isMember() && resource.data.members[request.auth.uid] == 'editor'));
-      allow delete: if request.auth != null && (isLegacyBoard() || isOwner());
+      allow update: if request.auth != null && (isGlobalAdmin() || isLegacyBoard() || isOpen() || isOwner() || isGroupAdmin() || (isMember() && resource.data.members[request.auth.uid] == 'editor'));
+      allow delete: if request.auth != null && (isGlobalAdmin() || isLegacyBoard() || isOwner());
 
       // Board objects — same ACL as parent board
       match /objects/{objectId} {
@@ -40,6 +56,9 @@ service cloud.firestore {
         function boardIsPublic() {
           return boardData().visibility == 'public';
         }
+        function boardIsOpen() {
+          return boardData().visibility == 'open';
+        }
         function boardIsOwner() {
           return request.auth.uid == boardData().ownerId;
         }
@@ -49,11 +68,38 @@ service cloud.firestore {
         function boardIsEditor() {
           return boardData().members != null && boardData().members[request.auth.uid] == 'editor';
         }
+        function boardIsGroupAdmin() {
+          return boardData().groupId != null
+            && exists(/databases/$(database)/documents/groups/$(boardData().groupId))
+            && get(/databases/$(database)/documents/groups/$(boardData().groupId)).data.members != null
+            && get(/databases/$(database)/documents/groups/$(boardData().groupId)).data.members[request.auth.uid] == 'admin';
+        }
 
-        allow read: if request.auth != null && (boardIsLegacy() || boardIsPublic() || boardIsOwner() || boardIsMember());
-        allow create, update: if request.auth != null && (boardIsLegacy() || boardIsOwner() || boardIsEditor());
-        allow delete: if request.auth != null && (boardIsLegacy() || boardIsOwner() || boardIsEditor());
+        allow read: if request.auth != null && (isGlobalAdmin() || boardIsLegacy() || boardIsPublic() || boardIsOpen() || boardIsOwner() || boardIsMember() || boardIsGroupAdmin());
+        allow create, update: if request.auth != null && (isGlobalAdmin() || boardIsLegacy() || boardIsOpen() || boardIsOwner() || boardIsEditor() || boardIsGroupAdmin());
+        allow delete: if request.auth != null && (isGlobalAdmin() || boardIsLegacy() || boardIsOpen() || boardIsOwner() || boardIsEditor() || boardIsGroupAdmin());
       }
+    }
+
+    // Groups
+    match /groups/{groupId} {
+      function isGroupOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+      function isGroupMember() {
+        return resource.data.members != null && request.auth.uid in resource.data.members;
+      }
+      function isGroupPublic() {
+        return resource.data.visibility == 'public';
+      }
+      function isGroupOpen() {
+        return resource.data.visibility == 'open';
+      }
+
+      allow read: if request.auth != null && (isGlobalAdmin() || isGroupPublic() || isGroupOpen() || isGroupOwner() || isGroupMember());
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (isGlobalAdmin() || isGroupOwner() || (isGroupMember() && resource.data.members[request.auth.uid] == 'admin'));
+      allow delete: if request.auth != null && (isGlobalAdmin() || isGroupOwner());
     }
   }
 }

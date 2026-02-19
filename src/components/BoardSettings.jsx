@@ -1,47 +1,66 @@
-import React, { useState } from 'react';
-import { X, Globe, Lock, UserPlus, Trash2 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import React, { useState, useRef } from 'react';
+import { X, Globe, Lock, Trash2, Users } from 'lucide-react';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './BoardSettings.css';
 
-export function BoardSettings({ board, currentUserId, onUpdateSettings, onInviteMember, onRemoveMember, onClose }) {
-  const [inviteEmail, setInviteEmail] = useState('');
+export function BoardSettings({ board, currentUserId, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false }) {
   const [inviteRole, setInviteRole] = useState('editor');
-  const [inviteError, setInviteError] = useState(null);
-  const [inviting, setInviting] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const userSearchTimerRef = useRef(null);
 
   if (!board) return null;
 
   const isOwner = board.ownerId === currentUserId;
+  const canManage = isOwner || isGroupAdminProp;
   const members = board.members || {};
   const visibility = board.visibility || 'public';
 
-  const handleVisibilityToggle = () => {
-    if (!isOwner) return;
-    onUpdateSettings({ visibility: visibility === 'public' ? 'private' : 'public' });
+  const handleVisibilityChange = (newVisibility) => {
+    if (!canManage) return;
+    onUpdateSettings({ visibility: newVisibility });
   };
 
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    if (!inviteEmail.trim()) return;
-    setInviting(true);
-    setInviteError(null);
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', inviteEmail.trim().toLowerCase()));
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        setInviteError('No user found with that email.');
-        setInviting(false);
-        return;
-      }
-      const uid = snap.docs[0].id;
-      await onInviteMember(uid, inviteRole);
-      setInviteEmail('');
-    } catch {
-      setInviteError('Failed to invite user.');
+  const handleUserSearch = (term) => {
+    setUserSearchQuery(term);
+    clearTimeout(userSearchTimerRef.current);
+    if (!term.trim()) {
+      setUserSearchResults([]);
+      setUserSearchOpen(false);
+      return;
     }
-    setInviting(false);
+    userSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef,
+          where('displayName', '>=', term),
+          where('displayName', '<=', term + '\uf8ff'),
+          limit(8)
+        );
+        const snap = await getDocs(q);
+        const existingMemberUids = Object.keys(members);
+        const results = snap.docs
+          .map(d => ({ uid: d.id, ...d.data() }))
+          .filter(u =>
+            u.uid !== currentUserId &&
+            u.uid !== board.ownerId &&
+            !existingMemberUids.includes(u.uid)
+          );
+        setUserSearchResults(results);
+        setUserSearchOpen(results.length > 0);
+      } catch {
+        setUserSearchResults([]);
+      }
+    }, 200);
+  };
+
+  const handleUserSelect = async (u) => {
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+    setUserSearchOpen(false);
+    await onInviteMember(u.uid, inviteRole);
   };
 
   const memberEntries = Object.entries(members).filter(([uid]) => uid !== board.ownerId);
@@ -56,17 +75,47 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
 
         <div className="board-settings-section">
           <h3>Visibility</h3>
-          <button
-            className={`visibility-toggle${!isOwner ? ' disabled' : ''}`}
-            onClick={handleVisibilityToggle}
-            disabled={!isOwner}
-          >
-            {visibility === 'public'
-              ? <><Globe size={16} /> Public — anyone can view</>
-              : <><Lock size={16} /> Private — only invited members</>
-            }
-            {isOwner && <span className="visibility-toggle-hint">Click to toggle</span>}
-          </button>
+          {canManage ? (
+            <>
+              <div className="visibility-pill-group">
+                <button
+                  type="button"
+                  className={`visibility-pill${visibility === 'private' ? ' visibility-pill--active' : ''}`}
+                  onClick={() => handleVisibilityChange('private')}
+                >
+                  <Lock size={14} /> Private
+                </button>
+                <button
+                  type="button"
+                  className={`visibility-pill${visibility === 'public' ? ' visibility-pill--active' : ''}`}
+                  onClick={() => handleVisibilityChange('public')}
+                >
+                  <Globe size={14} /> Public
+                </button>
+                <button
+                  type="button"
+                  className={`visibility-pill${visibility === 'open' ? ' visibility-pill--active' : ''}`}
+                  onClick={() => handleVisibilityChange('open')}
+                >
+                  <Users size={14} /> Open
+                </button>
+              </div>
+              <p className="visibility-description">
+                {visibility === 'private' && 'Only the owner and invited members can access this board.'}
+                {visibility === 'public' && 'Anyone with the link can view this board. Only the owner and editors can make changes.'}
+                {visibility === 'open' && 'Anyone with the link can view and edit this board.'}
+              </p>
+              {visibility === 'open' && (
+                <p className="visibility-warning visibility-warning--danger">Anyone with the link can edit this board. Objects may be added, changed, or deleted by anyone.</p>
+              )}
+            </>
+          ) : (
+            <div className="visibility-toggle disabled">
+              {visibility === 'private' && <><Lock size={16} /> Private</>}
+              {visibility === 'public' && <><Globe size={16} /> Public</>}
+              {visibility === 'open' && <><Users size={16} /> Open</>}
+            </div>
+          )}
         </div>
 
         <div className="board-settings-section">
@@ -78,10 +127,16 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
                 <span className="member-role owner">owner</span>
               </div>
             )}
+            {memberEntries.length === 0 && (
+              <div className="member-empty">
+                <Users size={14} />
+                No additional members
+              </div>
+            )}
             {memberEntries.map(([uid, role]) => (
               <div key={uid} className="member-row">
                 <span className="member-uid">{uid === currentUserId ? 'You' : uid}</span>
-                {isOwner ? (
+                {canManage ? (
                   <select
                     className="member-role-select"
                     value={role}
@@ -93,7 +148,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
                 ) : (
                   <span className="member-role">{role}</span>
                 )}
-                {isOwner && uid !== currentUserId && (
+                {canManage && uid !== currentUserId && (
                   <button className="member-remove-btn" onClick={() => onRemoveMember(uid)}>
                     <Trash2 size={12} />
                   </button>
@@ -102,29 +157,44 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
             ))}
           </div>
 
-          {isOwner && (
-            <form className="invite-form" onSubmit={handleInvite}>
-              <input
-                type="email"
-                placeholder="Invite by email..."
-                value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                className="invite-input"
-              />
-              <select
-                className="invite-role-select"
-                value={inviteRole}
-                onChange={e => setInviteRole(e.target.value)}
-              >
-                <option value="editor">editor</option>
-                <option value="viewer">viewer</option>
-              </select>
-              <button type="submit" className="invite-btn" disabled={inviting}>
-                <UserPlus size={15} />
-              </button>
-            </form>
+          {canManage && (
+            <div className="invite-search-wrapper">
+              <div className="invite-search-row">
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={userSearchQuery}
+                  onChange={e => handleUserSearch(e.target.value)}
+                  onFocus={() => userSearchResults.length > 0 && setUserSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setUserSearchOpen(false), 150)}
+                  className="invite-input"
+                />
+                <select
+                  className="invite-role-select"
+                  value={inviteRole}
+                  onChange={e => setInviteRole(e.target.value)}
+                >
+                  <option value="editor">editor</option>
+                  <option value="viewer">viewer</option>
+                </select>
+              </div>
+              {userSearchOpen && (
+                <div className="invite-dropdown-list">
+                  {userSearchResults.map(u => (
+                    <div
+                      key={u.uid}
+                      className="invite-dropdown-item"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => handleUserSelect(u)}
+                    >
+                      {u.photoURL && <img src={u.photoURL} alt="" className="pending-invite-avatar" referrerPolicy="no-referrer" />}
+                      <span>{u.displayName || u.uid}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
-          {inviteError && <p className="invite-error">{inviteError}</p>}
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical } from 'lucide-react';
 import { groupToSlug } from '../utils/slugUtils.js';
+import { Avatar } from './Avatar.jsx';
 import './GroupCard.css';
 
 function formatDate(ts) {
@@ -17,26 +18,27 @@ function formatDate(ts) {
 }
 
 export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard, globalPresence, onDeleteBoard, onDeleteGroup,
-  draggable, onDragStart, onDragOver, onDrop, onDragLeave, onDragEnd, isDragOver }) {
+  onGroupDragOver, onGroupDrop, onGroupDragLeave, isDragOver, onMoveBoard, existingGroups,
+  user, draggingBoard, onBoardDragStart, onBoardDragEnd }) {
   const slug = groupToSlug(group);
+  const groupName = group?.name || (typeof group === 'string' ? group : null);
+  const groupId = group?.id || null;
   const [expanded, setExpanded] = useState(true);
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false);
+  const [movingBoardId, setMovingBoardId] = useState(null);
 
   return (
     <div
       className={`group-card${isDragOver ? ' drag-over' : ''}`}
-      draggable={draggable || false}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragLeave={onDragLeave}
-      onDragEnd={onDragEnd}
+      onDragOver={onGroupDragOver}
+      onDrop={onGroupDrop}
+      onDragLeave={onGroupDragLeave}
     >
       <div className="group-card-header" onClick={() => setExpanded(e => !e)}>
         {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
         <Folder size={16} className="group-card-icon" />
-        <span className="group-card-name">{group || 'Ungrouped'}</span>
+        <span className="group-card-name">{groupName || 'Ungrouped'}</span>
         <span className="group-card-count">{boards.length} board{boards.length !== 1 ? 's' : ''}</span>
         {group && onDeleteGroup && (
           <button
@@ -55,21 +57,52 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             const onlineUsers = globalPresence?.[b.id] || [];
             const visibleOnline = onlineUsers.slice(0, 3);
             const extraOnline = onlineUsers.length - 3;
+            const isOwner = b.ownerId === user?.uid;
+            const isDragging = draggingBoard?.boardId === b.id;
+            let cardRef = null;
             return (
               <div
                 key={b.id}
-                className="board-card"
-                onClick={() => onNavigateToBoard(slug, b.id, b.name)}
+                className={`board-card${isDragging ? ' board-card--dragging' : ''}`}
+                ref={el => { cardRef = el; }}
+                onClick={() => onNavigateToBoard(group ? slug : null, b.id, b.name)}
               >
                 <div className="board-card-thumbnail">
                   {b.thumbnail
                     ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
                     : <div className="board-card-thumbnail-placeholder" />
                   }
+                  {isOwner && onBoardDragStart && (
+                    <span
+                      className="board-card-drag-handle"
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        if (cardRef) {
+                          const rect = cardRef.getBoundingClientRect();
+                          e.dataTransfer.setDragImage(cardRef, rect.width - 8, 8);
+                        }
+                        onBoardDragStart(e, b.id, groupId);
+                      }}
+                      onDragEnd={onBoardDragEnd}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical size={12} />
+                    </span>
+                  )}
                 </div>
                 <div className="board-card-info">
                   <div className="board-card-row">
                     <span className="board-card-name">{b.name}</span>
+                    {onMoveBoard && (
+                      <button
+                        className="board-card-move-btn"
+                        title="Move to group"
+                        onClick={(e) => { e.stopPropagation(); setMovingBoardId(movingBoardId === b.id ? null : b.id); }}
+                      >
+                        <FolderOutput size={12} />
+                      </button>
+                    )}
                     {onDeleteBoard && (
                       <button
                         className="board-card-delete-btn"
@@ -88,32 +121,49 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                     {onlineUsers.length > 0 && (
                       <div className="board-card-online">
                         {visibleOnline.map((u, i) => (
-                          <div
+                          <Avatar
                             key={i}
+                            photoURL={u.photoURL}
+                            name={u.name}
+                            color={u.color}
+                            size="xs"
                             className="board-card-avatar"
-                            style={{ backgroundColor: u.color }}
-                            title={u.name}
-                          >
-                            {u.photoURL
-                              ? <img src={u.photoURL} alt="" referrerPolicy="no-referrer" />
-                              : u.name?.charAt(0).toUpperCase()
-                            }
-                          </div>
+                          />
                         ))}
                         {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
                       </div>
                     )}
                   </div>
                 </div>
+                {movingBoardId === b.id && onMoveBoard && (
+                  <div className="move-group-picker" onClick={e => e.stopPropagation()}>
+                    {(existingGroups || []).filter(g => {
+                      const gId = g?.id || g;
+                      return gId !== groupId;
+                    }).map(g => {
+                      const gObj = typeof g === 'object' ? g : null;
+                      return (
+                        <button key={gObj?.id || g} className="move-group-option" onClick={() => { onMoveBoard(b.id, gObj?.id || null); setMovingBoardId(null); }}>
+                          <Folder size={12} /> {gObj?.name || g}
+                        </button>
+                      );
+                    })}
+                    {group && (
+                      <button className="move-group-option" onClick={() => { onMoveBoard(b.id, null); setMovingBoardId(null); }}>
+                        Ungrouped
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
-          {boards.length > 3 && (
+          {group && (
             <button
               className="board-cards-see-all"
               onClick={() => onNavigateToGroup(slug)}
             >
-              See all {boards.length} boards →
+              {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
             </button>
           )}
         </div>
@@ -136,10 +186,10 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
         <div className="modal-overlay" onClick={() => setConfirmDeleteGroup(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <h2>Delete Group</h2>
-            <p>Delete group &ldquo;{group}&rdquo; and all {boards.length} board{boards.length !== 1 ? 's' : ''} in it? This cannot be undone.</p>
+            <p>Delete group &ldquo;{groupName}&rdquo; and all {boards.length} board{boards.length !== 1 ? 's' : ''} in it? This cannot be undone.</p>
             <div className="modal-actions">
               <button className="secondary-btn" onClick={() => setConfirmDeleteGroup(false)}>Cancel</button>
-              <button className="danger-btn" onClick={() => { onDeleteGroup(group); setConfirmDeleteGroup(false); }}>Delete All</button>
+              <button className="danger-btn" onClick={() => { onDeleteGroup(groupId); setConfirmDeleteGroup(false); }}>Delete All</button>
             </div>
           </div>
         </div>

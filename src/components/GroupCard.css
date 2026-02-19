@@ -3,6 +3,8 @@
   align-items: flex-start;
   gap: 16px;
   padding: 24px 0;
+  min-height: 300px;
+  flex-wrap: wrap;
 }
 
 .masonry-column {
@@ -33,16 +35,10 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.group-card[draggable=true] {
-  cursor: grab;
-}
-
-.group-card.dragging {
-  opacity: 0.4;
-}
-
 .group-card.drag-over {
-  box-shadow: 0 -3px 0 0 var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 4px 12px rgba(0,0,0,0.15);
+  background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-secondary));
 }
 
 .group-card-header {
@@ -125,12 +121,40 @@
   transform: translateY(-1px);
 }
 
+.board-card--dragging {
+  opacity: 0.4;
+}
+
+.board-card-drag-handle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  color: white;
+  cursor: grab;
+  padding: 3px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.board-card:hover .board-card-drag-handle {
+  opacity: 1;
+}
+
+.board-card-drag-handle:active {
+  cursor: grabbing;
+}
+
 .board-card-thumbnail {
   width: 100%;
   aspect-ratio: 16 / 9;
   background: var(--bg-tertiary);
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
 }
 
 .board-card-thumbnail-img {
@@ -232,6 +256,60 @@
   background: #374151;
   color: #9ca3af;
   font-size: 0.5rem;
+}
+
+.board-card-move-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.board-card:hover .board-card-move-btn {
+  opacity: 1;
+}
+
+.board-card-move-btn:hover {
+  color: var(--accent-primary);
+}
+
+.move-group-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.move-group-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s;
+}
+
+.move-group-option:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .board-cards-see-all {

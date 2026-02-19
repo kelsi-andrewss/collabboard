@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { darkenHex } from '../utils/colorUtils.js';
 
-function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId }) {
+function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -56,15 +56,17 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
         x={dragPos?.id === id ? dragPos.x : x}
         y={dragPos?.id === id ? dragPos.y : y}
         rotation={rotation}
-        draggable={!isEditing}
+        draggable={canEdit && !isEditing}
         dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);
         }}
         onDblClick={(e) => {
+          if (!canEdit) return;
           e.cancelBubble = true;
           setIsEditing(true);
+          onTypingChange?.(true);
         }}
         onTap={(e) => {
           e.cancelBubble = true;
@@ -99,8 +101,8 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
           shadowOpacity={frameId ? 0.12 : 0.22}
           shadowColor={isSelected ? color : '#000000'}
           cornerRadius={4}
-          stroke={isSelected ? '#2563eb' : darkenHex(color, 0.2)}
-          strokeWidth={2}
+          stroke={isSelected ? '#2563eb' : isMultiSelected ? '#6366f1' : darkenHex(color, 0.2)}
+          strokeWidth={isMultiSelected ? 3 : 2}
         />
         {dragState?.draggingId === id && dragState?.illegalDrag && (
           <Rect x={0} y={0} width={width} height={height}
@@ -125,8 +127,10 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
               onSelect(id);
             }}
             onDblClick={(e) => {
+              if (!canEdit) return;
               e.cancelBubble = true;
               setIsEditing(true);
+              onTypingChange?.(true);
             }}
             onTap={(e) => {
               e.cancelBubble = true;
@@ -149,7 +153,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
               <textarea
                 value={text}
                 onChange={handleTextChange}
-                onBlur={() => setIsEditing(false)}
+                onBlur={() => { setIsEditing(false); onTypingChange?.(false); }}
                 autoFocus
                 rows={1}
                 style={{
@@ -185,7 +189,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && (
+      {isSelected && !isEditing && canEdit && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}

@@ -158,3 +158,31 @@
   color: var(--text-tertiary);
   font-size: 0.8rem;
 }
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state-icon {
+  color: var(--accent-primary);
+  opacity: 0.4;
+  margin-bottom: 4px;
+}
+
+.empty-state-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.empty-state-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0;
+}

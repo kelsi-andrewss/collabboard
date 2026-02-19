@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2 } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -7,10 +7,10 @@ import './BoardSwitcher.css';
 import { groupToSlug } from '../utils/slugUtils.js';
 
 function HeaderLeftInner({ state, handlers }) {
-  const { boardName, boardId, boards, shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar } = state;
+  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
-    handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType,
+    handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
   } = handlers;
 
   const [showBoardSwitcher, setShowBoardSwitcher] = useState(false);
@@ -30,6 +30,14 @@ function HeaderLeftInner({ state, handlers }) {
   }, [showBoardSwitcher]);
 
   const q = boardSearch.trim().toLowerCase();
+  const getGroupName = (b) => {
+    if (b.groupId) {
+      const g = groupsList.find(gr => gr.id === b.groupId);
+      return g?.name || null;
+    }
+    return b.group || null;
+  };
+
   const filteredGroups = (() => {
     if (!boards?.length) return [];
     const allBoards = boards;
@@ -38,19 +46,19 @@ function HeaderLeftInner({ state, handlers }) {
       filtered = allBoards;
     } else {
       const matchedGroupNames = new Set(
-        allBoards.filter(b => b.group && b.group.toLowerCase().includes(q)).map(b => b.group)
+        allBoards.map(b => getGroupName(b)).filter(n => n && n.toLowerCase().includes(q))
       );
       filtered = allBoards.filter(b =>
-        b.name.toLowerCase().includes(q) || (b.group && matchedGroupNames.has(b.group))
+        b.name.toLowerCase().includes(q) || matchedGroupNames.has(getGroupName(b))
       );
     }
-    const groups = {};
+    const groupMap = {};
     for (const b of filtered) {
-      const g = b.group || null;
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(b);
+      const g = getGroupName(b);
+      if (!groupMap[g]) groupMap[g] = [];
+      groupMap[g].push(b);
     }
-    const entries = Object.entries(groups).sort(([a], [b]) => {
+    const entries = Object.entries(groupMap).sort(([a], [b]) => {
       if (a === 'null' || a === null) return -1;
       if (b === 'null' || b === null) return 1;
       return a.localeCompare(b);
@@ -60,8 +68,12 @@ function HeaderLeftInner({ state, handlers }) {
 
   const handleShapeAdd = (type) => {
     setActiveShapeType(type);
-    if (type === 'line') handleAddLine();
-    else handleAddShape(type);
+    if (setPendingTool) {
+      setPendingTool(type);
+    } else {
+      if (type === 'line') handleAddLine();
+      else handleAddShape(type);
+    }
     setShowColorPicker(null);
   };
 
@@ -112,7 +124,8 @@ function HeaderLeftInner({ state, handlers }) {
                       key={b.id}
                       className={`board-switcher-item ${b.id === boardId ? 'active' : ''}`}
                       onClick={() => {
-                        const slug = groupToSlug(b.group || null);
+                        const bGroup = b.groupId ? groupsList.find(g => g.id === b.groupId) : null;
+                        const slug = groupToSlug(bGroup);
                         if (onSwitchBoard) onSwitchBoard(slug, b.id, b.name);
                         else { setBoardId(b.id); setBoardName(b.name); }
                         setShowBoardSwitcher(false); setBoardSearch('');
@@ -129,52 +142,66 @@ function HeaderLeftInner({ state, handlers }) {
       </div>}
 
       {showToolbar && <div className="toolbar">
-        <div className="tool-split-button no-outline">
-          <button data-toolbar-item="sticky" onClick={handleAddSticky} title="Add Sticky Note">
-            <StickyNote size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
-          </button>
-          <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
-            <ChevronDown size={14} />
-          </button>
-          {showColorPicker === 'sticky' && (
-            <ColorPickerMenu
-              type="sticky"
-              data={shapeColors.sticky}
-              history={colorHistory}
-              onSelect={updateActiveColor}
-            />
-          )}
-        </div>
+        {canEdit && (
+          <>
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="sticky" className={pendingTool === 'sticky' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'sticky' ? null : 'sticky') : handleAddSticky()} title="Add Sticky Note (click to place)">
+                <StickyNote size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
+              </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'sticky' && (
+                <ColorPickerMenu
+                  type="sticky"
+                  data={shapeColors.sticky}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                />
+              )}
+            </div>
 
-        <div className="tool-split-button no-outline">
-          <button data-toolbar-item="shape" onClick={handleActiveShapeAdd} title={`Add ${activeShapeType}`}>
-            <ShapeIcon type={activeShapeType} color={shapeColors.shapes.active} />
-          </button>
-          <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'shapes' ? null : 'shapes')}>
-            <ChevronDown size={14} />
-          </button>
-          {showColorPicker === 'shapes' && (
-            <ColorPickerMenu
-              type={activeShapeType}
-              data={shapeColors.shapes}
-              history={colorHistory}
-              onSelect={updateActiveColor}
-              shapeSelector={{
-                types: ['rectangle', 'circle', 'triangle', 'line'],
-                activeType: activeShapeType,
-                onSelect: handleShapeAdd,
-              }}
-            />
-          )}
-        </div>
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="shape" className={pendingTool === activeShapeType ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === activeShapeType ? null : activeShapeType) : handleActiveShapeAdd()} title={`Add ${activeShapeType} (click to place)`}>
+                <ShapeIcon type={activeShapeType} color={shapeColors.shapes.active} />
+              </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'shapes' ? null : 'shapes')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'shapes' && (
+                <ColorPickerMenu
+                  type={activeShapeType}
+                  data={shapeColors.shapes}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                  shapeSelector={{
+                    types: ['rectangle', 'circle', 'triangle', 'line'],
+                    activeType: activeShapeType,
+                    onSelect: handleShapeAdd,
+                  }}
+                />
+              )}
+            </div>
 
-        <div className="tool-split-button no-outline">
-          <button data-toolbar-item="frame" onClick={handleAddFrame} title="Add Frame">
-            <AppWindow size={18} />
-          </button>
-        </div>
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="frame" className={pendingTool === 'frame' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'frame' ? null : 'frame') : handleAddFrame()} title="Add Frame (click to place)">
+                <AppWindow size={18} />
+              </button>
+            </div>
 
-        <span className="header-divider" />
+            <span className="header-divider" />
+          </>
+        )}
+
+        {setActiveTool && (
+          <button
+            className={`snap-toggle ${activeTool === 'select' ? 'active' : ''}`}
+            onClick={() => setActiveTool(activeTool === 'select' ? 'pan' : 'select')}
+            title={activeTool === 'select' ? 'Switch to Pan' : 'Switch to Select'}
+          >
+            <MousePointer2 size={18} />
+          </button>
+        )}
 
         <button
           data-toolbar-item="snap"
@@ -185,15 +212,17 @@ function HeaderLeftInner({ state, handlers }) {
           <Grid3x3 size={18} />
         </button>
 
-        <button
-          data-toolbar-item="undo"
-          className={`snap-toggle ${canUndo ? '' : 'disabled'}`}
-          onClick={() => canUndo && undo()}
-          title="Undo (Ctrl+Z)"
-          disabled={!canUndo}
-        >
-          <Undo2 size={18} />
-        </button>
+        {canEdit && (
+          <button
+            data-toolbar-item="undo"
+            className={`snap-toggle ${canUndo ? '' : 'disabled'}`}
+            onClick={() => canUndo && undo()}
+            title="Undo (Ctrl+Z)"
+            disabled={!canUndo}
+          >
+            <Undo2 size={18} />
+          </button>
+        )}
       </div>}
     </div>
   );
@@ -212,7 +241,10 @@ function areEqual(prev, next) {
     ps.snapToGrid === ns.snapToGrid &&
     ps.canUndo === ns.canUndo &&
     ps.activeShapeType === ns.activeShapeType &&
-    ps.colorHistory === ns.colorHistory
+    ps.colorHistory === ns.colorHistory &&
+    ps.pendingTool === ns.pendingTool &&
+    ps.activeTool === ns.activeTool &&
+    ps.canEdit === ns.canEdit
   );
 }
 

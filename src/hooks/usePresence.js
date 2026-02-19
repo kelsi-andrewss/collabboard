@@ -1,35 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
-import { ref, onValue, set, onDisconnect, serverTimestamp } from 'firebase/database';
+import { ref, onValue, set, update, onDisconnect, serverTimestamp } from 'firebase/database';
 import { rtdb } from '../firebase/config';
 import { getUserColor } from '../utils/colorUtils.js';
 
 export function usePresence(boardId, currentUser) {
   const [presentUsers, setPresentUsers] = useState({});
+  const typingRef = useRef(false);
+  const presenceRefDb = useRef(null);
 
   useEffect(() => {
     if (!boardId || !currentUser) return;
 
-    const presenceRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
+    const presRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
+    presenceRefDb.current = presRef;
     const boardPresenceRef = ref(rtdb, `boards/${boardId}/presence`);
 
-    // Set presence on connect
-    set(presenceRef, {
+    set(presRef, {
       name: currentUser.displayName || 'Anonymous',
       color: getUserColor(currentUser.uid),
       photoURL: currentUser.photoURL || null,
       lastSeen: serverTimestamp(),
       x: 0,
-      y: 0
+      y: 0,
+      isTyping: false,
     });
 
-    // Remove presence on disconnect
-    onDisconnect(presenceRef).remove();
+    onDisconnect(presRef).remove();
 
-    // Listen for other users
     const unsubscribe = onValue(boardPresenceRef, (snapshot) => {
       if (snapshot.exists()) {
-        const val = snapshot.val();
-        setPresentUsers(val);
+        setPresentUsers(snapshot.val());
       } else {
         setPresentUsers({});
       }
@@ -37,8 +37,8 @@ export function usePresence(boardId, currentUser) {
 
     return () => {
       unsubscribe();
-      // Remove presence from the current board when leaving or changing boards
-      set(presenceRef, null);
+      set(presRef, null);
+      presenceRefDb.current = null;
     };
   }, [boardId, currentUser]);
 
@@ -48,16 +48,24 @@ export function usePresence(boardId, currentUser) {
     const now = Date.now();
     if (now - lastCursorWrite.current < 50) return;
     lastCursorWrite.current = now;
-    const presenceRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
-    set(presenceRef, {
+    const presRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
+    set(presRef, {
       name: currentUser.displayName || 'Anonymous',
       color: getUserColor(currentUser.uid),
       photoURL: currentUser.photoURL || null,
       lastSeen: serverTimestamp(),
       x,
-      y
+      y,
+      isTyping: typingRef.current,
     });
   };
 
-  return { presentUsers, updateCursor };
+  const setTyping = (typing) => {
+    typingRef.current = typing;
+    if (presenceRefDb.current) {
+      update(presenceRefDb.current, { isTyping: typing });
+    }
+  };
+
+  return { presentUsers, updateCursor, setTyping };
 }

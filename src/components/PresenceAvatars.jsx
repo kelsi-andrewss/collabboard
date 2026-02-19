@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Avatar } from './Avatar.jsx';
 import './PresenceAvatars.css';
 
 function PresenceAvatarsInner({ presentUsers, currentUserId, currentUserPhotoURL }) {
@@ -23,16 +24,14 @@ function PresenceAvatarsInner({ presentUsers, currentUserId, currentUserPhotoURL
           const photo = u.id === currentUserId ? currentUserPhotoURL : u.photoURL;
           const isCurrentUser = u.id === currentUserId;
           const avatarCircle = (
-            <div
+            <Avatar
+              photoURL={photo}
+              name={u.name}
+              color={u.color}
+              size="md"
               className="avatar-circle"
-              style={{ backgroundColor: u.color, zIndex: 10 - i }}
-              title={u.name}
-            >
-              {photo
-                ? <img src={photo} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                : u.name.charAt(0).toUpperCase()
-              }
-            </div>
+              style={{ zIndex: 10 - i }}
+            />
           );
           if (isCurrentUser) {
             return (
@@ -63,12 +62,7 @@ function PresenceAvatarsInner({ presentUsers, currentUserId, currentUserPhotoURL
                 const photo = u.id === currentUserId ? currentUserPhotoURL : u.photoURL;
                 return (
                   <div key={i} className="user-detail-row">
-                    <div className="avatar-circle large" style={{ backgroundColor: u.color }}>
-                      {photo
-                        ? <img src={photo} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                        : u.name.charAt(0).toUpperCase()
-                      }
-                    </div>
+                    <Avatar photoURL={photo} name={u.name} color={u.color} size="lg" />
                     <div className="user-detail-info">
                       <span className="user-detail-name">{u.name} {u.id === currentUserId && '(You)'}</span>
                       <span className="user-detail-status">Currently editing</span>

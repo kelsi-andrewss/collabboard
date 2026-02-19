@@ -26,7 +26,10 @@ export function useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName 
   const buildContext = () => {
     const boards = allBoardsRef.current;
     if (!boards?.length) return '';
-    const lines = boards.map(b => `  - "${b.name}"${b.group ? ` (group: ${b.group})` : ''} [id: ${b.id}]`);
+    const lines = boards.map(b => {
+      const groupLabel = b.groupId || b.group || null;
+      return `  - "${b.name}"${groupLabel ? ` (group: ${groupLabel})` : ''} [id: ${b.id}]`;
+    });
     return `[Available boards:\n${lines.join('\n')}\n]\n\n`;
   };
 

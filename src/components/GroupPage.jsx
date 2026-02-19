@@ -1,20 +1,31 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Layout, Search } from 'lucide-react';
+import { ArrowLeft, Layout, Search, LayoutGrid, Lock } from 'lucide-react';
+import { Avatar } from './Avatar.jsx';
 import { findGroupBySlug } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
 import './GroupPage.css';
 
-export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
-  const { boards } = useBoardsList();
+export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, user, isAdmin, adminViewActive }) {
+  const effectiveAdminView = isAdmin && adminViewActive;
+  const { boards } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
   const globalPresence = useGlobalPresence();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const groupName = findGroupBySlug(boards, groupSlug);
+  const groupObj = findGroupBySlug(groups, groupSlug);
+  const groupName = groupObj?.name || null;
+  const groupId = groupObj?.id || null;
+
+  // Check if user is a member of this group (for private groups)
+  const isMember = groupObj && user && (
+    groupObj.ownerId === user.uid ||
+    (groupObj.members && groupObj.members[user.uid])
+  );
+  const isPrivateAndNotMember = groupObj?.visibility === 'private' && !isMember && !effectiveAdminView;
 
   const groupBoards = boards.filter(b => {
-    if (groupSlug === '__ungrouped__') return !b.group;
-    return b.group && b.group === groupName;
+    if (groupSlug === '__ungrouped__') return !b.groupId && !b.group;
+    return b.groupId === groupId;
   });
 
   const q = searchQuery.trim().toLowerCase();
@@ -27,6 +38,27 @@ export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
     const bTime = b.updatedAt?.toMillis?.() ?? (b.updatedAt?.seconds ?? 0) * 1000;
     return bTime - aTime;
   });
+
+  if (isPrivateAndNotMember) {
+    return (
+      <div className="group-page">
+        <div className="group-page-header">
+          <button className="group-page-back" onClick={onBack}>
+            <ArrowLeft size={16} />
+            All Groups
+          </button>
+          <h1 className="group-page-title">
+            <Lock size={20} />
+            Private Group
+          </h1>
+        </div>
+        <div className="empty-state" style={{ padding: '60px 40px' }}>
+          <p className="empty-state-title">You don't have access to this group</p>
+          <p className="empty-state-hint">Ask the group owner to invite you</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="group-page">
@@ -71,16 +103,14 @@ export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
                 {globalPresence[board.id]?.length > 0 && (
                   <div className="card-avatars">
                     {globalPresence[board.id].slice(0, 3).map((u, i) => (
-                      <div
+                      <Avatar
                         key={i}
+                        photoURL={u.photoURL}
+                        name={u.name}
+                        color={u.color}
+                        size="sm"
                         className="mini-avatar"
-                        style={{ backgroundColor: u.color }}
-                        title={u.name}
-                      >
-                        {u.photoURL
-                          ? <img src={u.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                          : u.name.charAt(0).toUpperCase()}
-                      </div>
+                      />
                     ))}
                     {globalPresence[board.id].length > 3 && (
                       <div className="mini-avatar mini-chip">+{globalPresence[board.id].length - 3}</div>
@@ -93,7 +123,11 @@ export function GroupPage({ groupSlug, onBack, onOpenBoard }) {
         ))}
         {sorted.length === 0 && (
           <div className="empty-state">
-            <p>{q ? `No boards match "${q}"` : 'No boards in this group.'}</p>
+            <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
+            <p className="empty-state-title">
+              {q ? `No boards match "${q}"` : 'No boards in this group'}
+            </p>
+            {!q && <p className="empty-state-hint">Create a new board and assign it to this group</p>}
           </div>
         )}
       </div>

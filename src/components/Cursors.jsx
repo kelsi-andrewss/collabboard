@@ -6,8 +6,18 @@ function CursorsInner({ presentUsers, userId }) {
     <>
       {Object.entries(presentUsers).map(([id, data]) => {
         if (id === userId) return null;
+        const typing = data.isTyping;
         return (
           <Group key={id} x={data.x} y={data.y} listening={false}>
+            {typing && (
+              <Circle
+                radius={10}
+                fill="transparent"
+                stroke={data.color}
+                strokeWidth={2}
+                opacity={0.6}
+              />
+            )}
             <Circle
               radius={5}
               fill={data.color}
@@ -17,13 +27,13 @@ function CursorsInner({ presentUsers, userId }) {
             <Rect
               x={10}
               y={-8}
-              width={data.name.length * 7 + 10}
+              width={(typing ? data.name.length * 7 + 30 : data.name.length * 7 + 10)}
               height={16}
               fill={data.color}
               cornerRadius={3}
             />
             <Text
-              text={data.name}
+              text={typing ? `${data.name} ...` : data.name}
               fontSize={10}
               fill="white"
               x={15}
@@ -36,7 +46,6 @@ function CursorsInner({ presentUsers, userId }) {
   );
 }
 
-// Update this comparator if new state props are added
 function cursorsEqual(prev, next) {
   if (prev.userId !== next.userId) return false;
   const pu = prev.presentUsers, nu = next.presentUsers;
@@ -45,7 +54,8 @@ function cursorsEqual(prev, next) {
   for (const k of pk) {
     if (!nu[k]) return false;
     if (pu[k].x !== nu[k].x || pu[k].y !== nu[k].y ||
-        pu[k].color !== nu[k].color || pu[k].name !== nu[k].name) return false;
+        pu[k].color !== nu[k].color || pu[k].name !== nu[k].name ||
+        pu[k].isTyping !== nu[k].isTyping) return false;
   }
   return true;
 }
