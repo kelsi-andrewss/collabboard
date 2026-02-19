@@ -8,6 +8,7 @@ async function writeUserProfile(user) {
     uid: user.uid,
     email: user.email,
     displayName: user.displayName || 'Anonymous',
+    displayNameLower: (user.displayName || 'Anonymous').toLowerCase(),
     photoURL: user.photoURL || null,
     updatedAt: serverTimestamp(),
   }, { merge: true });

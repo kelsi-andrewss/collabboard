@@ -34,9 +34,10 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
     userSearchTimerRef.current = setTimeout(async () => {
       try {
         const usersRef = collection(db, 'users');
+        const lower = term.trim().toLowerCase();
         const q = query(usersRef,
-          where('displayName', '>=', term),
-          where('displayName', '<=', term + '\uf8ff'),
+          where('displayNameLower', '>=', lower),
+          where('displayNameLower', '<=', lower + '\uf8ff'),
           limit(8)
         );
         const snap = await getDocs(q);
@@ -50,7 +51,8 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
           );
         setUserSearchResults(results);
         setUserSearchOpen(results.length > 0);
-      } catch {
+      } catch (err) {
+        console.error('[user search]', err);
         setUserSearchResults([]);
       }
     }, 200);
