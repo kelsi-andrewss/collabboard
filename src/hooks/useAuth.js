@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase/config';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../firebase/config';
+
+async function writeUserProfile(user) {
+  await setDoc(doc(db, 'users', user.uid), {
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName || 'Anonymous',
+    photoURL: user.photoURL || null,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
 
 export function useAuth() {
   const [user, setUser] = useState(null);
@@ -10,6 +21,7 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+      if (user) writeUserProfile(user).catch(() => {});
     });
 
     getRedirectResult(auth).catch((error) => {

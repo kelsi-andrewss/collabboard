@@ -2,7 +2,7 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  padding: 24px 40px;
+  padding: 24px 0;
 }
 
 .masonry-column {
@@ -11,6 +11,11 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+
+.standalone-board-card {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
 }
 
 .group-card {

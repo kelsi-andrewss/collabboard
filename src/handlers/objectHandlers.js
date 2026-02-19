@@ -105,7 +105,8 @@ export function makeObjectHandlers({
     const oh = lineBounds ? lineBounds.height : (obj.height || 150);
 
     // Overlap check: objects cannot overlap sibling frames
-    const objectsForOverlapCheck = (oldFrameId && !newFrameId)
+    // Exclude old parent frame when reparenting (to root or to an ancestor frame)
+    const objectsForOverlapCheck = (oldFrameId && oldFrameId !== newFrameId)
       ? Object.fromEntries(Object.entries(board.objects).filter(([k]) => k !== oldFrameId))
       : board.objects;
     const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
@@ -212,6 +213,14 @@ export function makeObjectHandlers({
     board.updateObject(id, { zIndex: minZ - 1 });
   };
 
+  const handleDuplicate = (id) => {
+    const obj = board.objects[id];
+    if (!obj) return;
+    const OFFSET = 20;
+    const { id: _id, createdAt, updatedAt, ...rest } = obj;
+    board.addObject({ ...rest, x: obj.x + OFFSET, y: obj.y + OFFSET });
+  };
+
   return {
     updateActiveColor,
     handleDragMove,
@@ -220,5 +229,6 @@ export function makeObjectHandlers({
     handleBringToFront,
     handleSendToBack,
     handleSelectAndRaise,
+    handleDuplicate,
   };
 }

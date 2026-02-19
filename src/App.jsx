@@ -29,6 +29,8 @@ import { HeaderLeft } from './components/HeaderLeft.jsx';
 import { BoardCanvas } from './components/BoardCanvas.jsx';
 import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
 import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
+import { ContextMenu } from './components/ContextMenu.jsx';
+import { BoardSettings } from './components/BoardSettings.jsx';
 import './App.css';
 
 export function App() {
@@ -40,6 +42,15 @@ export function App() {
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
   const handleRecenterRef = useRef(null);
+
+  const captureThumbnail = (bId) => {
+    const stage = stageRef.current;
+    if (!stage || !bId) return;
+    try {
+      const dataUrl = stage.toDataURL({ pixelRatio: 1, mimeType: 'image/jpeg', quality: 0.7 });
+      saveThumbnail(bId, dataUrl).catch(() => {});
+    } catch {}
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -59,7 +70,26 @@ export function App() {
   const presence = usePresence(boardId, user);
   const rawBoard = useBoard(boardId, user);
   const board = useUndoStack(rawBoard);
-  const { boards: allBoards, createBoard: createNewBoard } = useBoardsList();
+  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember } = useBoardsList(user);
+
+  // Thumbnail: 5-minute interval capture while on a board
+  const boardIdRef = useRef(boardId);
+  boardIdRef.current = boardId;
+  useEffect(() => {
+    if (!boardId) return;
+    const interval = setInterval(() => captureThumbnail(boardIdRef.current), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [boardId]);
+
+  // Thumbnail: capture when navigating away from a board
+  const prevBoardIdRef = useRef(null);
+  useEffect(() => {
+    const prev = prevBoardIdRef.current;
+    if (prev && !boardId) {
+      captureThumbnail(prev);
+    }
+    prevBoardIdRef.current = boardId;
+  }, [boardId]);
 
   // When loading from a shared URL hash, look up the board name and group from the boards list
   useEffect(() => {
@@ -128,6 +158,8 @@ export function App() {
   const [resizeTooltip, setResizeTooltip] = useState(null); // { x, y, msg }
   const [dragPos, setDragPos] = useState(null); // { id, x, y } while dragging, null otherwise
   const resizeTooltipTimer = useRef(null);
+  const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
+  const [showBoardSettings, setShowBoardSettings] = useState(false);
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
   useEffect(() => {
@@ -177,17 +209,66 @@ export function App() {
     };
   }, [showSelectedColorPicker]);
 
-  // Ctrl/Cmd+Z undo shortcut
+  // Refs so keyboard handler always reads latest values without re-registering
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+  const boardRef = useRef(board);
+  boardRef.current = board;
+  const handleDeleteRef = useRef(null);
+  const handleDuplicateRef = useRef(null);
+
+  // Keyboard shortcuts — registered once; reads via refs
   useEffect(() => {
-    const handleUndo = (e) => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName;
+      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        if (board.canUndo) board.undo();
+        const b = boardRef.current;
+        if (b.canUndo) b.undo();
+        return;
+      }
+
+      if (isEditing) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const id = selectedIdRef.current;
+        if (id) {
+          e.preventDefault();
+          handleDeleteRef.current?.(id);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        const id = selectedIdRef.current;
+        if (id) {
+          e.preventDefault();
+          setSelectedId(null);
+          const stage = stageRef.current;
+          stage?.findOne('Transformer')?.nodes([]);
+          stage?.batchDraw();
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        const id = selectedIdRef.current;
+        if (id) handleDuplicateRef.current?.(id);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // TODO: multi-select not yet supported; prevent browser default (text selection)
+        e.preventDefault();
+        return;
       }
     };
-    window.addEventListener('keydown', handleUndo);
-    return () => window.removeEventListener('keydown', handleUndo);
-  }, [board.canUndo, board.undo]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Auto-clear dragPos once Firestore confirms the new position.
   // IMPORTANT: Do NOT call setDragPos(null) in drag-end handlers (objectHandlers or
@@ -209,12 +290,15 @@ export function App() {
     handleContainedDragEnd,
     handleDeleteWithCleanup,
     handleSelectAndRaise,
+    handleDuplicate,
   } = makeObjectHandlers({
     board, stageRef, snap, setDragState: updateDragState, setSelectedId,
     stagePos, stageScale, setShapeColors,
     setDragPos, updateColorHistory,
     setResizeTooltip, resizeTooltipTimer,
   });
+  handleDeleteRef.current = handleDeleteWithCleanup;
+  handleDuplicateRef.current = handleDuplicate;
 
   const {
     handleAddSticky,
@@ -278,7 +362,7 @@ export function App() {
           {user && boardId && (
             <HeaderRight
               state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
-              handlers={{ setShowTutorial, logout }}
+              handlers={{ setShowTutorial, logout, setShowBoardSettings }}
             />
           )}
           {(!boardId) && (
@@ -351,7 +435,7 @@ export function App() {
             <BoardCanvas
               stageRef={stageRef}
               state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu }}
             />
             <FABButtons
               state={{ showAI, darkMode, isOffCenter }}
@@ -368,6 +452,52 @@ export function App() {
             />
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={darkMode} />
             {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
+            {showBoardSettings && (() => {
+              const currentBoard = allBoards.find(b => b.id === boardId) || null;
+              return (
+                <BoardSettings
+                  board={currentBoard}
+                  currentUserId={user?.uid}
+                  onUpdateSettings={(patches) => updateBoardSettings(boardId, patches)}
+                  onInviteMember={(uid, role) => inviteMember(boardId, uid, role)}
+                  onRemoveMember={(uid) => removeMember(boardId, uid)}
+                  onClose={() => setShowBoardSettings(false)}
+                />
+              );
+            })()}
+            {contextMenu && (() => {
+              const obj = contextMenu.targetId ? board.objects[contextMenu.targetId] : null;
+              const items = obj
+                ? [
+                    { label: 'Duplicate', shortcut: '⌘D', action: () => handleDuplicate(obj.id) },
+                    { label: 'Delete', shortcut: '⌫', danger: true, action: () => handleDeleteWithCleanup(obj.id) },
+                    { separator: true },
+                    { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
+                  ]
+                : [
+                    { label: 'Add Sticky here', action: () => {
+                      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
+                    }},
+                    { label: 'Add Shape here', action: () => {
+                      board.addObject({ type: 'rectangle', x: contextMenu.canvasX - 50, y: contextMenu.canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, userId: user.uid });
+                    }},
+                    { label: 'Add Frame here', action: () => {
+                      const fw = Math.round(window.innerWidth * 0.55 / stageScale);
+                      const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+                      board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: '#6366f1', userId: user.uid });
+                    }},
+                    { separator: true },
+                    { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
+                  ];
+              return (
+                <ContextMenu
+                  x={contextMenu.screenX}
+                  y={contextMenu.screenY}
+                  items={items}
+                  onClose={() => setContextMenu(null)}
+                />
+              );
+            })()}
           </div>
         )}
       </div>

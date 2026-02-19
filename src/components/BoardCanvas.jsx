@@ -21,7 +21,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
-    handleDragMove, handleResizeClamped, setSelectedId,
+    handleDragMove, handleResizeClamped, setSelectedId, onContextMenu,
   } = handlers;
 
   return (
@@ -45,6 +45,21 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         }
       }}
       onWheel={handleWheel}
+      onContextMenu={(e) => {
+        e.evt.preventDefault();
+        const stage = e.target.getStage();
+        const pointer = stage.getPointerPosition();
+        if (onContextMenu && pointer) {
+          const isStageOrBg = e.target === stage || e.target.name() === 'bg-rect';
+          onContextMenu({
+            screenX: pointer.x,
+            screenY: pointer.y + 60, // offset for header
+            canvasX: (pointer.x - stage.x()) / stage.scaleX(),
+            canvasY: (pointer.y - stage.y()) / stage.scaleY(),
+            targetId: isStageOrBg ? null : e.target.id() || e.target.parent?.id(),
+          });
+        }
+      }}
     >
       <Layer ref={mainLayerRef}>
         <Rect

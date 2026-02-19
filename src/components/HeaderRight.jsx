@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { HelpCircle, Link, Check } from 'lucide-react';
+import { HelpCircle, Link, Check, Settings } from 'lucide-react';
 import { PresenceAvatars } from './PresenceAvatars.jsx';
 import { UserAvatarMenu } from './UserAvatarMenu.jsx';
 
 function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user } = state;
-  const { setShowTutorial, logout } = handlers;
+  const { setShowTutorial, logout, setShowBoardSettings } = handlers;
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -17,6 +17,7 @@ function HeaderRightInner({ state, handlers }) {
   return (
     <div className="header-right">
       <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />
+      <span className="header-divider" />
       <div className="header-icon-group">
         <button
           className="help-btn"
@@ -25,6 +26,15 @@ function HeaderRightInner({ state, handlers }) {
         >
           {copied ? <Check size={18} /> : <Link size={18} />}
         </button>
+        {setShowBoardSettings && (
+          <button
+            className="help-btn"
+            onClick={() => setShowBoardSettings(true)}
+            title="Board settings & sharing"
+          >
+            <Settings size={18} />
+          </button>
+        )}
         <button
           className="help-btn"
           onClick={() => setShowTutorial(true)}

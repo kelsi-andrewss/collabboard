@@ -49,8 +49,7 @@ export function makeStageHandlers({
   const handleRecenter = () => {
     const bounds = getContentBounds(objectsRef.current);
     if (!bounds) {
-      setStagePos({ x: 0, y: 0 });
-      setStageScale(1);
+      // Board is empty — nothing to center on, leave viewport as-is
       return;
     }
     const { minX, minY, maxX, maxY } = bounds;

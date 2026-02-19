@@ -1,15 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /boards/{boardId} {
-      allow read, write: if request.auth != null;
-      match /objects/{objectId} {
-        allow read, write: if request.auth != null;
-      }
+
+    // User profiles — users can read all profiles (for invite lookup), write only their own
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    // Allow listing boards for the dashboard
-    match /boards/{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Boards
+    match /boards/{boardId} {
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+      function isMember() {
+        return resource.data.members != null && request.auth.uid in resource.data.members;
+      }
+      function isPublic() {
+        return resource.data.visibility == 'public';
+      }
+      function isLegacyBoard() {
+        // Legacy boards without ownerId/visibility were open to all authenticated users
+        return !('ownerId' in resource.data) || resource.data.ownerId == null;
+      }
+
+      allow read: if request.auth != null && (isLegacyBoard() || isPublic() || isOwner() || isMember());
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (isLegacyBoard() || isOwner() || (isMember() && resource.data.members[request.auth.uid] == 'editor'));
+      allow delete: if request.auth != null && (isLegacyBoard() || isOwner());
+
+      // Board objects — same ACL as parent board
+      match /objects/{objectId} {
+        function boardData() {
+          return get(/databases/$(database)/documents/boards/$(boardId)).data;
+        }
+        function boardIsLegacy() {
+          return !('ownerId' in boardData()) || boardData().ownerId == null;
+        }
+        function boardIsPublic() {
+          return boardData().visibility == 'public';
+        }
+        function boardIsOwner() {
+          return request.auth.uid == boardData().ownerId;
+        }
+        function boardIsMember() {
+          return boardData().members != null && request.auth.uid in boardData().members;
+        }
+        function boardIsEditor() {
+          return boardData().members != null && boardData().members[request.auth.uid] == 'editor';
+        }
+
+        allow read: if request.auth != null && (boardIsLegacy() || boardIsPublic() || boardIsOwner() || boardIsMember());
+        allow create, update: if request.auth != null && (boardIsLegacy() || boardIsOwner() || boardIsEditor());
+        allow delete: if request.auth != null && (boardIsLegacy() || boardIsOwner() || boardIsEditor());
+      }
     }
   }
 }

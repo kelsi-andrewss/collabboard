@@ -420,6 +420,12 @@
   background: var(--accent-hover);
 }
 
+.primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .secondary-btn {
   background: var(--bg-primary);
   color: var(--text-primary);

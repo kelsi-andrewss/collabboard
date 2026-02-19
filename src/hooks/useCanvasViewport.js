@@ -33,7 +33,13 @@ export function useCanvasViewport(boardId, handleRecenterRef) {
         return;
       }
     } catch {}
-    handleRecenterRef.current?.();
+    // Only recenter if the stage is still at the default position (user hasn't panned this session)
+    setStagePos(prev => {
+      if (prev.x === 0 && prev.y === 0) {
+        handleRecenterRef.current?.();
+      }
+      return prev;
+    });
   }, [boardId]);
 
   return { stagePos, setStagePos, stageScale, setStageScale };

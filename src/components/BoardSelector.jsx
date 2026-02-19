@@ -1,55 +1,81 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Folder, Globe } from 'lucide-react';
+import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
 import { GroupCard } from './GroupCard.jsx';
 import { groupToSlug } from '../utils/slugUtils.js';
 import './BoardSelector.css';
 
-const HEADER_HEIGHT = 44;
+function formatDate(ts) {
+  if (!ts) return '';
+  const ms = ts.toMillis?.() ?? (ts.seconds ? ts.seconds * 1000 : null);
+  if (!ms) return '';
+  const d = new Date(ms);
+  const now = Date.now();
+  const diff = now - ms;
+  if (diff < 60 * 1000) return 'just now';
+  if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 3600000)}h ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 const BOARD_CARD_HEIGHT = 116;
 const BOARD_CARD_GAP = 8;
 const BOARD_CARDS_PADDING = 16;
+const GROUP_HEADER_HEIGHT = 44;
 const SEE_ALL_HEIGHT = 36;
 const COLUMN_ITEM_GAP = 16;
 
-function estimateGroupHeight(boards) {
-  const shown = Math.min(boards.length, 3);
+function estimateItemHeight(item) {
+  if (item.type === 'board') return BOARD_CARD_HEIGHT;
+  const shown = Math.min(item.boards.length, 3);
   const boardsH = shown * BOARD_CARD_HEIGHT + Math.max(0, shown - 1) * BOARD_CARD_GAP;
-  return HEADER_HEIGHT + BOARD_CARDS_PADDING + boardsH + (boards.length > 3 ? SEE_ALL_HEIGHT : 0);
+  return GROUP_HEADER_HEIGHT + BOARD_CARDS_PADDING + boardsH + (item.boards.length > 3 ? SEE_ALL_HEIGHT : 0);
 }
 
-function distributeToColumns(entries, columnCount) {
+function distributeToColumns(items, columnCount) {
   const columns = Array.from({ length: columnCount }, () => ({ items: [], height: 0 }));
-  for (const entry of entries) {
+  for (const item of items) {
     const shortest = columns.reduce((min, col) => col.height < min.height ? col : min, columns[0]);
-    shortest.items.push(entry);
-    shortest.height += estimateGroupHeight(entry[1]) + COLUMN_ITEM_GAP;
+    shortest.items.push(item);
+    shortest.height += estimateItemHeight(item) + COLUMN_ITEM_GAP;
   }
   return columns.map(c => c.items);
 }
 
 const SORT_KEY = 'collaboard_group_sort';
-const UNGROUPED_SENTINEL = '__ungrouped';
 
 const loadGroupSort = () => {
   try { return JSON.parse(localStorage.getItem(SORT_KEY)) || {}; } catch { return {}; }
 };
-const saveGroupSort = (mode, order) =>
-  localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order }));
+const saveGroupSort = (mode, order, asc, view) =>
+  localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
 export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout }) {
-  const { boards, loading, createBoard, deleteBoard, deleteGroup } = useBoardsList(user);
+  const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember } = useBoardsList(user);
   const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  const [newBoardVisibility, setNewBoardVisibility] = useState('private');
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('editor');
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteLooking, setInviteLooking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState(() => loadGroupSort().mode || 'recent');
-  const [manualOrder, setManualOrder] = useState(() => loadGroupSort().order || []);
-  const [dragOverGroup, setDragOverGroup] = useState(null);
-  const dragGroupRef = useRef(null);
+  const [sortMode, setSortMode] = useState(() => {
+    const m = loadGroupSort().mode;
+    return ['recent', 'name', 'count'].includes(m) ? m : 'recent';
+  });
+  const [sortAsc, setSortAsc] = useState(() => loadGroupSort().asc ?? false);
+  const [boardView, setBoardView] = useState(() => {
+    const v = loadGroupSort().view;
+    return ['my', 'public', 'all'].includes(v) ? v : 'my';
+  });
   const groupDropdownRef = useRef(null);
   const groupInputRef = useRef(null);
   const boardNameInputRef = useRef(null);
@@ -73,12 +99,67 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     : existingGroups;
   const isNewGroup = newGroupName.trim() && !existingGroups.some(g => g.toLowerCase() === newGroupName.trim().toLowerCase());
 
-  const submitCreate = async (name, group) => {
-    const ref = await createBoard(name, group || null);
+  const handleInviteLookup = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviteLooking(true);
+    setInviteError(null);
+    try {
+      const email = inviteEmail.trim().toLowerCase();
+      if (user && email === user.email?.toLowerCase()) {
+        setInviteError('You are already the owner.');
+        setInviteLooking(false);
+        return;
+      }
+      if (pendingInvites.some(i => i.email === email)) {
+        setInviteError('Already added.');
+        setInviteLooking(false);
+        return;
+      }
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setInviteError('No user found with that email.');
+        setInviteLooking(false);
+        return;
+      }
+      const userData = snap.docs[0].data();
+      setPendingInvites(prev => [...prev, {
+        uid: snap.docs[0].id,
+        email,
+        displayName: userData.displayName || email,
+        photoURL: userData.photoURL || null,
+        role: inviteRole,
+      }]);
+      setInviteEmail('');
+    } catch {
+      setInviteError('Failed to look up user.');
+    }
+    setInviteLooking(false);
+  };
+
+  const removeInvite = (uid) => setPendingInvites(prev => prev.filter(i => i.uid !== uid));
+  const updateInviteRole = (uid, role) => setPendingInvites(prev => prev.map(i => i.uid === uid ? { ...i, role } : i));
+
+  const resetModalState = () => {
     setNewBoardName('');
     setNewGroupName('');
     setGroupDropdownOpen(false);
+    setNewBoardVisibility('private');
+    setPendingInvites([]);
+    setInviteEmail('');
+    setInviteRole('editor');
+    setInviteError(null);
     setShowModal(false);
+  };
+
+  const submitCreate = async (name, group) => {
+    const ref = await createBoard(name, group || null, newBoardVisibility);
+    for (const inv of pendingInvites) {
+      inviteMember(ref.id, inv.uid, inv.role).catch(() => {});
+    }
+    resetModalState();
     onSelectBoard(ref.id, name);
   };
 
@@ -104,19 +185,19 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   if (loading) return <div className="loading">Loading boards...</div>;
 
-  const myBoards = boards.filter(b => {
-    if (!user) return true;
-    if (!b.ownerId && !b.visibility) return true;
-    return b.ownerId === user.uid || (b.members && b.members[user.uid]);
-  });
-  const publicOnlyBoards = boards.filter(b => {
-    if (!user) return false;
-    if (!b.ownerId && !b.visibility) return false;
-    if (b.visibility !== 'public') return false;
-    return b.ownerId !== user.uid && !(b.members && b.members[user.uid]);
+  const visibleBoards = boards.filter(b => {
+    if (boardView === 'my') {
+      if (!user) return true;
+      if (!b.ownerId && !b.visibility) return true;
+      return b.ownerId === user.uid || (b.members && b.members[user.uid]);
+    }
+    if (boardView === 'public') {
+      return b.visibility === 'public';
+    }
+    return true;
   });
 
-  const groups = myBoards.reduce((acc, board) => {
+  const groups = visibleBoards.reduce((acc, board) => {
     const g = board.group || null;
     if (!acc[g]) acc[g] = [];
     acc[g].push(board);
@@ -143,12 +224,10 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     if (matchedBoards.length > 0) searchedGroups[key] = matchedBoards;
   }
 
-  const toSentinel = (key) => (key === null || key === 'null') ? UNGROUPED_SENTINEL : key;
-  const fromSentinel = (s) => s === UNGROUPED_SENTINEL ? null : s;
-
   const applySort = (entries) => {
+    let sorted;
     if (sortMode === 'recent') {
-      return [...entries].sort(([a, aBoards], [b, bBoards]) => {
+      sorted = [...entries].sort(([a, aBoards], [b, bBoards]) => {
         const aNull = a === null || a === 'null';
         const bNull = b === null || b === 'null';
         if (aNull) return -1;
@@ -157,9 +236,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         const bTime = bBoards[0]?.updatedAt?.toMillis?.() ?? bBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
         return bTime - aTime;
       });
-    }
-    if (sortMode === 'name') {
-      return [...entries].sort(([a], [b]) => {
+    } else if (sortMode === 'name') {
+      sorted = [...entries].sort(([a], [b]) => {
         const aNull = a === null || a === 'null';
         const bNull = b === null || b === 'null';
         if (aNull && bNull) return 0;
@@ -167,166 +245,212 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         if (bNull) return -1;
         return String(a).localeCompare(String(b));
       });
+    } else if (sortMode === 'count') {
+      sorted = [...entries].sort(([, aBoards], [, bBoards]) => bBoards.length - aBoards.length);
+    } else {
+      sorted = entries;
     }
-    if (sortMode === 'count') {
-      return [...entries].sort(([, aBoards], [, bBoards]) => bBoards.length - aBoards.length);
+    if (sortAsc) {
+      sorted = [...sorted].reverse();
     }
-    if (sortMode === 'manual') {
-      return [...entries].sort(([a], [b]) => {
-        const ai = manualOrder.indexOf(toSentinel(a));
-        const bi = manualOrder.indexOf(toSentinel(b));
-        if (ai === -1 && bi === -1) return 0;
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      });
-    }
-    return entries;
+    return sorted;
   };
 
   const sortedGroupEntries = applySort(Object.entries(searchedGroups));
 
   const handleSortModeChange = (mode) => {
-    const currentOrder = sortedGroupEntries.map(([key]) => toSentinel(key));
-    setManualOrder(currentOrder);
     setSortMode(mode);
-    saveGroupSort(mode, currentOrder);
+    saveGroupSort(mode, [], sortAsc, boardView);
   };
 
-  const handleDragStart = (groupKey) => {
-    dragGroupRef.current = groupKey;
+  const handleSortDirectionToggle = () => {
+    const newAsc = !sortAsc;
+    setSortAsc(newAsc);
+    saveGroupSort(sortMode, [], newAsc, boardView);
   };
 
-  const handleDragOver = (groupKey, e) => {
-    e.preventDefault();
-    setDragOverGroup(groupKey);
+  const handleBoardViewChange = (view) => {
+    setBoardView(view);
+    saveGroupSort(sortMode, [], sortAsc, view);
   };
-
-  const handleDrop = (targetKey) => {
-    const sourceKey = dragGroupRef.current;
-    if (sourceKey === null || sourceKey === targetKey) {
-      setDragOverGroup(null);
-      return;
-    }
-    const currentOrder = sortedGroupEntries.map(([key]) => toSentinel(key));
-    const sourceIdx = currentOrder.indexOf(toSentinel(sourceKey));
-    const targetIdx = currentOrder.indexOf(toSentinel(targetKey));
-    if (sourceIdx === -1 || targetIdx === -1) {
-      setDragOverGroup(null);
-      return;
-    }
-    const newOrder = [...currentOrder];
-    newOrder.splice(sourceIdx, 1);
-    newOrder.splice(targetIdx, 0, toSentinel(sourceKey));
-    setManualOrder(newOrder);
-    saveGroupSort('manual', newOrder);
-    dragGroupRef.current = null;
-    setDragOverGroup(null);
-  };
-
-  const handleDragEnd = () => {
-    dragGroupRef.current = null;
-    setDragOverGroup(null);
-  };
-
-  const showSortControls = Object.keys(searchedGroups).length >= 2;
 
   return (
     <div className="board-selector-container">
-      <div className="selector-header">
-        <p>Your private and shared boards</p>
-        <div className="selector-header-actions">
-          <div className="dashboard-search">
-            <Search size={16} className="dashboard-search-icon" />
-            <input
-              type="text"
-              placeholder="Search boards and groups..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="dashboard-search-input"
-            />
-            {searchQuery && (
-              <button className="dashboard-search-clear" onClick={() => setSearchQuery('')}>×</button>
-            )}
+      <div className="board-selector-inner">
+      <div className="controls-bar">
+        <div className="dashboard-search">
+          <Search size={16} className="dashboard-search-icon" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="dashboard-search-input"
+          />
+          {searchQuery && (
+            <button className="dashboard-search-clear" onClick={() => setSearchQuery('')}>×</button>
+          )}
+        </div>
+        <div className="controls-bar-center">
+          {user && (
+            <div className="filter-pill-group">
+              {['my', 'public', 'all'].map(view => (
+                <button
+                  key={view}
+                  className={`sort-btn${boardView === view ? ' sort-btn--active' : ''}`}
+                  onClick={() => handleBoardViewChange(view)}
+                >
+                  {view === 'my' ? 'My Boards' : view.charAt(0).toUpperCase() + view.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="sort-pill-group">
+            {['recent', 'name', 'count'].map(mode => (
+              <button
+                key={mode}
+                className={`sort-btn${sortMode === mode ? ' sort-btn--active' : ''}`}
+                onClick={() => handleSortModeChange(mode)}
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
           </div>
-          <button className="new-board-btn" onClick={() => setShowModal(true)}>
-            <Plus size={15} />
-            New Board
+          <button
+            className="sort-direction-btn"
+            onClick={handleSortDirectionToggle}
+            title={sortAsc ? 'Ascending' : 'Descending'}
+          >
+            {sortAsc ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
           </button>
         </div>
+        <button className="new-board-btn" onClick={() => setShowModal(true)}>
+          <Plus size={15} />
+          New Board
+        </button>
       </div>
 
-      {showSortControls && (
-        <div className="sort-controls">
-          {['recent', 'name', 'count', 'manual'].map(mode => (
-            <button
-              key={mode}
-              className={`sort-btn${sortMode === mode ? ' sort-btn--active' : ''}`}
-              onClick={() => handleSortModeChange(mode)}
-            >
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
-            </button>
-          ))}
-        </div>
-      )}
+      {(() => {
+        const ungroupedEntry = sortedGroupEntries.find(([k]) => k === null || k === 'null');
+        const groupedEntries = sortedGroupEntries.filter(([k]) => k !== null && k !== 'null');
+        const ungroupedBoards = ungroupedEntry ? ungroupedEntry[1] : [];
 
-      <div className="masonry-columns-container" ref={masonryContainerRef}>
-        {sortedGroupEntries.length === 0 ? (
-          <div className="empty-state">
-            <p>{myBoards.length === 0 ? 'No boards yet. Hit the + button to create your first one!' : `No boards match "${searchQuery}"`}</p>
-          </div>
-        ) : (
-          distributeToColumns(sortedGroupEntries, columnCount).map((colEntries, colIdx) => (
-            <div key={colIdx} className="masonry-column">
-              {colEntries.map(([groupKey, groupBoards]) => {
-                const normalizedKey = groupKey === 'null' ? null : groupKey;
-                const sentinelKey = toSentinel(groupKey);
-                return (
-                  <GroupCard
-                    key={groupKey}
-                    group={normalizedKey}
-                    boards={groupBoards}
-                    onNavigateToGroup={onNavigateToGroup || (() => {})}
-                    onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
-                    globalPresence={globalPresence}
-                    onDeleteBoard={deleteBoard}
-                    onDeleteGroup={deleteGroup}
-                    draggable={sortMode === 'manual'}
-                    onDragStart={() => handleDragStart(sentinelKey)}
-                    onDragOver={(e) => handleDragOver(sentinelKey, e)}
-                    onDrop={() => handleDrop(sentinelKey)}
-                    onDragLeave={() => setDragOverGroup(null)}
-                    onDragEnd={handleDragEnd}
-                    isDragOver={dragOverGroup === sentinelKey}
-                  />
-                );
-              })}
+        const allItems = [
+          ...groupedEntries.map(([groupKey, groupBoards]) => ({
+            type: 'group',
+            key: groupKey,
+            boards: groupBoards,
+            sortTime: groupBoards[0]?.updatedAt?.toMillis?.() ?? (groupBoards[0]?.updatedAt?.seconds ?? 0) * 1000,
+            sortName: groupKey,
+          })),
+          ...ungroupedBoards.map(board => ({
+            type: 'board',
+            key: board.id,
+            board,
+            sortTime: board.updatedAt?.toMillis?.() ?? (board.updatedAt?.seconds ?? 0) * 1000,
+            sortName: board.name,
+          })),
+        ];
+
+        allItems.sort((a, b) => {
+          let cmp = 0;
+          if (sortMode === 'name') {
+            cmp = (a.sortName ?? '').localeCompare(b.sortName ?? '');
+          } else if (sortMode === 'count') {
+            const aCount = a.type === 'group' ? a.boards.length : 1;
+            const bCount = b.type === 'group' ? b.boards.length : 1;
+            cmp = bCount - aCount;
+          } else {
+            cmp = b.sortTime - a.sortTime;
+          }
+          return sortAsc ? -cmp : cmp;
+        });
+
+        const masonryItems = allItems;
+
+        const onlineForBoard = (boardId) => globalPresence?.[boardId] || [];
+
+        return (
+          <div className="masonry-columns-container" ref={masonryContainerRef}>
+          {masonryItems.length === 0 && (
+            <div className="empty-state">
+              <p>{visibleBoards.length === 0 ? 'No boards yet. Hit the + button to create your first one!' : `No boards match "${searchQuery}"`}</p>
             </div>
-          ))
-        )}
+          )}
+            {distributeToColumns(masonryItems, columnCount).map((colItems, colIdx) => (
+              <div key={colIdx} className="masonry-column">
+                {colItems.map(item => {
+                  if (item.type === 'group') {
+                    return (
+                      <GroupCard
+                        key={item.key}
+                        group={item.key === 'null' ? null : item.key}
+                        boards={item.boards}
+                        onNavigateToGroup={onNavigateToGroup || (() => {})}
+                        onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
+                        globalPresence={globalPresence}
+                        onDeleteBoard={deleteBoard}
+                        onDeleteGroup={deleteGroup}
+                        draggable={false}
+                      />
+                    );
+                  }
+                  const b = item.board;
+                  const onlineUsers = onlineForBoard(b.id);
+                  const visibleOnline = onlineUsers.slice(0, 3);
+                  const extraOnline = onlineUsers.length - 3;
+                  return (
+                    <div
+                      key={b.id}
+                      className="board-card standalone-board-card"
+                      onClick={() => onNavigateToBoard ? onNavigateToBoard(null, b.id, b.name) : onSelectBoard(b.id, b.name)}
+                    >
+                      <div className="board-card-thumbnail">
+                        {b.thumbnail
+                          ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                          : <div className="board-card-thumbnail-placeholder" />
+                        }
+                      </div>
+                      <div className="board-card-info">
+                        <div className="board-card-row">
+                          <span className="board-card-name">{b.name}</span>
+                          {deleteBoard && (
+                            <button
+                              className="board-card-delete-btn"
+                              title="Delete board"
+                              onClick={(e) => { e.stopPropagation(); deleteBoard(b.id); }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="board-card-meta">
+                          <span className="board-card-date">{formatDate(b.updatedAt)}</span>
+                          {onlineUsers.length > 0 && (
+                            <div className="board-card-online">
+                              {visibleOnline.map((u, i) => (
+                                <div key={i} className="board-card-avatar" style={{ backgroundColor: u.color }} title={u.name}>
+                                  {u.photoURL ? <img src={u.photoURL} alt="" referrerPolicy="no-referrer" /> : u.name?.charAt(0).toUpperCase()}
+                                </div>
+                              ))}
+                              {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
       </div>
-
-      {publicOnlyBoards.length > 0 && (
-        <div className="public-boards-section">
-          <div className="public-boards-header">
-            <Globe size={16} />
-            <span>Public Boards</span>
-          </div>
-          <div className="public-boards-grid">
-            <GroupCard
-              group={null}
-              boards={publicOnlyBoards.filter(b => !q || b.name.toLowerCase().includes(q))}
-              onNavigateToGroup={() => {}}
-              onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
-              globalPresence={globalPresence}
-            />
-          </div>
-        </div>
-      )}
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-card">
+        <div className="modal-overlay" onClick={resetModalState}>
+          <div className="modal-card modal-card--create" onClick={e => e.stopPropagation()}>
             <h2>Create New Board</h2>
             <form onSubmit={handleAddBoard}>
               <div className="form-group">
@@ -400,9 +524,78 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   )}
                 </div>
               </div>
+              <div className="form-group">
+                <label>Visibility</label>
+                <div className="visibility-pill-group">
+                  <button
+                    type="button"
+                    className={`visibility-pill${newBoardVisibility === 'private' ? ' visibility-pill--active' : ''}`}
+                    onClick={() => setNewBoardVisibility('private')}
+                  >
+                    <Lock size={14} /> Private
+                  </button>
+                  <button
+                    type="button"
+                    className={`visibility-pill${newBoardVisibility === 'public' ? ' visibility-pill--active' : ''}`}
+                    onClick={() => setNewBoardVisibility('public')}
+                  >
+                    <Globe size={14} /> Public
+                  </button>
+                </div>
+              </div>
+              {newBoardVisibility === 'private' && (
+                <div className="form-group">
+                  <label>Invite Members <span className="label-optional">(optional)</span></label>
+                  {pendingInvites.length > 0 && (
+                    <div className="pending-invites">
+                      {pendingInvites.map(inv => (
+                        <div key={inv.uid} className="pending-invite-row">
+                          <div className="pending-invite-info">
+                            {inv.photoURL && <img src={inv.photoURL} alt="" className="pending-invite-avatar" referrerPolicy="no-referrer" />}
+                            <span className="pending-invite-name">{inv.displayName || inv.email}</span>
+                          </div>
+                          <select
+                            className="member-role-select"
+                            value={inv.role}
+                            onChange={(e) => updateInviteRole(inv.uid, e.target.value)}
+                          >
+                            <option value="editor">editor</option>
+                            <option value="viewer">viewer</option>
+                          </select>
+                          <button type="button" className="member-remove-btn" onClick={() => removeInvite(inv.uid)}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="invite-form">
+                    <input
+                      type="email"
+                      placeholder="Invite by email..."
+                      value={inviteEmail}
+                      onChange={e => setInviteEmail(e.target.value)}
+                      className="invite-input"
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleInviteLookup(e); } }}
+                    />
+                    <select
+                      className="invite-role-select"
+                      value={inviteRole}
+                      onChange={e => setInviteRole(e.target.value)}
+                    >
+                      <option value="editor">editor</option>
+                      <option value="viewer">viewer</option>
+                    </select>
+                    <button type="button" className="invite-btn" onClick={handleInviteLookup} disabled={inviteLooking}>
+                      <UserPlus size={15} />
+                    </button>
+                  </div>
+                  {inviteError && <p className="invite-error">{inviteError}</p>}
+                </div>
+              )}
               <div className="modal-actions">
-                <button type="button" className="secondary-btn" onClick={() => { setShowModal(false); setNewGroupName(''); setGroupDropdownOpen(false); }}>Cancel</button>
-                <button type="submit" className="primary-btn">Create Board</button>
+                <button type="button" className="secondary-btn" onClick={resetModalState}>Cancel</button>
+                <button type="submit" className="primary-btn" disabled={!newBoardName.trim()}>Create Board</button>
               </div>
             </form>
           </div>
