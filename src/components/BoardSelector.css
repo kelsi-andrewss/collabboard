@@ -183,3 +183,7 @@
   text-align: center;
   color: var(--text-tertiary);
 }
+
+.public-boards-grid {
+  padding: 12px 40px;
+}

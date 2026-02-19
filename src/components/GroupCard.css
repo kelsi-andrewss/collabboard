@@ -1,8 +1,16 @@
-.group-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+.masonry-columns-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   padding: 24px 40px;
+}
+
+.masonry-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
 .group-card {
@@ -11,6 +19,8 @@
   border: 1px solid var(--border-color);
   overflow: hidden;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 
 .group-card:hover {
@@ -85,33 +95,37 @@
 
 /* Board cards grid inside each group */
 .board-cards-grid {
-  display: grid;
-  /* columns set via inline style based on board count */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 8px;
+  gap: 8px;
 }
 
 .board-card {
   background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow 0.15s, background 0.15s;
-}
-
-.board-card:last-child {
-  border-right: none;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
 .board-card:hover {
-  background: var(--bg-tertiary);
-  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
 }
 
 .board-card-thumbnail {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   background: var(--bg-tertiary);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .board-card-thumbnail-img {

@@ -1,10 +1,33 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Folder, Globe } from 'lucide-react';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
 import { GroupCard } from './GroupCard.jsx';
 import { groupToSlug } from '../utils/slugUtils.js';
 import './BoardSelector.css';
+
+const HEADER_HEIGHT = 44;
+const BOARD_CARD_HEIGHT = 116;
+const BOARD_CARD_GAP = 8;
+const BOARD_CARDS_PADDING = 16;
+const SEE_ALL_HEIGHT = 36;
+const COLUMN_ITEM_GAP = 16;
+
+function estimateGroupHeight(boards) {
+  const shown = Math.min(boards.length, 3);
+  const boardsH = shown * BOARD_CARD_HEIGHT + Math.max(0, shown - 1) * BOARD_CARD_GAP;
+  return HEADER_HEIGHT + BOARD_CARDS_PADDING + boardsH + (boards.length > 3 ? SEE_ALL_HEIGHT : 0);
+}
+
+function distributeToColumns(entries, columnCount) {
+  const columns = Array.from({ length: columnCount }, () => ({ items: [], height: 0 }));
+  for (const entry of entries) {
+    const shortest = columns.reduce((min, col) => col.height < min.height ? col : min, columns[0]);
+    shortest.items.push(entry);
+    shortest.height += estimateGroupHeight(entry[1]) + COLUMN_ITEM_GAP;
+  }
+  return columns.map(c => c.items);
+}
 
 const SORT_KEY = 'collaboard_group_sort';
 const UNGROUPED_SENTINEL = '__ungrouped';
@@ -30,6 +53,19 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const groupDropdownRef = useRef(null);
   const groupInputRef = useRef(null);
   const boardNameInputRef = useRef(null);
+  const masonryContainerRef = useRef(null);
+  const [columnCount, setColumnCount] = useState(5);
+
+  useEffect(() => {
+    const el = masonryContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      setColumnCount(Math.max(1, Math.min(5, Math.floor(w / 280))));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const existingGroups = [...new Set(boards.map(b => b.group).filter(Boolean))];
   const filteredGroups = newGroupName
@@ -234,39 +270,39 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         </div>
       )}
 
-      <div className="group-cards-grid">
-        {sortedGroupEntries.map(([groupKey, groupBoards]) => {
-          const normalizedKey = groupKey === 'null' ? null : groupKey;
-          const sentinelKey = toSentinel(groupKey);
-          return (
-            <GroupCard
-              key={groupKey}
-              group={normalizedKey}
-              boards={groupBoards}
-              onNavigateToGroup={onNavigateToGroup || (() => {})}
-              onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
-              globalPresence={globalPresence}
-              onDeleteBoard={deleteBoard}
-              onDeleteGroup={deleteGroup}
-              draggable={sortMode === 'manual'}
-              onDragStart={() => handleDragStart(sentinelKey)}
-              onDragOver={(e) => handleDragOver(sentinelKey, e)}
-              onDrop={() => handleDrop(sentinelKey)}
-              onDragLeave={() => setDragOverGroup(null)}
-              onDragEnd={handleDragEnd}
-              isDragOver={dragOverGroup === sentinelKey}
-            />
-          );
-        })}
-        {myBoards.length === 0 && (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <p>No boards yet. Hit the + button to create your first one!</p>
+      <div className="masonry-columns-container" ref={masonryContainerRef}>
+        {sortedGroupEntries.length === 0 ? (
+          <div className="empty-state">
+            <p>{myBoards.length === 0 ? 'No boards yet. Hit the + button to create your first one!' : `No boards match "${searchQuery}"`}</p>
           </div>
-        )}
-        {myBoards.length > 0 && sortedGroupEntries.length === 0 && (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <p>No boards match &ldquo;{searchQuery}&rdquo;</p>
-          </div>
+        ) : (
+          distributeToColumns(sortedGroupEntries, columnCount).map((colEntries, colIdx) => (
+            <div key={colIdx} className="masonry-column">
+              {colEntries.map(([groupKey, groupBoards]) => {
+                const normalizedKey = groupKey === 'null' ? null : groupKey;
+                const sentinelKey = toSentinel(groupKey);
+                return (
+                  <GroupCard
+                    key={groupKey}
+                    group={normalizedKey}
+                    boards={groupBoards}
+                    onNavigateToGroup={onNavigateToGroup || (() => {})}
+                    onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
+                    globalPresence={globalPresence}
+                    onDeleteBoard={deleteBoard}
+                    onDeleteGroup={deleteGroup}
+                    draggable={sortMode === 'manual'}
+                    onDragStart={() => handleDragStart(sentinelKey)}
+                    onDragOver={(e) => handleDragOver(sentinelKey, e)}
+                    onDrop={() => handleDrop(sentinelKey)}
+                    onDragLeave={() => setDragOverGroup(null)}
+                    onDragEnd={handleDragEnd}
+                    isDragOver={dragOverGroup === sentinelKey}
+                  />
+                );
+              })}
+            </div>
+          ))
         )}
       </div>
 
@@ -276,7 +312,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
             <Globe size={16} />
             <span>Public Boards</span>
           </div>
-          <div className="group-cards-grid" style={{ padding: '12px 40px' }}>
+          <div className="public-boards-grid">
             <GroupCard
               group={null}
               boards={publicOnlyBoards.filter(b => !q || b.name.toLowerCase().includes(q))}

@@ -50,10 +50,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       </div>
 
       {expanded && (
-        <div
-          className="board-cards-grid"
-          style={{ gridTemplateColumns: `repeat(${Math.min(boards.length, 3)}, 1fr)` }}
-        >
+        <div className="board-cards-grid">
           {boards.slice(0, 3).map(b => {
             const onlineUsers = globalPresence?.[b.id] || [];
             const visibleOnline = onlineUsers.slice(0, 3);
