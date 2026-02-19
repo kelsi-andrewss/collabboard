@@ -659,6 +659,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                     <Users size={14} /> Open
                   </button>
                 </div>
+                <p className="visibility-description">
+                  {groupModalData.visibility === 'private' && 'Only you and invited members can see this.'}
+                  {groupModalData.visibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
+                  {groupModalData.visibility === 'open' && 'Anyone can find, view, and edit this.'}
+                </p>
               </div>
               <div className="form-group">
                 <label>Boards <span className="label-optional">(optional)</span></label>
@@ -797,9 +802,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                     <Users size={14} /> Open
                   </button>
                 </div>
-                {newBoardVisibility === 'open' && (
-                  <p className="visibility-warning visibility-warning--danger">Anyone with the link can edit this board. Objects may be added, changed, or deleted by anyone.</p>
-                )}
+                <p className="visibility-description">
+                  {newBoardVisibility === 'private' && 'Only you and invited members can see this.'}
+                  {newBoardVisibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
+                  {newBoardVisibility === 'open' && 'Anyone can find, view, and edit this.'}
+                </p>
               </div>
               {newBoardVisibility === 'private' && (
                 <div className="form-group">

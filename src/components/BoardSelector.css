@@ -276,6 +276,14 @@
 .visibility-pill--active:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .visibility-pill--active + .visibility-pill { border-left: 1px solid var(--accent-primary); }
 
+.modal-card .visibility-pill-group { display: flex; width: 100%; }
+
+.visibility-description {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin: 8px 0 0;
+}
+
 .visibility-warning {
   font-size: 0.8rem;
   color: #d97706;
