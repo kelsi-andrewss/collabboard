@@ -99,8 +99,11 @@
   inset: 0;
   border-radius: inherit;
   background: currentColor;
-  animation: ai-fab-pulse 1.8s ease-out infinite;
   pointer-events: none;
+}
+
+.ai-fab.pulse-active::before {
+  animation: ai-fab-pulse 1.8s ease-out infinite;
 }
 
 .ai-fab.active::before {
