@@ -6,7 +6,6 @@ import { db } from '../firebase/config';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
 import { GroupCard } from './GroupCard.jsx';
-import { groupToSlug } from '../utils/slugUtils.js';
 import './BoardSelector.css';
 
 function formatDate(ts) {
@@ -64,6 +63,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupModalData, setGroupModalData] = useState({ name: '', visibility: 'private' });
+  const [groupNameError, setGroupNameError] = useState('');
   const [boardRows, setBoardRows] = useState([{ name: '' }]);
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
   const [groupSearchText, setGroupSearchText] = useState('');
@@ -93,6 +93,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [draggingBoard, setDraggingBoard] = useState(null);
   const [draggingGroup, setDraggingGroup] = useState(null);
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
+  const [rootDropActive, setRootDropActive] = useState(false);
 
   const getGroupDepth = (groupId, allGroups) => {
     let depth = 0;
@@ -153,22 +154,25 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     if (groupPayload) {
       try {
         const { id: draggedGroupId } = JSON.parse(groupPayload);
-        const normalizedTarget = targetGroupId === '__ungrouped__' ? null : (targetGroupId || null);
+        const normalizedTarget = targetGroupId || null;
         if (normalizedTarget === draggedGroupId) {
           setDraggingGroup(null);
           setDragOverTargetId(null);
+          setRootDropActive(false);
           return;
         }
         if (normalizedTarget !== null) {
           if (draggedGroupId === normalizedTarget || isAncestor(draggedGroupId, normalizedTarget, groupsProp)) {
             setDraggingGroup(null);
             setDragOverTargetId(null);
+            setRootDropActive(false);
             return;
           }
           const targetDepth = getGroupDepth(normalizedTarget, groupsProp);
           if (targetDepth >= 2) {
             setDraggingGroup(null);
             setDragOverTargetId(null);
+            setRootDropActive(false);
             return;
           }
         }
@@ -176,22 +180,25 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
       } catch { /* ignore malformed drag data */ }
       setDraggingGroup(null);
       setDragOverTargetId(null);
+      setRootDropActive(false);
       return;
     }
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       const { boardId, sourceGroupId } = data;
       const normalizedSource = sourceGroupId || null;
-      const normalizedTarget = targetGroupId === '__ungrouped__' ? null : (targetGroupId || null);
+      const normalizedTarget = targetGroupId || null;
       if (normalizedSource === normalizedTarget) {
         setDraggingBoard(null);
         setDragOverTargetId(null);
+        setRootDropActive(false);
         return;
       }
       moveBoard(boardId, normalizedTarget);
     } catch { /* ignore malformed drag data */ }
     setDraggingBoard(null);
     setDragOverTargetId(null);
+    setRootDropActive(false);
   };
 
   useEffect(() => {
@@ -281,6 +288,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const resetGroupModalState = () => {
     setGroupModalData({ name: '', visibility: 'private' });
+    setGroupNameError('');
     setBoardRows([{ name: '' }]);
     setShowGroupModal(false);
   };
@@ -303,12 +311,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
     if (!groupModalData.name.trim()) return;
-    const groupRef = await createGroup(groupModalData.name.trim(), groupModalData.visibility);
-    const validRows = boardRows.filter(r => r.name.trim());
-    for (const row of validRows) {
-      await createBoard(row.name.trim(), groupRef.id, groupModalData.visibility);
+    setGroupNameError('');
+    try {
+      const groupRef = await createGroup(groupModalData.name.trim(), groupModalData.visibility);
+      const validRows = boardRows.filter(r => r.name.trim());
+      for (const row of validRows) {
+        await createBoard(row.name.trim(), groupRef.id, groupModalData.visibility);
+      }
+      resetGroupModalState();
+    } catch (err) {
+      if (err.message === 'SLUG_TAKEN') {
+        setGroupNameError('A group with this name already exists');
+      } else {
+        throw err;
+      }
     }
-    resetGroupModalState();
   };
 
   const handleGroupKeyDown = (e) => {
@@ -552,11 +569,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         return (
           <>
           <div
-            className={`masonry-columns-container${dragOverTargetId === '__ungrouped__' ? ' masonry-drop-target--active' : ''}`}
+            className={`masonry-columns-container${rootDropActive ? ' masonry-drop-target--active' : ''}`}
             ref={masonryContainerRef}
-            onDragOver={(e) => handleGroupDragOver(e, '__ungrouped__')}
-            onDrop={(e) => handleGroupDrop(e, '__ungrouped__')}
-            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) handleGroupDragLeave(e, '__ungrouped__'); }}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setRootDropActive(true); }}
+            onDrop={(e) => { setRootDropActive(false); handleGroupDrop(e, null); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRootDropActive(false); }}
           >
           {masonryItems.length === 0 && (
             <div className="empty-state">
@@ -616,7 +633,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                       key={b.id}
                       className={`board-card standalone-board-card${isDragging ? ' board-card--dragging' : ''}`}
                       ref={el => { standaloneCardRef = el; }}
-                      onClick={() => onNavigateToBoard ? onNavigateToBoard(null, b.id, b.name) : onSelectBoard(b.id, b.name)}
+                      onClick={() => onNavigateToBoard ? onNavigateToBoard([], b.id, b.name) : onSelectBoard(b.id, b.name)}
                     >
                       <div className="board-card-thumbnail">
                         {b.thumbnail
@@ -695,10 +712,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <input
                   type="text"
                   value={groupModalData.name}
-                  onChange={e => setGroupModalData(d => ({ ...d, name: e.target.value }))}
+                  onChange={e => { setGroupModalData(d => ({ ...d, name: e.target.value })); setGroupNameError(''); }}
                   placeholder="My Team"
                   autoFocus
                 />
+                {groupNameError && <p className="form-error">{groupNameError}</p>}
               </div>
               <div className="form-group">
                 <label>Visibility</label>

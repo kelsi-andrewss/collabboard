@@ -12,7 +12,7 @@ import { useRouting } from './hooks/useRouting';
 import { useCanvasViewport } from './hooks/useCanvasViewport';
 import { useShapeColors } from './hooks/useShapeColors';
 import { GroupPage } from './components/GroupPage.jsx';
-import { groupToSlug } from './utils/slugUtils.js';
+import { buildSlugChain } from './utils/slugUtils.js';
 import { Tutorial } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
 import { makeObjectHandlers } from './handlers/objectHandlers.js';
@@ -37,7 +37,7 @@ import './App.css';
 export function App() {
   const { user, loading, login, logout, isAdmin } = useAuth();
   const [adminViewActive, setAdminViewActive] = useState(true);
-  const { groupSlug, setGroupSlug, boardId, setBoardId, boardName, setBoardName,
+  const { groupSlugs, setGroupSlugs, boardId, setBoardId, boardName, setBoardName,
           navigateHome, navigateToGroup, navigateToBoard } = useRouting();
 
   const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -108,15 +108,14 @@ export function App() {
     prevBoardIdRef.current = boardId;
   }, [boardId]);
 
-  // When loading from a shared URL hash, look up the board name and group from the boards list
   useEffect(() => {
-    if (boardId && (!boardName || !groupSlug) && allBoards.length > 0) {
+    if (boardId && (!boardName || groupSlugs.length === 0) && allBoards.length > 0) {
       const found = allBoards.find(b => b.id === boardId);
       if (found) {
         if (!boardName) setBoardName(found.name);
-        if (!groupSlug && found.groupId) {
+        if (groupSlugs.length === 0 && found.groupId) {
           const boardGroup = groups.find(g => g.id === found.groupId);
-          if (boardGroup) setGroupSlug(groupToSlug(boardGroup));
+          if (boardGroup) setGroupSlugs(buildSlugChain(boardGroup, groups));
         }
       }
     }
@@ -125,7 +124,7 @@ export function App() {
   const aiCreateBoard = async (name, groupId) => {
     const ref = await createNewBoard(name, groupId);
     const boardGroup = groupId ? groups.find(g => g.id === groupId) : null;
-    setGroupSlug(groupToSlug(boardGroup));
+    setGroupSlugs(boardGroup ? buildSlugChain(boardGroup, groups) : []);
     setBoardId(ref.id);
     setBoardName(name);
     // Small delay to let board subscription initialize
@@ -476,9 +475,9 @@ export function App() {
         )}
         {user && !boardId && (
           <div className="home-content">
-            {groupSlug && groupSlug !== '__ungrouped__' ? (
+            {groupSlugs.length > 0 ? (
               <GroupPage
-                groupSlug={groupSlug}
+                groupSlugs={groupSlugs}
                 groups={groups}
                 onBack={navigateHome}
                 onOpenBoard={navigateToBoard}
@@ -495,7 +494,7 @@ export function App() {
               />
             ) : (
               <BoardSelector
-                onSelectBoard={(id, name) => { setBoardId(id); setBoardName(name || id); }}
+                onSelectBoard={(id, name) => navigateToBoard([], id, name)}
                 onNavigateToGroup={navigateToGroup}
                 onNavigateToBoard={navigateToBoard}
                 darkMode={darkMode}

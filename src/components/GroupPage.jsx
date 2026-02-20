@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Search, LayoutGrid, Lock, Folder, ChevronRight, Trash2, Settings } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
-import { findGroupBySlug, groupToSlug } from '../utils/slugUtils.js';
+import { buildSlugChain, resolveSlugChain } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
 import { GroupSettings } from './GroupSettings.jsx';
@@ -51,7 +51,7 @@ function buildAncestorChain(groupObj, groups) {
   return chain;
 }
 
-export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember, onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade, allBoards = [] }) {
+export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember, onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade, allBoards = [] }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, deleteBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
   const globalPresence = useGlobalPresence();
@@ -71,7 +71,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
     return () => ro.disconnect();
   }, []);
 
-  const groupObj = findGroupBySlug(groups, groupSlug);
+  const groupObj = resolveSlugChain(groupSlugs, groups);
   const groupName = groupObj?.name || null;
   const groupId = groupObj?.id || null;
 
@@ -85,10 +85,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
   );
   const isPrivateAndNotMember = groupObj?.visibility === 'private' && !isMember && !effectiveAdminView;
 
-  const groupBoards = boards.filter(b => {
-    if (groupSlug === '__ungrouped__') return !b.groupId && !b.group;
-    return b.groupId === groupId;
-  });
+  const groupBoards = boards.filter(b => b.groupId === groupId);
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
@@ -105,7 +102,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
     if (groupObj?.parentGroupId) {
       const parent = groups.find(g => g.id === groupObj.parentGroupId);
       if (parent && onNavigateToGroup) {
-        onNavigateToGroup(groupToSlug(parent));
+        onNavigateToGroup(buildSlugChain(parent, groups));
         return;
       }
     }
@@ -148,7 +145,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
             {ancestors.map(a => (
               <React.Fragment key={a.id}>
                 <ChevronRight size={12} className="group-page-breadcrumb-sep" />
-                <button className="group-page-breadcrumb-item" onClick={() => onNavigateToGroup?.(groupToSlug(a))}>
+                <button className="group-page-breadcrumb-item" onClick={() => onNavigateToGroup?.(buildSlugChain(a, groups))}>
                   {a.name}
                 </button>
               </React.Fragment>
@@ -210,7 +207,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
                         <button
                           key={sub.id}
                           className="group-page-subgroup-card"
-                          onClick={() => onNavigateToGroup?.(groupToSlug(sub))}
+                          onClick={() => onNavigateToGroup?.(buildSlugChain(sub, groups))}
                         >
                           <Folder size={16} className="group-card-icon" />
                           <span>{sub.name}</span>
@@ -227,7 +224,7 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
                       <div
                         key={b.id}
                         className="board-card standalone-board-card"
-                        onClick={() => onOpenBoard(groupSlug, b.id, b.name)}
+                        onClick={() => onOpenBoard(groupSlugs, b.id, b.name)}
                       >
                         <div className="board-card-thumbnail">
                           {b.thumbnail

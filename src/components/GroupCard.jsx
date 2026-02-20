@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical, Shield } from 'lucide-react';
-import { groupToSlug } from '../utils/slugUtils.js';
+import { buildSlugChain } from '../utils/slugUtils.js';
 import { Avatar } from './Avatar.jsx';
 import './GroupCard.css';
 
@@ -22,7 +22,6 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup }) {
-  const slug = groupToSlug(group);
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const [expanded, setExpanded] = useState(true);
@@ -38,7 +37,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
       onDragLeave={onGroupDragLeave}
-      onClick={groupId ? () => onNavigateToGroup(slug) : undefined}
+      onClick={groupId ? () => onNavigateToGroup(buildSlugChain(group, allGroups)) : undefined}
     >
       <div className="group-card-header" onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}>
         {onGroupDragStart && group && (
@@ -59,7 +58,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
         >{groupName || 'Ungrouped'}</span>
         {group?.protected && <span className="shield-badge"><Shield size={12} /></span>}
         <span className="group-card-count">
-          {boards.length}{subgroups.length > 0 ? ` / ${subgroups.length}` : ''}
+          {boards.length}
         </span>
         {onCreateSubgroup && depth < 3 && (
           <button
@@ -143,7 +142,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   key={b.id}
                   className={`board-card${isDragging ? ' board-card--dragging' : ''}`}
                   ref={el => { cardRef = el; }}
-                  onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? slug : null, b.id, b.name); }}
+                  onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? buildSlugChain(group, allGroups) : [], b.id, b.name); }}
                 >
                   <div className="board-card-thumbnail">
                     {b.thumbnail
@@ -260,7 +259,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             {group && (
               <button
                 className="board-cards-see-all"
-                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(slug); }}
+                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
               >
                 {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
               </button>
