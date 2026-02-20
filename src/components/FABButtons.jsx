@@ -10,7 +10,7 @@ function FABButtonsInner({ state, handlers }) {
     <>
       {canEdit !== false && (
         <button
-          className="ai-fab"
+          className={`ai-fab${showAI ? ' active' : ''}`}
           onClick={() => setShowAI(!showAI)}
           title="Toggle AI Assistant"
         >
