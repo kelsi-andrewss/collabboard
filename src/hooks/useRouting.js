@@ -4,17 +4,21 @@ const parseHash = () => {
   const hash = window.location.hash.slice(1);
   if (!hash) return { groupSlug: null, boardId: null };
   const parts = hash.split('/');
-  if (parts.length >= 2) return { groupSlug: parts[0], boardId: parts[1] };
+  if (parts.length >= 2) {
+    const slug = parts[0] === '__ungrouped__' ? null : parts[0];
+    return { groupSlug: slug, boardId: parts[1] };
+  }
   const savedBoardId = localStorage.getItem('collaboard_boardId');
   if (savedBoardId === parts[0]) return { groupSlug: null, boardId: parts[0] };
+  if (parts[0] === '__ungrouped__') return { groupSlug: null, boardId: null };
   return { groupSlug: parts[0], boardId: null };
 };
 
 export function useRouting() {
   const [groupSlug, setGroupSlug] = useState(() => parseHash().groupSlug);
   const [boardId, setBoardId] = useState(() => {
-    const { boardId: hashBoard } = parseHash();
-    return hashBoard || localStorage.getItem('collaboard_boardId') || null;
+    const { boardId: hashBoard, groupSlug: hashGroup } = parseHash();
+    return hashBoard || (!hashGroup ? localStorage.getItem('collaboard_boardId') : null) || null;
   });
   const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
 

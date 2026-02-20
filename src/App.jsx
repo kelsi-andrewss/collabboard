@@ -114,13 +114,13 @@ export function App() {
       const found = allBoards.find(b => b.id === boardId);
       if (found) {
         if (!boardName) setBoardName(found.name);
-        if (!groupSlug) {
-          const boardGroup = found.groupId ? groups.find(g => g.id === found.groupId) : null;
+        if (!groupSlug && found.groupId) {
+          const boardGroup = groups.find(g => g.id === found.groupId);
           setGroupSlug(groupToSlug(boardGroup));
         }
       }
     }
-  }, [boardId, boardName, groupSlug, allBoards, groups]);
+  }, [boardId, boardName, allBoards, groups]);
 
   const aiCreateBoard = async (name, groupId) => {
     const ref = await createNewBoard(name, groupId);
@@ -476,7 +476,7 @@ export function App() {
         )}
         {user && !boardId && (
           <div className="home-content">
-            {groupSlug ? (
+            {groupSlug && groupSlug !== '__ungrouped__' ? (
               <GroupPage
                 groupSlug={groupSlug}
                 groups={groups}
