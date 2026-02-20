@@ -638,7 +638,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onNavigateToGroup={onNavigateToGroup || (() => {})}
                         onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
                         globalPresence={globalPresence}
-                        onDeleteBoard={deleteBoard}
+                        onDeleteBoard={null}
                         onDeleteGroup={(id) => deleteGroupCascade(id, groupsProp, boards)}
                         onCreateSubgroup={createSubgroup}
                         onSetGroupProtected={setGroupProtected}
@@ -712,7 +712,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         )}
                         <div className="board-card-row">
                           <span className="board-card-name">{b.name}</span>
-                          {deleteBoard && (
+                          {deleteBoard && !b.groupId && (
                             <button
                               className="board-card-delete-btn"
                               title="Delete board"
