@@ -636,6 +636,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragOverUnbound={handleGroupDragOver}
                         onGroupDropUnbound={handleGroupDrop}
                         onGroupDragLeaveUnbound={handleGroupDragLeave}
+                        allBoards={boards}
                       />
                     );
                   }

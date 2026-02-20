@@ -524,6 +524,22 @@
   flex-shrink: 0;
 }
 
+.board-card--ghost {
+  opacity: 0.5;
+  border: 2px dashed var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 4%, var(--bg-primary));
+  pointer-events: none;
+}
+
+.board-card-preview-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
 .board-card-delete-btn--disabled,
 .group-card-delete-btn--disabled {
   opacity: 0.35;
