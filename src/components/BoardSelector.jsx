@@ -467,6 +467,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     saveGroupSort(sortMode, [], sortAsc, view);
   };
 
+  const handleQuickAddBoard = (groupId) => {
+    setSelectedGroupId(groupId || null);
+    setShowModal(true);
+  };
+
   return (
     <div className="board-selector-container">
       <div className="board-selector-inner">
@@ -655,6 +660,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragOverUnbound={handleGroupDragOver}
                         onGroupDropUnbound={handleGroupDrop}
                         onGroupDragLeaveUnbound={handleGroupDragLeave}
+                        onAddBoard={handleQuickAddBoard}
                       />
                     );
                   }

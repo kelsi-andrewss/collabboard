@@ -22,7 +22,8 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
-  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
+  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound,
+  onAddBoard }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
@@ -306,12 +307,22 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
             );
           })()}
           {group && (
-            <button
-              className="board-cards-see-all"
-              onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
-            >
-              {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
-            </button>
+            <div className="group-card-footer-row">
+              <button
+                className="board-cards-see-all"
+                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
+              >
+                {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
+              </button>
+              {onAddBoard && (
+                <button
+                  className="group-card-add-board-btn"
+                  onClick={(e) => { e.stopPropagation(); onAddBoard(groupId); }}
+                >
+                  + board
+                </button>
+              )}
+            </div>
           )}
         </>
       )}
