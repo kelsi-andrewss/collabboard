@@ -120,9 +120,9 @@ export function useBoardsList(currentUser, { isAdminView = false, groups = [] } 
   const moveBoard = async (boardId, newGroupId) => {
     const boardRef = doc(db, 'boards', boardId);
     if (newGroupId) {
-      await updateDoc(boardRef, { groupId: newGroupId, updatedAt: serverTimestamp() });
+      await updateDoc(boardRef, { groupId: newGroupId });
     } else {
-      await updateDoc(boardRef, { groupId: deleteField(), updatedAt: serverTimestamp() });
+      await updateDoc(boardRef, { groupId: deleteField() });
     }
   };
 
