@@ -2,7 +2,7 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  padding: 24px 0;
+  padding: 24px 0 40px;
   min-height: 300px;
   flex-wrap: wrap;
 }
@@ -79,9 +79,15 @@
 }
 
 .group-card-count {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 500;
   color: var(--text-tertiary);
-  margin-left: auto;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+  line-height: 1.6;
 }
 
 .group-card-drag-handle {

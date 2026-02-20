@@ -486,6 +486,12 @@ export function App() {
                 user={user}
                 isAdmin={isAdmin}
                 adminViewActive={adminViewActive}
+                onUpdateGroup={updateGroup}
+                onInviteGroupMember={inviteGroupMember}
+                onRemoveGroupMember={removeGroupMember}
+                onSetGroupProtected={setGroupProtected}
+                onDeleteGroupCascade={(id, gs, bs) => deleteGroupCascade(id, gs, bs)}
+                allBoards={allBoards}
               />
             ) : (
               <BoardSelector
@@ -506,9 +512,6 @@ export function App() {
                 deleteGroupCascade={deleteGroupCascade}
                 setGroupProtected={setGroupProtected}
                 moveGroup={moveGroup}
-                updateGroup={updateGroup}
-                inviteGroupMember={inviteGroupMember}
-                removeGroupMember={removeGroupMember}
               />
             )}
             <FABButtons

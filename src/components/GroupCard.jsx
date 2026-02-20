@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical, Shield, Settings } from 'lucide-react';
+import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical, Shield } from 'lucide-react';
 import { groupToSlug } from '../utils/slugUtils.js';
 import { Avatar } from './Avatar.jsx';
-import { GroupSettings } from './GroupSettings.jsx';
 import './GroupCard.css';
 
 function formatDate(ts) {
@@ -22,8 +21,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   onGroupDragOver, onGroupDrop, onGroupDragLeave, isDragOver, onMoveBoard, existingGroups,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
-  onGroupDragStart, onGroupDragEnd, draggingGroup,
-  onUpdateGroup, onInviteGroupMember, onRemoveGroupMember }) {
+  onGroupDragStart, onGroupDragEnd, draggingGroup }) {
   const slug = groupToSlug(group);
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
@@ -32,7 +30,6 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   const [movingBoardId, setMovingBoardId] = useState(null);
   const [addingSubgroup, setAddingSubgroup] = useState(false);
   const [subgroupName, setSubgroupName] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div
@@ -62,7 +59,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
         >{groupName || 'Ungrouped'}</span>
         {group?.protected && <span className="shield-badge"><Shield size={12} /></span>}
         <span className="group-card-count">
-          {boards.length} board{boards.length !== 1 ? 's' : ''}{subgroups.length > 0 ? `, ${subgroups.length} subgroup${subgroups.length !== 1 ? 's' : ''}` : ''}
+          {boards.length}{subgroups.length > 0 ? ` / ${subgroups.length}` : ''}
         </span>
         {onCreateSubgroup && depth < 3 && (
           <button
@@ -71,15 +68,6 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             onClick={e => { e.stopPropagation(); setAddingSubgroup(true); }}
           >
             +
-          </button>
-        )}
-        {groupId && onUpdateGroup && (
-          <button
-            className="group-card-add-btn"
-            title="Group settings"
-            onClick={e => { e.stopPropagation(); setShowSettings(true); }}
-          >
-            <Settings size={13} />
           </button>
         )}
       </div>
@@ -113,9 +101,6 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   onGroupDragStart={onGroupDragStart}
                   onGroupDragEnd={onGroupDragEnd}
                   draggingGroup={draggingGroup}
-                  onUpdateGroup={onUpdateGroup}
-                  onInviteGroupMember={onInviteGroupMember}
-                  onRemoveGroupMember={onRemoveGroupMember}
                 />
               ))}
               {addingSubgroup && (
@@ -295,19 +280,6 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             </div>
           </div>
         </div>
-      )}
-
-      {showSettings && group && onUpdateGroup && (
-        <GroupSettings
-          group={group}
-          currentUserId={user?.uid}
-          onUpdateGroup={onUpdateGroup}
-          onInviteMember={(uid, role) => onInviteGroupMember && onInviteGroupMember(uid, role)}
-          onRemoveMember={(uid) => onRemoveGroupMember && onRemoveGroupMember(uid)}
-          onSetProtected={(bool) => onSetGroupProtected && onSetGroupProtected(groupId, bool)}
-          onDeleteGroup={() => onDeleteGroup && onDeleteGroup(groupId)}
-          onClose={() => setShowSettings(false)}
-        />
       )}
 
     </div>

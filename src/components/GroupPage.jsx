@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Search, LayoutGrid, Lock, Folder, ChevronRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, Lock, Folder, ChevronRight, Trash2, Settings } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import { findGroupBySlug, groupToSlug } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
+import { GroupSettings } from './GroupSettings.jsx';
 import './GroupPage.css';
 
 export function formatDate(ts) {
@@ -50,11 +51,12 @@ function buildAncestorChain(groupObj, groups) {
   return chain;
 }
 
-export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive }) {
+export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember, onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade, allBoards = [] }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, deleteBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
   const globalPresence = useGlobalPresence();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
   const masonryContainerRef = useRef(null);
   const [columnCount, setColumnCount] = useState(5);
 
@@ -155,10 +157,17 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
             <span className="group-page-breadcrumb-current">{groupName}</span>
           </div>
         )}
-        <h1 className="group-page-title">
-          {groupName || 'Ungrouped'}
-          <span className="group-page-count">{groupBoards.length} board{groupBoards.length !== 1 ? 's' : ''}</span>
-        </h1>
+        <div className="group-page-title-row">
+          <h1 className="group-page-title">
+            {groupName || 'Ungrouped'}
+            <span className="group-page-count">{groupBoards.length} board{groupBoards.length !== 1 ? 's' : ''}</span>
+          </h1>
+          {groupId && onUpdateGroup && (
+            <button className="group-page-settings-btn" title="Group settings" onClick={() => setShowSettings(true)}>
+              <Settings size={16} />
+            </button>
+          )}
+        </div>
         <div className="dashboard-search" style={{ marginTop: 0 }}>
           <Search size={16} className="dashboard-search-icon" />
           <input
@@ -267,6 +276,19 @@ export function GroupPage({ groupSlug, groups = [], onBack, onOpenBoard, onNavig
           );
         })()}
       </div>
+
+      {showSettings && groupObj && (
+        <GroupSettings
+          group={groupObj}
+          currentUserId={user?.uid}
+          onUpdateGroup={(patches) => onUpdateGroup && onUpdateGroup(groupId, patches)}
+          onInviteMember={(uid, role) => onInviteGroupMember && onInviteGroupMember(groupId, uid, role)}
+          onRemoveMember={(uid) => onRemoveGroupMember && onRemoveGroupMember(groupId, uid)}
+          onSetProtected={(bool) => onSetGroupProtected && onSetGroupProtected(groupId, bool)}
+          onDeleteGroup={() => { onDeleteGroupCascade && onDeleteGroupCascade(groupId, groups, allBoards); onBack(); }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 }

@@ -28,6 +28,12 @@
 }
 .group-page-back:hover { color: var(--text-primary); }
 
+.group-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .group-page-title {
   display: flex;
   align-items: center;
@@ -36,6 +42,24 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+}
+
+.group-page-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.group-page-settings-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
 }
 
 .group-page-count {

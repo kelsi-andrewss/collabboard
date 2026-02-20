@@ -55,7 +55,7 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup, updateGroup, inviteGroupMember, removeGroupMember }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
   const globalPresence = useGlobalPresence();
@@ -601,9 +601,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragStart={handleGroupItemDragStart}
                         onGroupDragEnd={handleGroupItemDragEnd}
                         draggingGroup={draggingGroup}
-                        onUpdateGroup={(patches) => updateGroup && updateGroup(item.groupObj?.id, patches)}
-                        onInviteGroupMember={(uid, role) => inviteGroupMember && inviteGroupMember(item.groupObj?.id, uid, role)}
-                        onRemoveGroupMember={(uid) => removeGroupMember && removeGroupMember(item.groupObj?.id, uid)}
                       />
                     );
                   }
