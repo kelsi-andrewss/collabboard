@@ -7,7 +7,8 @@ import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
 import { GroupSettings } from './GroupSettings.jsx';
 import { GroupCard } from './GroupCard.jsx';
 import './GroupPage.css';
-export { formatDate, estimateItemHeight, distributeToColumns } from '../utils/groupUtils.js';
+import { formatDate, estimateItemHeight, distributeToColumns } from '../utils/groupUtils.js';
+export { formatDate, estimateItemHeight, distributeToColumns };
 
 function buildAncestorChain(groupObj, groups) {
   const chain = [];
