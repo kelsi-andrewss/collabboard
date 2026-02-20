@@ -401,6 +401,7 @@ export function GroupPage({
         <div
           className={`masonry-columns-container${rootDropActive ? ' masonry-drop-target--active' : ''}`}
           ref={masonryContainerRef}
+          data-group-id={groupId}
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setRootDropActive(true); }}
           onDrop={(e) => { setRootDropActive(false); handleGroupDrop(e, groupId); }}
           onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRootDropActive(false); }}
@@ -453,7 +454,6 @@ export function GroupPage({
                       onGroupDragOverUnbound={handleGroupDragOver}
                       onGroupDropUnbound={handleGroupDrop}
                       onGroupDragLeaveUnbound={handleGroupDragLeave}
-                      allBoards={allBoards}
                     />
                   );
                 }
