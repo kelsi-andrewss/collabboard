@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { multiSelectHit, sortObjects, computeVisibleIds, areEqual } from './BoardCanvas.jsx';
+import { multiSelectHit, sortObjects, computeVisibleIds, areEqual, computeGridDimensions, GRID_CELL_LIMIT } from './BoardCanvas.jsx';
 
 // ---------------------------------------------------------------------------
 // multiSelectHit
@@ -261,6 +261,24 @@ describe('areEqual', () => {
     expect(areEqual(a, b)).toBe(false);
   });
 
+  it('returns false when dragPos.y changes', () => {
+    const a = makeState({ dragPos: { id: 'x', x: 0, y: 0 } });
+    const b = makeState({ dragPos: { id: 'x', x: 0, y: 5 } });
+    expect(areEqual(a, b)).toBe(false);
+  });
+
+  it('returns false when presentUsers reference changes', () => {
+    const a = makeState({ presentUsers: [] });
+    const b = makeState({ presentUsers: [] });
+    expect(areEqual(a, b)).toBe(false);
+  });
+
+  it('returns false when currentUserId changes', () => {
+    const a = makeState({ currentUserId: 'u1' });
+    const b = makeState({ currentUserId: 'u2' });
+    expect(areEqual(a, b)).toBe(false);
+  });
+
   it('returns false when activeTool changes', () => {
     const a = makeState({ activeTool: 'select' });
     const b = makeState({ activeTool: 'pan' });
@@ -285,29 +303,14 @@ describe('areEqual', () => {
 // ---------------------------------------------------------------------------
 
 describe('grid guard formula', () => {
-  const GRID_SIZE = 50;
-  const HEADER_HEIGHT = 60;
-
-  function computeGridDimensions(stagePos, stageScale, windowWidth, windowHeight) {
-    const left = -stagePos.x / stageScale;
-    const top = -stagePos.y / stageScale;
-    const right = left + windowWidth / stageScale;
-    const bottom = top + (windowHeight - HEADER_HEIGHT) / stageScale;
-    const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
-    const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
-    const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
-    const rows = Math.ceil((bottom - startY) / GRID_SIZE) + 1;
-    return { cols, rows };
-  }
-
   it('produces a manageable grid at normal zoom (scale=1, 1200x800)', () => {
     const { cols, rows } = computeGridDimensions({ x: 0, y: 0 }, 1, 1200, 800);
-    expect(cols * rows).toBeLessThanOrEqual(5000);
+    expect(cols * rows).toBeLessThanOrEqual(GRID_CELL_LIMIT);
   });
 
-  it('would exceed 5000 cells at extreme zoom-out (scale=0.01)', () => {
+  it('would exceed GRID_CELL_LIMIT cells at extreme zoom-out (scale=0.01)', () => {
     const { cols, rows } = computeGridDimensions({ x: 0, y: 0 }, 0.01, 1200, 800);
-    expect(cols * rows).toBeGreaterThan(5000);
+    expect(cols * rows).toBeGreaterThan(GRID_CELL_LIMIT);
   });
 
   it('cols is at least 1', () => {
