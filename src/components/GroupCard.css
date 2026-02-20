@@ -377,6 +377,8 @@
   padding: 6px 4px;
   border-radius: 4px;
   transition: background 0.1s;
+  display: flex;
+  align-items: center;
 }
 
 .board-cards-see-all:hover {
@@ -449,6 +451,7 @@
 .group-card--nested {
   border-radius: 8px;
   border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
 .group-card--nested .group-card-header {
@@ -494,6 +497,8 @@
   text-align: left;
   width: 100%;
   transition: color 0.15s, background 0.12s;
+  display: flex;
+  align-items: center;
 }
 
 .group-card-add-subgroup-btn:hover {
