@@ -346,6 +346,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         boardNameInputRef.current?.focus();
         return;
       }
+      if (newBoardVisibility === 'open' && !confirmOpenBoard) return;
       submitCreate(newBoardName.trim(), selectedGroupId);
     } else if (e.key === 'Escape') {
       setGroupDropdownOpen(false);
@@ -898,21 +899,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'private' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('private')}
+                    onClick={() => { setNewBoardVisibility('private'); setConfirmOpenBoard(false); }}
                   >
                     <Lock size={14} /> Private
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'public' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('public')}
+                    onClick={() => { setNewBoardVisibility('public'); setConfirmOpenBoard(false); }}
                   >
                     <Globe size={14} /> Public
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'open' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('open')}
+                    onClick={() => { setNewBoardVisibility('open'); setConfirmOpenBoard(false); }}
                   >
                     <Users size={14} /> Open
                   </button>
