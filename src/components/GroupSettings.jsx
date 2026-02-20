@@ -11,6 +11,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const userSearchTimerRef = useRef(null);
 
   if (!group) return null;
@@ -20,6 +21,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const isAdmin = members[currentUserId] === 'admin';
   const canManage = isOwner || isAdmin;
   const visibility = group.visibility || 'private';
+  const protectedDirty = localProtected !== (group.protected || false);
 
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
@@ -214,12 +216,20 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
               <span>Protect this group from deletion</span>
               <button
                 type="button"
-                className={`group-settings-toggle-btn${group.protected ? ' group-settings-toggle-btn--on' : ''}`}
-                onClick={() => onSetProtected(!group.protected)}
+                className={`group-settings-toggle-btn${localProtected ? ' group-settings-toggle-btn--on' : ''}`}
+                onClick={() => setLocalProtected(v => !v)}
               >
-                {group.protected ? 'On' : 'Off'}
+                {localProtected ? 'On' : 'Off'}
               </button>
             </div>
+            <button
+              type="button"
+              className="group-settings-save-btn"
+              disabled={!protectedDirty}
+              onClick={() => onSetProtected(localProtected)}
+            >
+              Save
+            </button>
           </div>
         )}
 
