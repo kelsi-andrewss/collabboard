@@ -22,7 +22,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
-  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound, allBoards }) {
+  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
