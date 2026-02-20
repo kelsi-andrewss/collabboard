@@ -66,9 +66,9 @@ export function useRouting() {
   });
   const [boardId, setBoardId] = useState(() => {
     const { boardId: hashBoard, groupSlugs } = parseHash();
-    return hashBoard || (groupSlugs.length === 0 ? localStorage.getItem('collaboard_boardId') : null) || null;
+    return hashBoard || null;
   });
-  const [boardName, setBoardName] = useState(() => localStorage.getItem('collaboard_boardName') || '');
+  const [boardName, setBoardName] = useState('');
 
   const groupSlugs = groupPath ? groupPath.split('/') : [];
 
