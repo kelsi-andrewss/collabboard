@@ -70,7 +70,7 @@ const getGroupDepth = (groupId, allGroups) => {
   return depth;
 };
 
-const isAncestor = (candidateAncestorId, targetGroupId, allGroups) => {
+export const isAncestor = (candidateAncestorId, targetGroupId, allGroups) => {
   let current = allGroups.find(g => g.id === targetGroupId);
   while (current?.parentGroupId) {
     if (current.parentGroupId === candidateAncestorId) return true;
