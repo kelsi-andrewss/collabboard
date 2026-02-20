@@ -129,3 +129,18 @@ Frames are the most complex part of the codebase. Key invariants to preserve:
 - **Dot grid perf**: The grid renders N*M individual Konva `<Rect>` nodes. Adding more grid-related logic here will hurt performance at low zoom levels. Consider migrating to a single `Shape` with a `sceneFunc` loop if perf becomes an issue.
 - **useAI chat state**: The Gemini `ChatSession` is per-board and held in a ref. Switching boards creates a new session; the old one is discarded (no server-side cleanup needed).
 - **Undo stack max**: Capped at 50 entries. Batch operations count as one entry regardless of how many objects are affected.
+
+## Protected Konva Files
+
+The following files render directly to the Konva canvas and are protected from agent edits.
+Agents MUST NOT edit these files without explicit user permission granted in the current session:
+
+- `src/components/BoardCanvas.jsx`
+- `src/components/StickyNote.jsx`
+- `src/components/Frame.jsx`
+- `src/components/Shape.jsx`
+- `src/components/LineShape.jsx`
+- `src/components/Cursors.jsx`
+
+Permission denies are also enforced via `.claude/settings.local.json`.
+If you need to modify one of these files, ask the user first and wait for explicit approval.

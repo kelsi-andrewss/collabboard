@@ -10,6 +10,64 @@ import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
 
+export function multiSelectHit(obj, rect) {
+  if (obj.type === 'frame') return false;
+  let ox, oy, ow, oh;
+  if (obj.type === 'line') {
+    const lb = getLineBounds(obj);
+    ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+  } else {
+    ox = obj.x ?? 0; oy = obj.y ?? 0;
+    ow = obj.width ?? 150; oh = obj.height ?? 150;
+  }
+  return ox + ow >= rect.x && ox <= rect.x + rect.width &&
+    oy + oh >= rect.y && oy <= rect.y + rect.height;
+}
+
+export function sortObjects(a, b) {
+  const aFrame = a.type === 'frame' ? 0 : 1;
+  const bFrame = b.type === 'frame' ? 0 : 1;
+  if (aFrame !== bFrame) return aFrame - bFrame;
+  if (a.type === 'frame' && b.type === 'frame') {
+    const aDepth = a.frameId ? 1 : 0;
+    const bDepth = b.frameId ? 1 : 0;
+    if (aDepth !== bDepth) return aDepth - bDepth;
+  }
+  return (a.zIndex || 0) - (b.zIndex || 0);
+}
+
+export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggingId) {
+  const { vLeft, vTop, vRight, vBottom } = viewport;
+  const visibleIds = new Set();
+  for (const obj of allObjs) {
+    let ox, oy, ow, oh;
+    if (obj.type === 'line') {
+      const lb = getLineBounds(obj);
+      ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+    } else {
+      ox = obj.x ?? 0; oy = obj.y ?? 0;
+      ow = obj.width ?? 150; oh = obj.height ?? 150;
+    }
+    if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
+      visibleIds.add(obj.id);
+      if (obj.type === 'frame' && obj.childIds) {
+        for (const cid of obj.childIds) visibleIds.add(cid);
+      }
+      if (obj.frameId) {
+        let fid = obj.frameId;
+        while (fid) {
+          visibleIds.add(fid);
+          const parent = objMap[fid];
+          fid = parent?.frameId || null;
+        }
+      }
+    }
+  }
+  if (selectedId) visibleIds.add(selectedId);
+  if (draggingId) visibleIds.add(draggingId);
+  return visibleIds;
+}
+
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
   const dragLayerRef = useRef();
@@ -407,7 +465,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   );
 }
 
-function areEqual(prev, next) {
+export function areEqual(prev, next) {
   const ps = prev.state, ns = next.state;
   return (
     ps.objects === ns.objects &&
