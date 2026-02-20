@@ -4,7 +4,7 @@ import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
 import './BoardSwitcher.css';
-import { groupToSlug } from '../utils/slugUtils.js';
+import { buildSlugChain } from '../utils/slugUtils.js';
 
 function HeaderLeftInner({ state, handlers }) {
   const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive } = state;
@@ -132,8 +132,7 @@ function HeaderLeftInner({ state, handlers }) {
                       className={`board-switcher-item ${b.id === boardId ? 'active' : ''}`}
                       onClick={() => {
                         const bGroup = b.groupId ? groupsList.find(g => g.id === b.groupId) : null;
-                        const slug = groupToSlug(bGroup);
-                        if (onSwitchBoard) onSwitchBoard(slug, b.id, b.name);
+                        if (onSwitchBoard) onSwitchBoard(bGroup ? buildSlugChain(bGroup, groupsList) : [], b.id, b.name);
                         else { setBoardId(b.id); setBoardName(b.name); }
                         setShowBoardSwitcher(false); setBoardSearch('');
                       }}

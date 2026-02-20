@@ -66,17 +66,14 @@ export function useGroupsList(currentUser, isAdminView = false) {
 
   const createGroup = async (name, visibility = 'private') => {
     const slug = toSlug(name);
-    // Check for slug uniqueness
-    let finalSlug = slug;
-    const existing = groups.filter(g => g.slug === slug || g.slug?.startsWith(slug + '-'));
-    if (existing.length > 0) {
-      finalSlug = `${slug}-${existing.length + 1}`;
+    if (groups.some(g => g.slug === slug && !g.parentGroupId)) {
+      throw new Error('SLUG_TAKEN');
     }
 
     const groupsRef = collection(db, 'groups');
     const ref = await addDoc(groupsRef, {
       name,
-      slug: finalSlug,
+      slug,
       visibility,
       ownerId: currentUser?.uid || null,
       members: currentUser ? { [currentUser.uid]: 'admin' } : {},
@@ -146,16 +143,14 @@ export function useGroupsList(currentUser, isAdminView = false) {
 
   const createSubgroup = async (parentGroupId, name, visibility = 'private') => {
     const slug = toSlug(name);
-    let finalSlug = slug;
-    const existing = groups.filter(g => g.slug === slug || g.slug?.startsWith(slug + '-'));
-    if (existing.length > 0) {
-      finalSlug = `${slug}-${existing.length + 1}`;
+    if (groups.some(g => g.slug === slug && g.parentGroupId === parentGroupId)) {
+      throw new Error('SLUG_TAKEN');
     }
 
     const groupsRef = collection(db, 'groups');
     const ref = await addDoc(groupsRef, {
       name,
-      slug: finalSlug,
+      slug,
       visibility,
       parentGroupId,
       ownerId: currentUser?.uid || null,
