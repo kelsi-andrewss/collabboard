@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Globe, Lock, Trash2, Users } from 'lucide-react';
+import { X, Globe, Lock, Trash2, Users, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './BoardSettings.css';
@@ -109,7 +109,10 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
                 {visibility === 'open' && 'Anyone with the link can view and edit this board.'}
               </p>
               {visibility === 'open' && (
-                <p className="visibility-warning visibility-warning--danger">Anyone with the link can edit this board. Objects may be added, changed, or deleted by anyone.</p>
+                <div className="visibility-open-warning">
+                  <AlertTriangle size={16} />
+                  <span>Anyone with the link can view and edit this board. Objects may be added, changed, or deleted by anyone.</span>
+                </div>
               )}
             </>
           ) : (

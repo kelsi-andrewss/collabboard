@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Globe, Lock, Trash2, Users, Shield } from 'lucide-react';
+import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './BoardSettings.css';
@@ -111,6 +111,12 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
                 {visibility === 'public' && 'Anyone can find and view this group. Only the owner and admins can make changes.'}
                 {visibility === 'open' && 'Anyone can find, view, and join this group.'}
               </p>
+              {visibility === 'open' && (
+                <div className="visibility-open-warning">
+                  <AlertTriangle size={16} />
+                  <span>Anyone can find, view, and edit this group.</span>
+                </div>
+              )}
             </>
           ) : (
             <div className="visibility-toggle disabled">

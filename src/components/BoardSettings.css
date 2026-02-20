@@ -117,6 +117,28 @@
   font-weight: 500;
 }
 
+.visibility-open-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid var(--accent-warning, #d97706);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.visibility-open-warning svg {
+  flex-shrink: 0;
+  color: var(--accent-warning, #d97706);
+}
+
+.visibility-open-warning span {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
 .member-empty {
   display: flex;
   align-items: center;

@@ -466,3 +466,46 @@
   font-size: 0.8rem;
   cursor: pointer;
 }
+
+.visibility-open-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid var(--accent-warning, #d97706);
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+
+.visibility-open-warning svg {
+  flex-shrink: 0;
+  color: var(--accent-warning, #d97706);
+}
+
+.visibility-open-warning span {
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.visibility-open-confirm-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.visibility-open-confirm-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.visibility-open-confirm-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-warning, #d97706);
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus, LayoutGrid, Users, GripVertical } from 'lucide-react';
+import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus, LayoutGrid, Users, GripVertical, AlertTriangle } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -68,6 +68,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
   const [groupSearchText, setGroupSearchText] = useState('');
   const [newBoardVisibility, setNewBoardVisibility] = useState('private');
+  const [confirmOpenBoard, setConfirmOpenBoard] = useState(false);
+  const [confirmOpenGroup, setConfirmOpenGroup] = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
   const pendingInvitesRef = useRef([]);
   const [inviteRole, setInviteRole] = useState('editor');
@@ -284,6 +286,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     setGroupSearchText('');
     setGroupDropdownOpen(false);
     setNewBoardVisibility('private');
+    setConfirmOpenBoard(false);
     pendingInvitesRef.current = [];
     setPendingInvites([]);
     setInviteRole('editor');
@@ -297,6 +300,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     setGroupModalData({ name: '', visibility: 'private' });
     setGroupNameError('');
     setBoardRows([{ name: '' }]);
+    setConfirmOpenGroup(false);
     setShowGroupModal(false);
   };
 
@@ -311,12 +315,14 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleAddBoard = (e) => {
     e.preventDefault();
+    if (newBoardVisibility === 'open' && !confirmOpenBoard) return;
     if (!newBoardName.trim()) return;
     submitCreate(newBoardName.trim(), selectedGroupId);
   };
 
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
+    if (groupModalData.visibility === 'open' && !confirmOpenGroup) return;
     if (!groupModalData.name.trim()) return;
     setGroupNameError('');
     try {
@@ -342,6 +348,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         boardNameInputRef.current?.focus();
         return;
       }
+      if (newBoardVisibility === 'open' && !confirmOpenBoard) return;
       submitCreate(newBoardName.trim(), selectedGroupId);
     } else if (e.key === 'Escape') {
       setGroupDropdownOpen(false);
@@ -735,21 +742,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'private' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'private' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'private' })); setConfirmOpenGroup(false); }}
                   >
                     <Lock size={14} /> Private
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'public' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'public' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'public' })); setConfirmOpenGroup(false); }}
                   >
                     <Globe size={14} /> Public
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'open' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'open' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'open' })); setConfirmOpenGroup(false); }}
                   >
                     <Users size={14} /> Open
                   </button>
@@ -759,6 +766,22 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   {groupModalData.visibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
                   {groupModalData.visibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
+                {groupModalData.visibility === 'open' && (
+                  <div className="visibility-open-confirm-block">
+                    <div className="visibility-open-warning">
+                      <AlertTriangle size={16} />
+                      <span>This group will be visible to everyone. Anyone can view and edit it.</span>
+                    </div>
+                    <label className="visibility-open-confirm-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={confirmOpenGroup}
+                        onChange={(e) => setConfirmOpenGroup(e.target.checked)}
+                      />
+                      <span>I understand that anyone can edit this group</span>
+                    </label>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label>Boards <span className="label-optional">(optional)</span></label>
@@ -795,7 +818,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               </div>
               <div className="modal-actions">
                 <button type="button" className="secondary-btn" onClick={resetGroupModalState}>Cancel</button>
-                <button type="submit" className="primary-btn" disabled={!groupModalData.name.trim()}>Create Group</button>
+                <button type="submit" className="primary-btn" disabled={!groupModalData.name.trim() || (groupModalData.visibility === 'open' && !confirmOpenGroup)}>Create Group</button>
               </div>
             </form>
           </div>
@@ -878,21 +901,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'private' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('private')}
+                    onClick={() => { setNewBoardVisibility('private'); setConfirmOpenBoard(false); }}
                   >
                     <Lock size={14} /> Private
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'public' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('public')}
+                    onClick={() => { setNewBoardVisibility('public'); setConfirmOpenBoard(false); }}
                   >
                     <Globe size={14} /> Public
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${newBoardVisibility === 'open' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setNewBoardVisibility('open')}
+                    onClick={() => { setNewBoardVisibility('open'); setConfirmOpenBoard(false); }}
                   >
                     <Users size={14} /> Open
                   </button>
@@ -902,6 +925,22 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   {newBoardVisibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
                   {newBoardVisibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
+                {newBoardVisibility === 'open' && (
+                  <div className="visibility-open-confirm-block">
+                    <div className="visibility-open-warning">
+                      <AlertTriangle size={16} />
+                      <span>This board will be visible to everyone. Anyone can view and edit it.</span>
+                    </div>
+                    <label className="visibility-open-confirm-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={confirmOpenBoard}
+                        onChange={(e) => setConfirmOpenBoard(e.target.checked)}
+                      />
+                      <span>I understand that anyone can edit this board</span>
+                    </label>
+                  </div>
+                )}
               </div>
               {newBoardVisibility === 'private' && (
                 <div className="form-group">
@@ -972,7 +1011,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               )}
               <div className="modal-actions">
                 <button type="button" className="secondary-btn" onClick={resetModalState}>Cancel</button>
-                <button type="submit" className="primary-btn" disabled={!newBoardName.trim()}>Create Board</button>
+                <button type="submit" className="primary-btn" disabled={!newBoardName.trim() || (newBoardVisibility === 'open' && !confirmOpenBoard)}>Create Board</button>
               </div>
             </form>
           </div>
