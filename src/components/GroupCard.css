@@ -52,6 +52,16 @@
   user-select: none;
 }
 
+.group-card-chevron-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .group-card-chevron {
   color: var(--text-tertiary);
   flex-shrink: 0;
@@ -466,23 +476,22 @@
   outline: none;
 }
 
-.group-card-add-btn {
+.group-card-add-subgroup-btn {
   background: transparent;
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: 3px;
+  padding: 6px 8px;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  transition: color 0.15s;
-  flex-shrink: 0;
-  font-size: 1rem;
-  line-height: 1;
+  font-size: 0.78rem;
+  text-align: left;
+  width: 100%;
+  transition: color 0.15s, background 0.12s;
 }
 
-.group-card-add-btn:hover {
+.group-card-add-subgroup-btn:hover {
   color: var(--accent-primary);
+  background: var(--bg-tertiary);
 }
 
 .board-card-protect-btn {

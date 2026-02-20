@@ -238,8 +238,8 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
-            const w = Math.max(100, sizeRef.current.width * scaleX);
-            const h = Math.max(80, sizeRef.current.height * scaleY);
+            const w = Math.max(100, sizeRef.current.width * Math.abs(scaleX));
+            const h = Math.max(80, sizeRef.current.height * Math.abs(scaleY));
             if (hitRectRef.current) { hitRectRef.current.width(w); hitRectRef.current.height(h); }
             if (bgRectRef.current) { bgRectRef.current.width(w); bgRectRef.current.height(h); }
             if (borderRectRef.current) { borderRectRef.current.width(w); borderRectRef.current.height(h); }
@@ -251,10 +251,11 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
-            const rawX = group.x();
-            const rawY = group.y();
-            const rawW = Math.max(100, sizeRef.current.width * scaleX);
-            const rawH = Math.max(80, sizeRef.current.height * scaleY);
+            const rect = group.getClientRect({ skipShadow: true, skipStroke: true, relativeTo: group.getParent() });
+            const rawX = rect.x;
+            const rawY = rect.y;
+            const rawW = Math.max(100, rect.width);
+            const rawH = Math.max(80, rect.height);
             const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
             let finalX, finalY, finalW, finalH;
             if (snapToGrid && isResize) {
