@@ -37,9 +37,22 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
       onDragLeave={onGroupDragLeave}
-      onClick={groupId ? () => onNavigateToGroup(buildSlugChain(group, allGroups)) : undefined}
     >
-      <div className="group-card-header" onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}>
+      <div
+        className="group-card-header"
+        onClick={groupId ? () => onNavigateToGroup(buildSlugChain(group, allGroups)) : undefined}
+      >
+        <button
+          className="group-card-chevron-btn"
+          onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
+        >
+          {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
+        </button>
+        <Folder size={16} className="group-card-icon" />
+        <span
+          className={`group-card-name${groupId ? ' group-card-name--link' : ''}`}
+        >{groupName || 'Ungrouped'}</span>
+        {group?.protected && <span className="shield-badge"><Shield size={12} /></span>}
         {onGroupDragStart && group && (
           <span
             className="group-card-drag-handle"
@@ -51,29 +64,11 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             <GripVertical size={12} />
           </span>
         )}
-        {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
-        <Folder size={16} className="group-card-icon" />
-        <span
-          className={`group-card-name${groupId ? ' group-card-name--link' : ''}`}
-        >{groupName || 'Ungrouped'}</span>
-        {group?.protected && <span className="shield-badge"><Shield size={12} /></span>}
-        <span className="group-card-count">
-          {boards.length}
-        </span>
-        {onCreateSubgroup && depth < 3 && (
-          <button
-            className="group-card-add-btn"
-            title="Add subgroup"
-            onClick={e => { e.stopPropagation(); setAddingSubgroup(true); }}
-          >
-            +
-          </button>
-        )}
       </div>
 
       {expanded && (
         <>
-          {(subgroups.length > 0 || addingSubgroup) && (
+          {(subgroups.length > 0 || addingSubgroup || (onCreateSubgroup && depth < 3)) && (
             <div className="group-card-subgroup-section">
               {subgroups.map(sub => (
                 <GroupCard
@@ -126,6 +121,14 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                     }}
                   />
                 </div>
+              )}
+              {onCreateSubgroup && depth < 3 && !addingSubgroup && (
+                <button
+                  className="group-card-add-subgroup-btn"
+                  onClick={e => { e.stopPropagation(); setAddingSubgroup(true); }}
+                >
+                  + Add subgroup
+                </button>
               )}
             </div>
           )}
