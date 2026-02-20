@@ -790,21 +790,18 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <p className="visibility-description">
                   {groupModalData.visibility === 'private' && 'Only you and invited members can see this.'}
                   {groupModalData.visibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
-                  {groupModalData.visibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
                 {groupModalData.visibility === 'open' && (
-                  <div className="visibility-open-confirm-block">
-                    <div className="visibility-open-warning">
-                      <AlertTriangle size={16} />
-                      <span>This group will be visible to everyone. Anyone can view and edit it.</span>
-                    </div>
+                  <div className="visibility-open-warning">
+                    <AlertTriangle size={16} />
+                    <span>This group will be visible to everyone. Anyone can view and edit it.</span>
                     <label className="visibility-open-confirm-checkbox">
                       <input
                         type="checkbox"
                         checked={confirmOpenGroup}
                         onChange={(e) => setConfirmOpenGroup(e.target.checked)}
                       />
-                      <span>I understand that anyone can edit this group</span>
+                      <span>I understand</span>
                     </label>
                   </div>
                 )}
@@ -949,21 +946,18 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <p className="visibility-description">
                   {newBoardVisibility === 'private' && 'Only you and invited members can see this.'}
                   {newBoardVisibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
-                  {newBoardVisibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
                 {newBoardVisibility === 'open' && (
-                  <div className="visibility-open-confirm-block">
-                    <div className="visibility-open-warning">
-                      <AlertTriangle size={16} />
-                      <span>This board will be visible to everyone. Anyone can view and edit it.</span>
-                    </div>
+                  <div className="visibility-open-warning">
+                    <AlertTriangle size={16} />
+                    <span>This board will be visible to everyone. Anyone can view and edit it.</span>
                     <label className="visibility-open-confirm-checkbox">
                       <input
                         type="checkbox"
                         checked={confirmOpenBoard}
                         onChange={(e) => setConfirmOpenBoard(e.target.checked)}
                       />
-                      <span>I understand that anyone can edit this board</span>
+                      <span>I understand</span>
                     </label>
                   </div>
                 )}
