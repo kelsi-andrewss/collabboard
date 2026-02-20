@@ -55,7 +55,7 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup, updateGroup, inviteGroupMember, removeGroupMember }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
   const globalPresence = useGlobalPresence();
@@ -91,7 +91,38 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const masonryContainerRef = useRef(null);
   const [columnCount, setColumnCount] = useState(5);
   const [draggingBoard, setDraggingBoard] = useState(null);
+  const [draggingGroup, setDraggingGroup] = useState(null);
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
+
+  const getGroupDepth = (groupId, allGroups) => {
+    let depth = 0;
+    let current = allGroups.find(g => g.id === groupId);
+    while (current?.parentGroupId) {
+      depth++;
+      current = allGroups.find(g => g.id === current.parentGroupId);
+    }
+    return depth;
+  };
+
+  const isAncestor = (candidateAncestorId, targetGroupId, allGroups) => {
+    let current = allGroups.find(g => g.id === targetGroupId);
+    while (current?.parentGroupId) {
+      if (current.parentGroupId === candidateAncestorId) return true;
+      current = allGroups.find(g => g.id === current.parentGroupId);
+    }
+    return false;
+  };
+
+  const handleGroupItemDragStart = (e, group) => {
+    e.dataTransfer.setData('application/x-group-json', JSON.stringify({ id: group.id }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingGroup({ id: group.id });
+  };
+
+  const handleGroupItemDragEnd = () => {
+    setDraggingGroup(null);
+    setDragOverTargetId(null);
+  };
 
   const handleBoardDragStart = (e, boardId, sourceGroupId) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ boardId, sourceGroupId }));
@@ -118,6 +149,35 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleGroupDrop = (e, targetGroupId) => {
     e.preventDefault();
+    const groupPayload = e.dataTransfer.getData('application/x-group-json');
+    if (groupPayload) {
+      try {
+        const { id: draggedGroupId } = JSON.parse(groupPayload);
+        const normalizedTarget = targetGroupId === '__ungrouped__' ? null : (targetGroupId || null);
+        if (normalizedTarget === draggedGroupId) {
+          setDraggingGroup(null);
+          setDragOverTargetId(null);
+          return;
+        }
+        if (normalizedTarget !== null) {
+          if (draggedGroupId === normalizedTarget || isAncestor(draggedGroupId, normalizedTarget, groupsProp)) {
+            setDraggingGroup(null);
+            setDragOverTargetId(null);
+            return;
+          }
+          const targetDepth = getGroupDepth(normalizedTarget, groupsProp);
+          if (targetDepth >= 2) {
+            setDraggingGroup(null);
+            setDragOverTargetId(null);
+            return;
+          }
+        }
+        moveGroup && moveGroup(draggedGroupId, normalizedTarget);
+      } catch { /* ignore malformed drag data */ }
+      setDraggingGroup(null);
+      setDragOverTargetId(null);
+      return;
+    }
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       const { boardId, sourceGroupId } = data;
@@ -444,10 +504,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
       </div>
 
       {(() => {
-        const ungroupedEntry = sortedGroupEntries.find(([k]) => k === null || k === 'null');
         const rootGroupIds = new Set(groupsProp.filter(g => !g.parentGroupId).map(g => g.id));
         const groupedEntries = sortedGroupEntries.filter(([k]) => k !== null && k !== 'null' && rootGroupIds.has(k));
-        const ungroupedBoards = ungroupedEntry ? ungroupedEntry[1] : [];
+        const ungroupedBoards = sortedGroupEntries
+          .filter(([k]) => k === null || k === 'null' || !rootGroupIds.has(k))
+          .flatMap(([, bs]) => bs);
 
         const allItems = [
           ...groupedEntries.map(([groupId, groupBoards]) => {
@@ -490,7 +551,13 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
         return (
           <>
-          <div className="masonry-columns-container" ref={masonryContainerRef}>
+          <div
+            className={`masonry-columns-container${dragOverTargetId === '__ungrouped__' ? ' masonry-drop-target--active' : ''}`}
+            ref={masonryContainerRef}
+            onDragOver={(e) => handleGroupDragOver(e, '__ungrouped__')}
+            onDrop={(e) => handleGroupDrop(e, '__ungrouped__')}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) handleGroupDragLeave(e, '__ungrouped__'); }}
+          >
           {masonryItems.length === 0 && (
             <div className="empty-state">
               <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
@@ -531,6 +598,12 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         draggingBoard={draggingBoard}
                         onBoardDragStart={handleBoardDragStart}
                         onBoardDragEnd={handleBoardDragEnd}
+                        onGroupDragStart={handleGroupItemDragStart}
+                        onGroupDragEnd={handleGroupItemDragEnd}
+                        draggingGroup={draggingGroup}
+                        onUpdateGroup={(patches) => updateGroup && updateGroup(item.groupObj?.id, patches)}
+                        onInviteGroupMember={(uid, role) => inviteGroupMember && inviteGroupMember(item.groupObj?.id, uid, role)}
+                        onRemoveGroupMember={(uid) => removeGroupMember && removeGroupMember(item.groupObj?.id, uid)}
                       />
                     );
                   }
@@ -610,16 +683,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               </div>
             ))}
           </div>
-          {draggingBoard && (
-            <div
-              className={`ungrouped-drop-zone${dragOverTargetId === '__ungrouped__' ? ' ungrouped-drop-zone--active' : ''}`}
-              onDragOver={(e) => handleGroupDragOver(e, '__ungrouped__')}
-              onDrop={(e) => handleGroupDrop(e, '__ungrouped__')}
-              onDragLeave={(e) => handleGroupDragLeave(e, '__ungrouped__')}
-            >
-              {draggingBoard?.sourceGroupId ? 'Remove from group' : 'Ungrouped'}
-            </div>
-          )}
           </>
         );
       })()}

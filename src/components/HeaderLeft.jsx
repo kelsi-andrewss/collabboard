@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2 } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -7,7 +7,7 @@ import './BoardSwitcher.css';
 import { groupToSlug } from '../utils/slugUtils.js';
 
 function HeaderLeftInner({ state, handlers }) {
-  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit } = state;
+  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
     handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
@@ -91,6 +91,13 @@ function HeaderLeftInner({ state, handlers }) {
         <Home size={16} />
         CollabBoard
       </span>
+
+      {isAdmin && adminViewActive && (
+        <span className="admin-mode-badge">
+          <Shield size={12} />
+          Admin
+        </span>
+      )}
 
       {showToolbar && <div className="board-switcher" ref={switcherRef}>
         <button
@@ -244,7 +251,9 @@ function areEqual(prev, next) {
     ps.colorHistory === ns.colorHistory &&
     ps.pendingTool === ns.pendingTool &&
     ps.activeTool === ns.activeTool &&
-    ps.canEdit === ns.canEdit
+    ps.canEdit === ns.canEdit &&
+    ps.isAdmin === ns.isAdmin &&
+    ps.adminViewActive === ns.adminViewActive
   );
 }
 

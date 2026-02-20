@@ -90,6 +90,22 @@
   gap: 15px;
 }
 
+.admin-mode-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background-color: rgba(217, 119, 6, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  pointer-events: none;
+  user-select: none;
+}
+
 .help-btn {
   background: transparent;
   border: none;

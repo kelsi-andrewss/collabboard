@@ -74,7 +74,7 @@ export function App() {
   const rawBoard = useBoard(boardId, user);
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
-  const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected } = useGroupsList(user, effectiveAdminView);
+  const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup } = useGroupsList(user, effectiveAdminView);
   const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
 
   const currentBoard = boardId ? allBoards.find(b => b.id === boardId) || null : null;
@@ -433,7 +433,7 @@ export function App() {
     <div className="app-container">
       <div className="header">
         <HeaderLeft
-          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit }}
+          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive }}
           handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool }}
         />
         <div className="header-right">
@@ -505,6 +505,10 @@ export function App() {
                 createSubgroup={createSubgroup}
                 deleteGroupCascade={deleteGroupCascade}
                 setGroupProtected={setGroupProtected}
+                moveGroup={moveGroup}
+                updateGroup={updateGroup}
+                inviteGroupMember={inviteGroupMember}
+                removeGroupMember={removeGroupMember}
               />
             )}
             <FABButtons

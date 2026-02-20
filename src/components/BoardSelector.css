@@ -444,26 +444,10 @@
   margin-bottom: 8px;
 }
 
-.ungrouped-drop-zone {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 32px;
-  background: var(--bg-secondary);
-  border: 2px dashed var(--border-color);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  z-index: 100;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-
-.ungrouped-drop-zone--active {
-  border-color: var(--accent-primary);
-  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
-  color: var(--accent-primary);
+.masonry-drop-target--active {
+  outline: 2px dashed var(--accent-primary);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
 
 .migrate-btn {

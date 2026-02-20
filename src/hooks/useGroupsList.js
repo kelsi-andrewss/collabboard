@@ -204,5 +204,12 @@ export function useGroupsList(currentUser, isAdminView = false) {
     await updateDoc(doc(db, 'groups', groupId), { protected: bool, updatedAt: serverTimestamp() });
   };
 
-  return { groups, loading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected };
+  const moveGroup = async (groupId, targetParentGroupId) => {
+    const patch = targetParentGroupId === null
+      ? { parentGroupId: deleteField(), updatedAt: serverTimestamp() }
+      : { parentGroupId: targetParentGroupId, updatedAt: serverTimestamp() };
+    await updateDoc(doc(db, 'groups', groupId), patch);
+  };
+
+  return { groups, loading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup };
 }

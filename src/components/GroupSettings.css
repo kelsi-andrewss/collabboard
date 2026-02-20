@@ -1,0 +1,52 @@
+.group-settings-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.group-settings-toggle-row svg {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.group-settings-toggle-row span {
+  flex: 1;
+}
+
+.group-settings-toggle-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.group-settings-toggle-btn--on {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.group-settings-danger .danger-btn {
+  width: 100%;
+}
+
+.group-settings-danger .danger-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.group-settings-delete-confirm p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}

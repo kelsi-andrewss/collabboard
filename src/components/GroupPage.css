@@ -220,6 +220,10 @@
   font-weight: 500;
 }
 
+.group-page-masonry-wrapper {
+  padding: 0 40px 40px;
+}
+
 .group-page-subgroups {
   display: flex;
   flex-direction: column;

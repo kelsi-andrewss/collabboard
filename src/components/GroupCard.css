@@ -28,6 +28,7 @@
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .group-card:hover {
@@ -44,7 +45,7 @@
 .group-card-header {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   padding: 12px 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
@@ -68,9 +69,39 @@
   flex: 1;
 }
 
+.group-card-name--link {
+  cursor: pointer;
+}
+
+.group-card-name--link:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
 .group-card-count {
   font-size: 0.75rem;
   color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.group-card-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  cursor: grab;
+  padding: 3px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.group-card-header:hover .group-card-drag-handle {
+  opacity: 1;
+}
+
+.group-card-drag-handle:active {
+  cursor: grabbing;
 }
 
 .group-card-delete-btn {
@@ -99,7 +130,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: 8px;
+  padding: 8px 8px 14px 8px;
   gap: 8px;
 }
 
@@ -429,7 +460,7 @@
   outline: none;
 }
 
-.group-card-protect-btn {
+.group-card-add-btn {
   background: transparent;
   border: none;
   color: var(--text-tertiary);
@@ -438,16 +469,13 @@
   border-radius: 4px;
   display: flex;
   align-items: center;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
+  transition: color 0.15s;
   flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.group-card-header:hover .group-card-protect-btn {
-  opacity: 1;
-}
-
-.group-card-protect-btn:hover {
+.group-card-add-btn:hover {
   color: var(--accent-primary);
 }
 

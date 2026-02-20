@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical, Shield } from 'lucide-react';
+import { Folder, ChevronDown, ChevronRight, Trash2, FolderOutput, GripVertical, Shield, Settings } from 'lucide-react';
 import { groupToSlug } from '../utils/slugUtils.js';
 import { Avatar } from './Avatar.jsx';
+import { GroupSettings } from './GroupSettings.jsx';
 import './GroupCard.css';
 
 function formatDate(ts) {
@@ -20,29 +21,18 @@ function formatDate(ts) {
 export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard, globalPresence, onDeleteBoard, onDeleteGroup,
   onGroupDragOver, onGroupDrop, onGroupDragLeave, isDragOver, onMoveBoard, existingGroups,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
-  subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [] }) {
+  subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
+  onGroupDragStart, onGroupDragEnd, draggingGroup,
+  onUpdateGroup, onInviteGroupMember, onRemoveGroupMember }) {
   const slug = groupToSlug(group);
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const [expanded, setExpanded] = useState(true);
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
-  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false);
   const [movingBoardId, setMovingBoardId] = useState(null);
   const [addingSubgroup, setAddingSubgroup] = useState(false);
   const [subgroupName, setSubgroupName] = useState('');
-  const [blockedItems, setBlockedItems] = useState(null);
-
-  const handleDeleteGroup = async () => {
-    try {
-      await onDeleteGroup(groupId);
-      setConfirmDeleteGroup(false);
-    } catch (err) {
-      if (err?.blocked) {
-        setConfirmDeleteGroup(false);
-        setBlockedItems(err.items);
-      }
-    }
-  };
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div
@@ -51,50 +41,46 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
       onDragLeave={onGroupDragLeave}
+      onClick={groupId ? () => onNavigateToGroup(slug) : undefined}
     >
-      <div className="group-card-header" onClick={() => setExpanded(e => !e)}>
+      <div className="group-card-header" onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}>
+        {onGroupDragStart && group && (
+          <span
+            className="group-card-drag-handle"
+            draggable
+            onDragStart={(e) => { e.stopPropagation(); onGroupDragStart(e, group); }}
+            onDragEnd={(e) => { e.stopPropagation(); onGroupDragEnd && onGroupDragEnd(e); }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={12} />
+          </span>
+        )}
         {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
         <Folder size={16} className="group-card-icon" />
-        <span className="group-card-name">{groupName || 'Ungrouped'}</span>
+        <span
+          className={`group-card-name${groupId ? ' group-card-name--link' : ''}`}
+        >{groupName || 'Ungrouped'}</span>
         {group?.protected && <span className="shield-badge"><Shield size={12} /></span>}
         <span className="group-card-count">
           {boards.length} board{boards.length !== 1 ? 's' : ''}{subgroups.length > 0 ? `, ${subgroups.length} subgroup${subgroups.length !== 1 ? 's' : ''}` : ''}
         </span>
-        {onSetGroupProtected && (
-          <button
-            className="group-card-protect-btn"
-            title={group?.protected ? 'Remove protection' : 'Protect'}
-            onClick={e => { e.stopPropagation(); onSetGroupProtected(groupId, !group?.protected); }}
-          >
-            <Shield size={13} />
-          </button>
-        )}
         {onCreateSubgroup && depth < 3 && (
           <button
-            className="group-card-delete-btn"
+            className="group-card-add-btn"
             title="Add subgroup"
             onClick={e => { e.stopPropagation(); setAddingSubgroup(true); }}
           >
             +
           </button>
         )}
-        {group && onDeleteGroup && (
-          group?.protected ? (
-            <button
-              className="group-card-delete-btn group-card-delete-btn--disabled"
-              title="Remove protection first"
-            >
-              <Trash2 size={13} />
-            </button>
-          ) : (
-            <button
-              className="group-card-delete-btn"
-              title="Delete group"
-              onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup(true); }}
-            >
-              <Trash2 size={13} />
-            </button>
-          )
+        {groupId && onUpdateGroup && (
+          <button
+            className="group-card-add-btn"
+            title="Group settings"
+            onClick={e => { e.stopPropagation(); setShowSettings(true); }}
+          >
+            <Settings size={13} />
+          </button>
         )}
       </div>
 
@@ -124,6 +110,12 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   draggingBoard={draggingBoard}
                   onBoardDragStart={onBoardDragStart}
                   onBoardDragEnd={onBoardDragEnd}
+                  onGroupDragStart={onGroupDragStart}
+                  onGroupDragEnd={onGroupDragEnd}
+                  draggingGroup={draggingGroup}
+                  onUpdateGroup={onUpdateGroup}
+                  onInviteGroupMember={onInviteGroupMember}
+                  onRemoveGroupMember={onRemoveGroupMember}
                 />
               ))}
               {addingSubgroup && (
@@ -166,7 +158,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   key={b.id}
                   className={`board-card${isDragging ? ' board-card--dragging' : ''}`}
                   ref={el => { cardRef = el; }}
-                  onClick={() => onNavigateToBoard(group ? slug : null, b.id, b.name)}
+                  onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? slug : null, b.id, b.name); }}
                 >
                   <div className="board-card-thumbnail">
                     {b.thumbnail
@@ -283,7 +275,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
             {group && (
               <button
                 className="board-cards-see-all"
-                onClick={() => onNavigateToGroup(slug)}
+                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(slug); }}
               >
                 {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
               </button>
@@ -305,31 +297,19 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
         </div>
       )}
 
-      {confirmDeleteGroup && (
-        <div className="modal-overlay" onClick={() => setConfirmDeleteGroup(false)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h2>Delete Group</h2>
-            <p>Delete group &ldquo;{groupName}&rdquo; and all {boards.length} board{boards.length !== 1 ? 's' : ''} in it? This cannot be undone.</p>
-            <div className="modal-actions">
-              <button className="secondary-btn" onClick={() => setConfirmDeleteGroup(false)}>Cancel</button>
-              <button className="danger-btn" onClick={handleDeleteGroup}>Delete All</button>
-            </div>
-          </div>
-        </div>
+      {showSettings && group && onUpdateGroup && (
+        <GroupSettings
+          group={group}
+          currentUserId={user?.uid}
+          onUpdateGroup={onUpdateGroup}
+          onInviteMember={(uid, role) => onInviteGroupMember && onInviteGroupMember(uid, role)}
+          onRemoveMember={(uid) => onRemoveGroupMember && onRemoveGroupMember(uid)}
+          onSetProtected={(bool) => onSetGroupProtected && onSetGroupProtected(groupId, bool)}
+          onDeleteGroup={() => onDeleteGroup && onDeleteGroup(groupId)}
+          onClose={() => setShowSettings(false)}
+        />
       )}
 
-      {blockedItems && (
-        <div className="modal-overlay" onClick={() => setBlockedItems(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h2>Cannot Delete</h2>
-            <p>The following protected items must be unprotected first:</p>
-            <ul>{blockedItems.map((item, i) => <li key={i}>{item.name} ({item.type})</li>)}</ul>
-            <div className="modal-actions">
-              <button className="secondary-btn" onClick={() => setBlockedItems(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
