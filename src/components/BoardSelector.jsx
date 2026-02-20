@@ -936,7 +936,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                     <div className="invite-search-row">
                       <input
                         type="text"
-                        placeholder="Search by name..."
+                        placeholder="Invite members..."
                         value={userSearchQuery}
                         onChange={e => handleUserSearch(e.target.value)}
                         onFocus={() => userSearchResults.length > 0 && setUserSearchOpen(true)}

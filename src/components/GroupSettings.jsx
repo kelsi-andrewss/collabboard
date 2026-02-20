@@ -165,7 +165,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
               <div className="invite-search-row">
                 <input
                   type="text"
-                  placeholder="Search by name..."
+                  placeholder="Add member..."
                   value={userSearchQuery}
                   onChange={e => handleUserSearch(e.target.value)}
                   onFocus={() => userSearchResults.length > 0 && setUserSearchOpen(true)}
