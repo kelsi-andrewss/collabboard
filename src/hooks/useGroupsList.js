@@ -134,7 +134,6 @@ export function useGroupsList(currentUser, isAdminView = false) {
         batch.update(doc(db, 'boards', b.id), {
           groupId: gId,
           group: deleteField(),
-          updatedAt: serverTimestamp(),
         });
       }
     }

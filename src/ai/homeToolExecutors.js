@@ -1,4 +1,4 @@
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export async function executeHomeToolCall(toolName, args, { createNewBoard, allBoards, setBoardId, setBoardName }) {
@@ -27,7 +27,7 @@ export async function executeHomeToolCall(toolName, args, { createNewBoard, allB
     const match = allBoards.find(b => b.name.toLowerCase().includes(q));
     if (match) {
       const boardRef = doc(db, 'boards', match.id);
-      await updateDoc(boardRef, { group, updatedAt: serverTimestamp() });
+      await updateDoc(boardRef, { group });
     }
     return;
   }
