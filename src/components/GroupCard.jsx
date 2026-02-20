@@ -17,7 +17,7 @@ function formatDate(ts) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard, globalPresence, onDeleteBoard, onDeleteGroup,
+export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, onNavigateToBoard, globalPresence, onDeleteBoard, onDeleteGroup,
   onGroupDragOver, onGroupDrop, onGroupDragLeave, isDragOver, onMoveBoard, existingGroups,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
@@ -44,12 +44,14 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       <div
         className="group-card-header"
       >
-        <button
-          className="group-card-chevron-btn"
-          onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
-        >
-          {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
-        </button>
+        {!isCompact && (
+          <button
+            className="group-card-chevron-btn"
+            onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
+          >
+            {expanded ? <ChevronDown size={16} className="group-card-chevron" /> : <ChevronRight size={16} className="group-card-chevron" />}
+          </button>
+        )}
         <Folder size={16} className="group-card-icon" />
         <span
           className={`group-card-name${groupId ? ' group-card-name--link' : ''}`}
@@ -83,7 +85,8 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                 <GroupCard
                   key={sub.id}
                   group={sub}
-                  boards={[]}
+                  boards={allBoards.filter(b => b.groupId === sub.id)}
+                  allBoards={allBoards}
                   subgroups={allGroups.filter(g => g.parentGroupId === sub.id)}
                   depth={depth + 1}
                   allGroups={allGroups}
