@@ -10,6 +10,77 @@ import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
 
+export const GRID_CELL_LIMIT = 5000;
+export function computeGridDimensions(stagePos, stageScale, windowWidth, windowHeight) {
+  const left = -stagePos.x / stageScale;
+  const top = -stagePos.y / stageScale;
+  const right = left + windowWidth / stageScale;
+  const bottom = top + (windowHeight - HEADER_HEIGHT) / stageScale;
+  const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
+  const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
+  const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
+  const rows = Math.ceil((bottom - startY) / GRID_SIZE) + 1;
+  return { cols, rows };
+}
+
+export function multiSelectHit(obj, rect) {
+  if (obj.type === 'frame') return false;
+  let ox, oy, ow, oh;
+  if (obj.type === 'line') {
+    const lb = getLineBounds(obj);
+    ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+  } else {
+    ox = obj.x ?? 0; oy = obj.y ?? 0;
+    ow = obj.width ?? 150; oh = obj.height ?? 150;
+  }
+  return ox + ow >= rect.x && ox <= rect.x + rect.width &&
+    oy + oh >= rect.y && oy <= rect.y + rect.height;
+}
+
+export function sortObjects(a, b) {
+  const aFrame = a.type === 'frame' ? 0 : 1;
+  const bFrame = b.type === 'frame' ? 0 : 1;
+  if (aFrame !== bFrame) return aFrame - bFrame;
+  if (a.type === 'frame' && b.type === 'frame') {
+    const aDepth = a.frameId ? 1 : 0;
+    const bDepth = b.frameId ? 1 : 0;
+    if (aDepth !== bDepth) return aDepth - bDepth;
+  }
+  return (a.zIndex || 0) - (b.zIndex || 0);
+}
+
+export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggingId) {
+  const { vLeft, vTop, vRight, vBottom } = viewport;
+  const visibleIds = new Set();
+  for (const obj of allObjs) {
+    let ox, oy, ow, oh;
+    if (obj.type === 'line') {
+      const lb = getLineBounds(obj);
+      ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
+    } else {
+      ox = obj.x ?? 0; oy = obj.y ?? 0;
+      ow = obj.width ?? 150; oh = obj.height ?? 150;
+    }
+    if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
+      visibleIds.add(obj.id);
+      if (obj.type === 'frame' && obj.childIds) {
+        for (const cid of obj.childIds) visibleIds.add(cid);
+      }
+      if (obj.frameId) {
+        let fid = obj.frameId;
+        while (fid) {
+          visibleIds.add(fid);
+          const parent = objMap[fid];
+          fid = parent?.frameId || null;
+        }
+      }
+    }
+  }
+  if (selectedId) visibleIds.add(selectedId);
+  if (draggingId) visibleIds.add(draggingId);
+  return visibleIds;
+}
+
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
   const dragLayerRef = useRef();
@@ -69,19 +140,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     if (!rect || rect.width < 5 || rect.height < 5) return;
     const hit = new Set();
     for (const obj of Object.values(objects)) {
-      if (obj.type === 'frame') continue;
-      let ox, oy, ow, oh;
-      if (obj.type === 'line') {
-        const lb = getLineBounds(obj);
-        ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
-      } else {
-        ox = obj.x ?? 0; oy = obj.y ?? 0;
-        ow = obj.width ?? 150; oh = obj.height ?? 150;
-      }
-      if (ox + ow >= rect.x && ox <= rect.x + rect.width &&
-          oy + oh >= rect.y && oy <= rect.y + rect.height) {
-        hit.add(obj.id);
-      }
+      if (multiSelectHit(obj, rect)) hit.add(obj.id);
     }
     if (setSelectedIds) setSelectedIds(hit);
   };
@@ -137,12 +196,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         {snapToGrid && (() => {
           const left = -stagePos.x / stageScale;
           const top = -stagePos.y / stageScale;
-          const right = left + window.innerWidth / stageScale;
-          const bottom = top + (window.innerHeight - HEADER_HEIGHT) / stageScale;
           const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
           const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
-          const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
-          const rows = Math.ceil((bottom - startY) / GRID_SIZE) + 1;
+          const { cols, rows } = computeGridDimensions(stagePos, stageScale, window.innerWidth, window.innerHeight);
           const fill = darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
           const dotSize = 2 / stageScale;
           return (
@@ -239,47 +295,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const vBottom = vTop + (window.innerHeight - HEADER_HEIGHT) / stageScale + pad * 2;
           const allObjs = Object.values(objects);
           const objMap = objects;
-          const visibleIds = new Set();
-          for (const obj of allObjs) {
-            let ox, oy, ow, oh;
-            if (obj.type === 'line') {
-              const lb = getLineBounds(obj);
-              ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
-            } else {
-              ox = obj.x ?? 0; oy = obj.y ?? 0;
-              ow = obj.width ?? 150; oh = obj.height ?? 150;
-            }
-            if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
-              visibleIds.add(obj.id);
-              if (obj.type === 'frame' && obj.childIds) {
-                for (const cid of obj.childIds) visibleIds.add(cid);
-              }
-              if (obj.frameId) {
-                let fid = obj.frameId;
-                while (fid) {
-                  visibleIds.add(fid);
-                  const parent = objMap[fid];
-                  fid = parent?.frameId || null;
-                }
-              }
-            }
-          }
-          if (selectedId) visibleIds.add(selectedId);
-          if (dragState?.draggingId) visibleIds.add(dragState.draggingId);
+          const visibleIds = computeVisibleIds(allObjs, objMap, { vLeft, vTop, vRight, vBottom }, selectedId, dragState?.draggingId);
           return allObjs
             .filter(obj => visibleIds.has(obj.id));
         })()
-          .sort((a, b) => {
-            const aFrame = a.type === 'frame' ? 0 : 1;
-            const bFrame = b.type === 'frame' ? 0 : 1;
-            if (aFrame !== bFrame) return aFrame - bFrame;
-            if (a.type === 'frame' && b.type === 'frame') {
-              const aDepth = a.frameId ? 1 : 0;
-              const bDepth = b.frameId ? 1 : 0;
-              if (aDepth !== bDepth) return aDepth - bDepth;
-            }
-            return (a.zIndex || 0) - (b.zIndex || 0);
-          })
+          .sort(sortObjects)
           .map((obj) => {
             const isMultiSelected = selectedIds?.has(obj.id);
             if (obj.type === 'frame') {
@@ -407,7 +427,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   );
 }
 
-function areEqual(prev, next) {
+export function areEqual(prev, next) {
   const ps = prev.state, ns = next.state;
   return (
     ps.objects === ns.objects &&
