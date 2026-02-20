@@ -196,12 +196,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         {snapToGrid && (() => {
           const left = -stagePos.x / stageScale;
           const top = -stagePos.y / stageScale;
-          const right = left + window.innerWidth / stageScale;
-          const bottom = top + (window.innerHeight - HEADER_HEIGHT) / stageScale;
           const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
           const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
-          const cols = Math.ceil((right - startX) / GRID_SIZE) + 1;
-          const rows = Math.ceil((bottom - startY) / GRID_SIZE) + 1;
+          const { cols, rows } = computeGridDimensions(stagePos, stageScale, window.innerWidth, window.innerHeight);
           const fill = darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
           const dotSize = 2 / stageScale;
           return (
