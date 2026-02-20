@@ -234,41 +234,21 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             if (newBox.width < 50 || newBox.height < 40) return oldBox;
             return newBox;
           }}
-          onTransform={() => {
-            const group = groupRef.current;
-            const scaleX = group.scaleX();
-            const scaleY = group.scaleY();
-            const w = Math.max(100, sizeRef.current.width * Math.abs(scaleX));
-            const h = Math.max(80, sizeRef.current.height * Math.abs(scaleY));
-            if (hitRectRef.current) { hitRectRef.current.width(w); hitRectRef.current.height(h); }
-            if (bgRectRef.current) { bgRectRef.current.width(w); bgRectRef.current.height(h); }
-            if (borderRectRef.current) { borderRectRef.current.width(w); borderRectRef.current.height(h); }
-            const tbH = Math.max(32, Math.min(52, h * 0.12));
-            if (titleBarRef.current) { titleBarRef.current.width(w); titleBarRef.current.height(tbH); }
-            if (titleTextRef.current) { titleTextRef.current.width(w - 16); titleTextRef.current.height(tbH); }
-          }}
           onTransformEnd={() => {
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
-            const rect = group.getClientRect({ skipShadow: true, skipStroke: true, relativeTo: group.getParent() });
-            const rawX = rect.x;
-            const rawY = rect.y;
-            const rawW = Math.max(100, rect.width);
-            const rawH = Math.max(80, rect.height);
+            const rawX = group.x();
+            const rawY = group.y();
+            const rawW = Math.max(100, sizeRef.current.width * scaleX);
+            const rawH = Math.max(80, sizeRef.current.height * scaleY);
             const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
-            let finalX, finalY, finalW, finalH;
+            let finalX = rawX, finalY = rawY, finalW = rawW, finalH = rawH;
             if (snapToGrid && isResize) {
               const s = (v) => Math.round(v / gridSize) * gridSize;
-              finalX = s(rawX);
-              finalY = s(rawY);
+              finalX = s(rawX); finalY = s(rawY);
               finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
               finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
-            } else {
-              finalX = rawX;
-              finalY = rawY;
-              finalW = rawW;
-              finalH = rawH;
             }
             // Clamp to minimum size required by children
             const wasClamped = finalW < minWidth || finalH < minHeight;
