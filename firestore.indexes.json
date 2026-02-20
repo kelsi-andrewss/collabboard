@@ -1,4 +1,12 @@
 {
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "users",
+      "fieldPath": "displayNameLower",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" }
+      ]
+    }
+  ]
 }
