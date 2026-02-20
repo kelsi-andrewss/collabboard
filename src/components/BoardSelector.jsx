@@ -302,7 +302,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const resetGroupModalState = () => {
     setGroupModalData({ name: '', visibility: 'private' });
     setGroupNameError('');
-    setBoardRows([{ name: '' }]);
+    setBoardRows([]);
     setConfirmOpenGroup(false);
     setShowGroupModal(false);
   };
