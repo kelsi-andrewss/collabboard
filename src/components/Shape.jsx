@@ -269,11 +269,11 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
-            const rawX = group.x();
-            const rawY = group.y();
-            // Use sizeRef (not React props) to handle rapid consecutive resizes
-            const rawW = Math.max(5, sizeRef.current.w * scaleX);
-            const rawH = Math.max(5, sizeRef.current.h * scaleY);
+            const rect = group.getClientRect({ skipShadow: true, skipStroke: true, relativeTo: group.getParent() });
+            const rawX = rect.x;
+            const rawY = rect.y;
+            const rawW = Math.max(5, rect.width);
+            const rawH = Math.max(5, rect.height);
             const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
             let finalX, finalY, finalW, finalH;
             if (snapToGrid && isResize) {
