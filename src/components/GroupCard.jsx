@@ -142,9 +142,14 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
               )}
             </div>
           )}
-          {(boards.length > 0 || (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== groupId)) && (
+          {(boards.length > 0 || (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== groupId)) && (() => {
+            const ghostBoard = (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== group?.id)
+              ? allBoards?.find(b => b.id === draggingBoard.boardId)
+              : null;
+            const visibleBoards = boards.slice(0, ghostBoard ? 2 : 3);
+            return (
             <div className="board-cards-grid">
-              {boards.slice(0, 3).map(b => {
+              {visibleBoards.map(b => {
                 const onlineUsers = globalPresence?.[b.id] || [];
                 const visibleOnline = onlineUsers.slice(0, 3);
                 const extraOnline = onlineUsers.length - 3;
@@ -270,29 +275,24 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   </div>
                 );
               })}
-              {isDragOver && draggingBoard && (() => {
-                const draggedBoard = allBoards?.find(b => b.id === draggingBoard.boardId);
-                if (draggedBoard && draggingBoard.sourceGroupId !== groupId) {
-                  return (
-                    <div key="ghost" className="board-card board-card--ghost">
-                      <div className="board-card-thumbnail">
-                        {draggedBoard.thumbnail
-                          ? <img src={draggedBoard.thumbnail} alt="" className="board-card-thumbnail-img" />
-                          : <div className="board-card-thumbnail-placeholder" />}
-                      </div>
-                      <div className="board-card-info">
-                        <div className="board-card-row">
-                          <span className="board-card-name">{draggedBoard.name}</span>
-                        </div>
-                        <div className="board-card-preview-label">Preview</div>
-                      </div>
+              {ghostBoard && (
+                <div className="board-card board-card--ghost">
+                  <div className="board-card-thumbnail">
+                    {ghostBoard.thumbnail
+                      ? <img src={ghostBoard.thumbnail} alt="" className="board-card-thumbnail-img" />
+                      : <div className="board-card-thumbnail-placeholder" />}
+                  </div>
+                  <div className="board-card-info">
+                    <div className="board-card-row">
+                      <span className="board-card-name">{ghostBoard.name}</span>
                     </div>
-                  );
-                }
-                return null;
-              })()}
+                    <div className="board-card-preview-label">Preview</div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+            );
+          })()}
           {group && (
             <button
               className="board-cards-see-all"
