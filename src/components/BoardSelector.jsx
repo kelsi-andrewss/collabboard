@@ -154,6 +154,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   };
 
   const handleGroupDrop = (e, targetGroupId) => {
+    e.stopPropagation();
     e.preventDefault();
     const groupPayload = e.dataTransfer.getData('application/x-group-json');
     if (groupPayload) {
