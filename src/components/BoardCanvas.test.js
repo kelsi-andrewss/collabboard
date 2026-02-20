@@ -56,6 +56,23 @@ describe('multiSelectHit', () => {
     // object at x:0, y:0 with default 150x150 — rect starts at 100 — overlaps
     expect(multiSelectHit({ type: 'sticky', x: 0, y: 0 }, rect)).toBe(true);
   });
+
+  it('returns true after object is resized larger so bounding box overlaps rect', () => {
+    expect(multiSelectHit({ type: 'sticky', x: 0, y: 0, width: 50, height: 50 }, rect)).toBe(false);
+    expect(multiSelectHit({ type: 'sticky', x: 0, y: 0, width: 150, height: 150 }, rect)).toBe(true);
+  });
+
+  it('returns false after object is resized smaller so bounding box no longer overlaps rect', () => {
+    expect(multiSelectHit({ type: 'sticky', x: 50, y: 50, width: 100, height: 100 }, rect)).toBe(true);
+    expect(multiSelectHit({ type: 'sticky', x: 50, y: 50, width: 40, height: 40 }, rect)).toBe(false);
+  });
+
+  it('returns the same result regardless of rotation field — uses unrotated bounding box', () => {
+    const base = { type: 'sticky', x: 120, y: 120, width: 50, height: 50 };
+    expect(multiSelectHit({ ...base, rotation: 0 }, rect)).toBe(true);
+    expect(multiSelectHit({ ...base, rotation: 45 }, rect)).toBe(true);
+    expect(multiSelectHit({ ...base, rotation: 90 }, rect)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -101,6 +118,18 @@ describe('sortObjects', () => {
     const a = { type: 'sticky', zIndex: 3 };
     const b = { type: 'sticky', zIndex: 3 };
     expect(sortObjects(a, b)).toBe(0);
+  });
+
+  it('returns 0 for equal-zIndex non-frames regardless of rotation field', () => {
+    const a = { type: 'sticky', zIndex: 3, rotation: 0 };
+    const b = { type: 'sticky', zIndex: 3, rotation: 45 };
+    expect(sortObjects(a, b)).toBe(0);
+  });
+
+  it('sorts non-frames by zIndex regardless of rotation field value', () => {
+    const a = { type: 'sticky', zIndex: 1, rotation: 90 };
+    const b = { type: 'sticky', zIndex: 5, rotation: 0 };
+    expect(sortObjects(a, b)).toBeLessThan(0);
   });
 });
 
@@ -157,6 +186,36 @@ describe('computeVisibleIds', () => {
     const line = { id: 'l1', type: 'line', x: 0, y: 0, points: [10, 10, 100, 100] };
     const ids = computeVisibleIds([line], { l1: line }, viewport, null, null);
     expect(ids.has('l1')).toBe(true);
+  });
+
+  it('includes all childIds of a visible frame even when children are individually outside viewport', () => {
+    const frame = { id: 'f1', type: 'frame', x: 10, y: 10, width: 200, height: 200, childIds: ['c1', 'c2'] };
+    const c1 = { id: 'c1', type: 'sticky', x: 600, y: 600, width: 100, height: 100, frameId: 'f1' };
+    const c2 = { id: 'c2', type: 'sticky', x: 700, y: 700, width: 100, height: 100, frameId: 'f1' };
+    const objMap = { f1: frame, c1, c2 };
+    const ids = computeVisibleIds([frame, c1, c2], objMap, viewport, null, null);
+    expect(ids.has('c1')).toBe(true);
+    expect(ids.has('c2')).toBe(true);
+  });
+
+  it('does not include childIds of a frame that is itself outside the viewport', () => {
+    const frame = { id: 'f1', type: 'frame', x: 1000, y: 1000, width: 200, height: 200, childIds: ['c1'] };
+    const c1 = { id: 'c1', type: 'sticky', x: 1050, y: 1050, width: 100, height: 100, frameId: 'f1' };
+    const objMap = { f1: frame, c1 };
+    const ids = computeVisibleIds([frame, c1], objMap, viewport, null, null);
+    expect(ids.has('f1')).toBe(false);
+    expect(ids.has('c1')).toBe(false);
+  });
+
+  it('includes only the in-viewport sibling when the frame itself is not visible', () => {
+    const frame = { id: 'f1', type: 'frame', x: 1000, y: 1000, width: 200, height: 200, childIds: ['c1', 'c2'] };
+    const c1 = { id: 'c1', type: 'sticky', x: 50, y: 50, width: 100, height: 100, frameId: 'f1' };
+    const c2 = { id: 'c2', type: 'sticky', x: 900, y: 900, width: 100, height: 100, frameId: 'f1' };
+    const objMap = { f1: frame, c1, c2 };
+    const ids = computeVisibleIds([frame, c1, c2], objMap, viewport, null, null);
+    expect(ids.has('c1')).toBe(true);
+    expect(ids.has('c2')).toBe(false);
+    expect(ids.has('f1')).toBe(true); // ancestor of c1, pulled in via frameId chain
   });
 });
 
@@ -295,6 +354,42 @@ describe('areEqual', () => {
     const a = makeState({ canEdit: true });
     const b = makeState({ canEdit: false });
     expect(areEqual(a, b)).toBe(false);
+  });
+
+  it('returns true when objects reference is same even if color field differs', () => {
+    const objs = { x: { id: 'x', color: '#ff0000' } };
+    const base = makeState().state;
+    const a = { state: { ...base, objects: objs } };
+    const b = { state: { ...base, objects: objs } };
+    expect(areEqual(a, b)).toBe(true);
+  });
+
+  it('returns false when objects reference changes even if only color differs', () => {
+    const a = makeState({ objects: { x: { id: 'x', color: '#ff0000' } } });
+    const b = makeState({ objects: { x: { id: 'x', color: '#0000ff' } } });
+    expect(areEqual(a, b)).toBe(false);
+  });
+
+  it('returns true when objects reference is same regardless of text content', () => {
+    const objs = { x: { id: 'x', text: 'hello' } };
+    const base = makeState().state;
+    const a = { state: { ...base, objects: objs } };
+    const b = { state: { ...base, objects: objs } };
+    expect(areEqual(a, b)).toBe(true);
+  });
+
+  it('returns false when objects reference changes even if only text differs', () => {
+    const a = makeState({ objects: { x: { id: 'x', text: 'hello' } } });
+    const b = makeState({ objects: { x: { id: 'x', text: 'world' } } });
+    expect(areEqual(a, b)).toBe(false);
+  });
+
+  it('returns true when objects reference is same regardless of rotation field', () => {
+    const objs = { x: { id: 'x', rotation: 45 } };
+    const base = makeState().state;
+    const a = { state: { ...base, objects: objs } };
+    const b = { state: { ...base, objects: objs } };
+    expect(areEqual(a, b)).toBe(true);
   });
 });
 
