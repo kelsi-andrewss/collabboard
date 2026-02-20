@@ -116,7 +116,7 @@ export function App() {
         if (!boardName) setBoardName(found.name);
         if (!groupSlug && found.groupId) {
           const boardGroup = groups.find(g => g.id === found.groupId);
-          setGroupSlug(groupToSlug(boardGroup));
+          if (boardGroup) setGroupSlug(groupToSlug(boardGroup));
         }
       }
     }
