@@ -15,14 +15,6 @@ const GHOST_FAB_STYLE = {
   pointerEvents: 'none',
 };
 
-const TOOLS = [
-  { key: 'sticky', label: 'Add a sticky note' },
-  { key: 'shape', label: 'Add shapes & lines' },
-  { key: 'frame', label: 'Group things in a frame' },
-  { key: 'snap', label: 'Snap objects to grid' },
-  { key: 'undo', label: 'Undo last action' },
-];
-
 function HandDrawnArrow({ x1, y1, x2, y2, color }) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -82,14 +74,23 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
   useLayoutEffect(() => {
     if (!isEmpty) return;
     const map = {};
-    for (const { key } of TOOLS) {
+    // toolbar items
+    for (const key of ['sticky', 'shape', 'frame', 'select', 'snap', 'undo']) {
       const el = document.querySelector(`[data-toolbar-item="${key}"]`);
       if (el) {
         const r = el.getBoundingClientRect();
         map[key] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
       }
     }
-    // ghost recenter FAB center
+    // FAB items
+    for (const key of ['ai', 'theme']) {
+      const el = document.querySelector(`[data-fab-item="${key}"]`);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        map[key] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
+    }
+    // ghost recenter FAB (always known position)
     map['recenter'] = { x: 40 + 28, y: window.innerHeight - 110 - 28 };
     setPositions(map);
   }, [isEmpty]);
@@ -99,15 +100,58 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
   const arrowColor = darkMode ? '#c4b5fd' : '#6366f1';
   const labelColor = darkMode ? 'rgba(196, 181, 253, 0.6)' : 'rgba(99, 102, 241, 0.5)';
 
-  // Label positions: spread below toolbar (for toolbar items) or near ghost FAB
-  const labelOffsets = {
-    sticky: { lx: 80, ly: 120 },
-    shape:  { lx: 160, ly: 160 },
-    frame:  { lx: 260, ly: 120 },
-    snap:   { lx: 360, ly: 160 },
-    undo:   { lx: 460, ly: 120 },
-    recenter: { lx: 40 + 56 + 16, ly: window.innerHeight - 110 - 28 - 6 },
-  };
+  const GROUPS = [
+    { key: 'addContent', labelText: 'Add stickies, shapes & frames', targetKey: 'sticky' },
+    { key: 'select',     labelText: 'Select & move objects',          targetKey: 'select' },
+    { key: 'snap',       labelText: 'Snap objects to grid',           targetKey: 'snap' },
+    { key: 'undo',       labelText: 'Undo last action',               targetKey: 'undo' },
+    { key: 'ai',         labelText: 'Ask the AI assistant',           targetKey: 'ai' },
+    { key: 'theme',      labelText: 'Toggle dark mode',               targetKey: 'theme' },
+    { key: 'recenter',   labelText: 'Fit board to screen',            targetKey: 'recenter' },
+  ];
+
+  const groups = GROUPS.map(({ key, labelText, targetKey }) => {
+    const target = positions[targetKey];
+    if (!target) return null;
+
+    let lx, ly, ax1, ay1, ax2, ay2;
+
+    if (key === 'ai') {
+      lx = target.x - 150;
+      ly = target.y - 55;
+      ax1 = lx + 70;
+      ay1 = ly + 16;
+      ax2 = target.x;
+      ay2 = target.y - 16;
+    } else if (key === 'theme') {
+      lx = target.x + 16;
+      ly = target.y - 30;
+      ax1 = lx + 50;
+      ay1 = ly + 16;
+      ax2 = target.x;
+      ay2 = target.y - 16;
+    } else if (key === 'recenter') {
+      lx = target.x + 16;
+      ly = target.y - 30;
+      ax1 = lx + 50;
+      ay1 = ly + 8;
+      ax2 = target.x;
+      ay2 = target.y;
+    } else {
+      // toolbar items — label below, arrow from label center up to button bottom edge
+      lx = target.x - 60;
+      if (key === 'addContent') {
+        lx = target.x - 80;
+      }
+      ly = target.y + 45;
+      ax1 = lx + 50;
+      ay1 = ly + 8;
+      ax2 = target.x;
+      ay2 = target.y + 16;
+    }
+
+    return { key, labelText, lx, ly, ax1, ay1, ax2, ay2 };
+  }).filter(Boolean);
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 500 }}>
@@ -119,38 +163,29 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
       </div>
 
       {/* SVG layer for arrows */}
-      {[...TOOLS, { key: 'recenter', label: 'Fit board to screen' }].map(({ key }) => {
-        const target = positions[key];
-        const off = labelOffsets[key];
-        if (!target || !off) return null;
-        const lx = off.lx + 60;
-        const ly = off.ly + 10;
-        return <HandDrawnArrow key={key} x1={lx} y1={ly} x2={target.x} y2={target.y} color={arrowColor} />;
-      })}
+      {groups.map(({ key, ax1, ay1, ax2, ay2 }) => (
+        <HandDrawnArrow key={key} x1={ax1} y1={ay1} x2={ax2} y2={ay2} color={arrowColor} />
+      ))}
 
-      {/* Labels — plain italic text, no chip/background */}
-      {[...TOOLS, { key: 'recenter', label: 'Fit board to screen' }].map(({ key, label }) => {
-        const off = labelOffsets[key];
-        if (!off) return null;
-        return (
-          <div
-            key={key}
-            style={{
-              position: 'fixed',
-              left: off.lx,
-              top: off.ly,
-              color: labelColor,
-              fontSize: '0.75rem',
-              fontWeight: 400,
-              fontStyle: 'italic',
-              whiteSpace: 'nowrap',
-              pointerEvents: 'none',
-            }}
-          >
-            {label}
-          </div>
-        );
-      })}
+      {/* Labels */}
+      {groups.map(({ key, labelText, lx, ly }) => (
+        <div
+          key={key}
+          style={{
+            position: 'fixed',
+            left: lx,
+            top: ly,
+            color: labelColor,
+            fontSize: '0.75rem',
+            fontWeight: 400,
+            fontStyle: 'italic',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}
+        >
+          {labelText}
+        </div>
+      ))}
     </div>
   );
 }

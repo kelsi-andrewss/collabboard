@@ -10,6 +10,7 @@ function FABButtonsInner({ state, handlers }) {
     <>
       {canEdit !== false && (
         <button
+          data-fab-item="ai"
           className={`ai-fab${showAI ? ' active' : ''}`}
           onClick={() => setShowAI(!showAI)}
           title="Toggle AI Assistant"
@@ -19,6 +20,7 @@ function FABButtonsInner({ state, handlers }) {
       )}
 
       <button
+        data-fab-item="theme"
         className="theme-fab"
         onClick={() => setDarkMode(!darkMode)}
         title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -28,6 +30,7 @@ function FABButtonsInner({ state, handlers }) {
 
       {isOffCenter && (
         <button
+          data-fab-item="recenter"
           className="recenter-fab"
           onClick={handleRecenter}
           title="Recenter Board"
