@@ -38,10 +38,10 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
       onDragLeave={onGroupDragLeave}
+      onClick={groupId ? () => onNavigateToGroup(buildSlugChain(group, allGroups)) : undefined}
     >
       <div
         className="group-card-header"
-        onClick={groupId ? () => onNavigateToGroup(buildSlugChain(group, allGroups)) : undefined}
       >
         <button
           className="group-card-chevron-btn"
