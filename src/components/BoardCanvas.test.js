@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { multiSelectHit, sortObjects, computeVisibleIds, areEqual, computeGridDimensions, GRID_CELL_LIMIT } from './BoardCanvas.jsx';
 
 // ---------------------------------------------------------------------------
