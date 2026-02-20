@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield } from 'lucide-react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './BoardSettings.css';
 import './GroupSettings.css';
@@ -41,6 +41,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
         const q = query(usersRef,
           where('displayNameLower', '>=', lower),
           where('displayNameLower', '<=', lower + '\uf8ff'),
+          orderBy('displayNameLower'),
           limit(8)
         );
         const snap = await getDocs(q);

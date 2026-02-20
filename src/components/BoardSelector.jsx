@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus, LayoutGrid, Users, GripVertical } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
@@ -239,6 +239,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         const q = query(usersRef,
           where('displayNameLower', '>=', lower),
           where('displayNameLower', '<=', lower + '\uf8ff'),
+          orderBy('displayNameLower'),
           limit(8)
         );
         const snap = await getDocs(q);

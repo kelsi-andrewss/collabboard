@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Globe, Lock, Trash2, Users } from 'lucide-react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './BoardSettings.css';
 
@@ -38,6 +38,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
         const q = query(usersRef,
           where('displayNameLower', '>=', lower),
           where('displayNameLower', '<=', lower + '\uf8ff'),
+          orderBy('displayNameLower'),
           limit(8)
         );
         const snap = await getDocs(q);
