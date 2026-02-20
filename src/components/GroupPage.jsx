@@ -214,6 +214,9 @@ export function GroupPage({
   };
 
   const handleGroupDrop = (e, targetGroupId) => {
+    const closestGroupEl = e.target.closest('[data-group-id]');
+    const closestGroupId = closestGroupEl ? closestGroupEl.dataset.groupId : null;
+    if (closestGroupId !== (targetGroupId ?? null)) return;
     e.stopPropagation();
     e.preventDefault();
     const groupPayload = e.dataTransfer.getData('application/x-group-json');

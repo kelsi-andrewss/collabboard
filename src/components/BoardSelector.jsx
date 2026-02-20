@@ -156,6 +156,9 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   };
 
   const handleGroupDrop = (e, targetGroupId) => {
+    const closestGroupEl = e.target.closest('[data-group-id]');
+    const closestGroupId = closestGroupEl ? closestGroupEl.dataset.groupId : null;
+    if (closestGroupId !== (targetGroupId ?? null)) return;
     e.stopPropagation();
     e.preventDefault();
     const groupPayload = e.dataTransfer.getData('application/x-group-json');
@@ -580,6 +583,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
         const onlineForBoard = (boardId) => globalPresence?.[boardId] || [];
 
+        const getGroupBreadcrumb = (groupId) => {
+          if (!groupId) return null;
+          const group = groupsProp.find(g => g.id === groupId);
+          if (!group || !group.parentGroupId) return null;
+          const parts = [group.name];
+          let current = group;
+          while (current.parentGroupId) {
+            const parent = groupsProp.find(g => g.id === current.parentGroupId);
+            if (!parent) break;
+            parts.unshift(parent.name);
+            current = parent;
+          }
+          return parts.join(' / ');
+        };
+
         return (
           <>
           <div
@@ -646,6 +664,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   const extraOnline = onlineUsers.length - 3;
                   const isOwner = b.ownerId === user?.uid;
                   const isDragging = draggingBoard?.boardId === b.id;
+                  const groupBreadcrumb = getGroupBreadcrumb(b.groupId);
                   let standaloneCardRef = null;
                   return (
                     <div
@@ -679,6 +698,12 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         )}
                       </div>
                       <div className="board-card-info">
+                        {groupBreadcrumb && (
+                          <div className="board-card-group-breadcrumb">
+                            <Folder size={10} className="board-card-group-breadcrumb-icon" />
+                            <span>{groupBreadcrumb}</span>
+                          </div>
+                        )}
                         <div className="board-card-row">
                           <span className="board-card-name">{b.name}</span>
                           {deleteBoard && (

@@ -35,6 +35,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   return (
     <div
       className={`group-card${isDragOver ? ' drag-over' : ''}${depth > 0 ? ' group-card--nested' : ''}`}
+      data-group-id={groupId}
       style={{ '--depth': depth }}
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
