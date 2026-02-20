@@ -491,6 +491,9 @@ export function App() {
                 onSetGroupProtected={setGroupProtected}
                 onDeleteGroupCascade={(id, gs, bs) => deleteGroupCascade(id, gs, bs)}
                 allBoards={allBoards}
+                moveBoard={moveBoard}
+                moveGroup={moveGroup}
+                createSubgroup={createSubgroup}
               />
             ) : (
               <BoardSelector
