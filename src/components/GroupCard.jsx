@@ -22,7 +22,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
-  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
+  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound, allBoards }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const [expanded, setExpanded] = useState(true);
@@ -104,6 +104,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   onGroupDragOverUnbound={onGroupDragOverUnbound}
                   onGroupDropUnbound={onGroupDropUnbound}
                   onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
+                  allBoards={allBoards}
                 />
               ))}
               {addingSubgroup && (
@@ -141,7 +142,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
               )}
             </div>
           )}
-          {boards.length > 0 && (
+          {(boards.length > 0 || (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== groupId)) && (
             <div className="board-cards-grid">
               {boards.slice(0, 3).map(b => {
                 const onlineUsers = globalPresence?.[b.id] || [];
@@ -269,6 +270,27 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   </div>
                 );
               })}
+              {isDragOver && draggingBoard && (() => {
+                const draggedBoard = allBoards?.find(b => b.id === draggingBoard.boardId);
+                if (draggedBoard && draggingBoard.sourceGroupId !== groupId) {
+                  return (
+                    <div key="ghost" className="board-card board-card--ghost">
+                      <div className="board-card-thumbnail">
+                        {draggedBoard.thumbnail
+                          ? <img src={draggedBoard.thumbnail} alt="" className="board-card-thumbnail-img" />
+                          : <div className="board-card-thumbnail-placeholder" />}
+                      </div>
+                      <div className="board-card-info">
+                        <div className="board-card-row">
+                          <span className="board-card-name">{draggedBoard.name}</span>
+                        </div>
+                        <div className="board-card-preview-label">Preview</div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
           {group && (

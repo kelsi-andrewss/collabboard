@@ -449,6 +449,7 @@ export function GroupPage({
                       onGroupDragOverUnbound={handleGroupDragOver}
                       onGroupDropUnbound={handleGroupDrop}
                       onGroupDragLeaveUnbound={handleGroupDragLeave}
+                      allBoards={allBoards}
                     />
                   );
                 }
