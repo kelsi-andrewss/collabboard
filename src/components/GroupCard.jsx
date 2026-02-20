@@ -141,142 +141,144 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
               )}
             </div>
           )}
-          <div className="board-cards-grid">
-            {boards.slice(0, 3).map(b => {
-              const onlineUsers = globalPresence?.[b.id] || [];
-              const visibleOnline = onlineUsers.slice(0, 3);
-              const extraOnline = onlineUsers.length - 3;
-              const isOwner = b.ownerId === user?.uid;
-              const isDragging = draggingBoard?.boardId === b.id;
-              let cardRef = null;
-              return (
-                <div
-                  key={b.id}
-                  className={`board-card${isDragging ? ' board-card--dragging' : ''}`}
-                  ref={el => { cardRef = el; }}
-                  onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? buildSlugChain(group, allGroups) : [], b.id, b.name); }}
-                >
-                  <div className="board-card-thumbnail">
-                    {b.thumbnail
-                      ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
-                      : <div className="board-card-thumbnail-placeholder" />
-                    }
-                    {isOwner && onBoardDragStart && (
-                      <span
-                        className="board-card-drag-handle"
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation();
-                          if (cardRef) {
-                            const rect = cardRef.getBoundingClientRect();
-                            e.dataTransfer.setDragImage(cardRef, rect.width - 8, 8);
-                          }
-                          onBoardDragStart(e, b.id, groupId);
-                        }}
-                        onDragEnd={onBoardDragEnd}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <GripVertical size={12} />
-                      </span>
+          {boards.length > 0 && (
+            <div className="board-cards-grid">
+              {boards.slice(0, 3).map(b => {
+                const onlineUsers = globalPresence?.[b.id] || [];
+                const visibleOnline = onlineUsers.slice(0, 3);
+                const extraOnline = onlineUsers.length - 3;
+                const isOwner = b.ownerId === user?.uid;
+                const isDragging = draggingBoard?.boardId === b.id;
+                let cardRef = null;
+                return (
+                  <div
+                    key={b.id}
+                    className={`board-card${isDragging ? ' board-card--dragging' : ''}`}
+                    ref={el => { cardRef = el; }}
+                    onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? buildSlugChain(group, allGroups) : [], b.id, b.name); }}
+                  >
+                    <div className="board-card-thumbnail">
+                      {b.thumbnail
+                        ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                        : <div className="board-card-thumbnail-placeholder" />
+                      }
+                      {isOwner && onBoardDragStart && (
+                        <span
+                          className="board-card-drag-handle"
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            if (cardRef) {
+                              const rect = cardRef.getBoundingClientRect();
+                              e.dataTransfer.setDragImage(cardRef, rect.width - 8, 8);
+                            }
+                            onBoardDragStart(e, b.id, groupId);
+                          }}
+                          onDragEnd={onBoardDragEnd}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical size={12} />
+                        </span>
+                      )}
+                    </div>
+                    <div className="board-card-info">
+                      <div className="board-card-row">
+                        <span className="board-card-name">
+                          {b.name}
+                          {b.protected && <span className="shield-badge"><Shield size={10} /></span>}
+                        </span>
+                        {onMoveBoard && (
+                          <button
+                            className="board-card-move-btn"
+                            title="Move to group"
+                            onClick={(e) => { e.stopPropagation(); setMovingBoardId(movingBoardId === b.id ? null : b.id); }}
+                          >
+                            <FolderOutput size={12} />
+                          </button>
+                        )}
+                        {onSetBoardProtected && (
+                          <button
+                            className="board-card-protect-btn"
+                            title={b.protected ? 'Remove protection' : 'Protect'}
+                            onClick={(e) => { e.stopPropagation(); onSetBoardProtected(b.id, !b.protected); }}
+                          >
+                            <Shield size={11} />
+                          </button>
+                        )}
+                        {onDeleteBoard && (
+                          b.protected ? (
+                            <button
+                              className="board-card-delete-btn board-card-delete-btn--disabled"
+                              title="Remove protection first"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          ) : (
+                            <button
+                              className="board-card-delete-btn"
+                              title="Delete board"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDeleteBoard(b);
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )
+                        )}
+                      </div>
+                      <div className="board-card-meta">
+                        <span className="board-card-date">{formatDate(b.updatedAt)}</span>
+                        {onlineUsers.length > 0 && (
+                          <div className="board-card-online">
+                            {visibleOnline.map((u, i) => (
+                              <Avatar
+                                key={i}
+                                photoURL={u.photoURL}
+                                name={u.name}
+                                color={u.color}
+                                size="xs"
+                                className="board-card-avatar"
+                              />
+                            ))}
+                            {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {movingBoardId === b.id && onMoveBoard && (
+                      <div className="move-group-picker" onClick={e => e.stopPropagation()}>
+                        {(existingGroups || []).filter(g => {
+                          const gId = g?.id || g;
+                          return gId !== groupId;
+                        }).map(g => {
+                          const gObj = typeof g === 'object' ? g : null;
+                          return (
+                            <button key={gObj?.id || g} className="move-group-option" onClick={() => { onMoveBoard(b.id, gObj?.id || null); setMovingBoardId(null); }}>
+                              <Folder size={12} /> {gObj?.name || g}
+                            </button>
+                          );
+                        })}
+                        {group && (
+                          <button className="move-group-option" onClick={() => { onMoveBoard(b.id, null); setMovingBoardId(null); }}>
+                            Ungrouped
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <div className="board-card-info">
-                    <div className="board-card-row">
-                      <span className="board-card-name">
-                        {b.name}
-                        {b.protected && <span className="shield-badge"><Shield size={10} /></span>}
-                      </span>
-                      {onMoveBoard && (
-                        <button
-                          className="board-card-move-btn"
-                          title="Move to group"
-                          onClick={(e) => { e.stopPropagation(); setMovingBoardId(movingBoardId === b.id ? null : b.id); }}
-                        >
-                          <FolderOutput size={12} />
-                        </button>
-                      )}
-                      {onSetBoardProtected && (
-                        <button
-                          className="board-card-protect-btn"
-                          title={b.protected ? 'Remove protection' : 'Protect'}
-                          onClick={(e) => { e.stopPropagation(); onSetBoardProtected(b.id, !b.protected); }}
-                        >
-                          <Shield size={11} />
-                        </button>
-                      )}
-                      {onDeleteBoard && (
-                        b.protected ? (
-                          <button
-                            className="board-card-delete-btn board-card-delete-btn--disabled"
-                            title="Remove protection first"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        ) : (
-                          <button
-                            className="board-card-delete-btn"
-                            title="Delete board"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmDeleteBoard(b);
-                            }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )
-                      )}
-                    </div>
-                    <div className="board-card-meta">
-                      <span className="board-card-date">{formatDate(b.updatedAt)}</span>
-                      {onlineUsers.length > 0 && (
-                        <div className="board-card-online">
-                          {visibleOnline.map((u, i) => (
-                            <Avatar
-                              key={i}
-                              photoURL={u.photoURL}
-                              name={u.name}
-                              color={u.color}
-                              size="xs"
-                              className="board-card-avatar"
-                            />
-                          ))}
-                          {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {movingBoardId === b.id && onMoveBoard && (
-                    <div className="move-group-picker" onClick={e => e.stopPropagation()}>
-                      {(existingGroups || []).filter(g => {
-                        const gId = g?.id || g;
-                        return gId !== groupId;
-                      }).map(g => {
-                        const gObj = typeof g === 'object' ? g : null;
-                        return (
-                          <button key={gObj?.id || g} className="move-group-option" onClick={() => { onMoveBoard(b.id, gObj?.id || null); setMovingBoardId(null); }}>
-                            <Folder size={12} /> {gObj?.name || g}
-                          </button>
-                        );
-                      })}
-                      {group && (
-                        <button className="move-group-option" onClick={() => { onMoveBoard(b.id, null); setMovingBoardId(null); }}>
-                          Ungrouped
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {group && (
-              <button
-                className="board-cards-see-all"
-                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
-              >
-                {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
-              </button>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
+          {group && (
+            <button
+              className="board-cards-see-all"
+              onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
+            >
+              {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
+            </button>
+          )}
         </>
       )}
 
