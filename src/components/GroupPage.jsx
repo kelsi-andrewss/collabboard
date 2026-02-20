@@ -423,6 +423,7 @@ export function GroupPage({
                       key={sub.id}
                       group={sub}
                       boards={subBoards}
+                      allBoards={allBoards}
                       subgroups={subSubgroups}
                       allGroups={groups}
                       onNavigateToGroup={onNavigateToGroup || (() => {})}

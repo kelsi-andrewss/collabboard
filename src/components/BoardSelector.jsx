@@ -609,6 +609,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         key={item.key}
                         group={item.groupObj}
                         boards={item.boards}
+                        allBoards={boards}
                         subgroups={groupsProp.filter(g => g.parentGroupId === item.groupObj?.id)}
                         allGroups={groupsProp}
                         onNavigateToGroup={onNavigateToGroup || (() => {})}
