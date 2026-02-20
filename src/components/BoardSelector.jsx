@@ -64,7 +64,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupModalData, setGroupModalData] = useState({ name: '', visibility: 'private' });
   const [groupNameError, setGroupNameError] = useState('');
-  const [boardRows, setBoardRows] = useState([{ name: '' }]);
+  const [boardRows, setBoardRows] = useState([]);
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
   const [groupSearchText, setGroupSearchText] = useState('');
   const [newBoardVisibility, setNewBoardVisibility] = useState('private');
@@ -971,9 +971,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               {newBoardVisibility === 'private' && (
                 <div className="form-group">
                   <label>Invite Members <span className="label-optional">(optional)</span></label>
-                  {pendingInvites.length === 0 && (
-                    <div className="member-empty">No members invited yet</div>
-                  )}
                   {pendingInvites.length > 0 && (
                     <div className="pending-invites">
                       {pendingInvites.map(inv => (
