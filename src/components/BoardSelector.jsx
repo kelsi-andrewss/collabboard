@@ -117,6 +117,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const handleGroupItemDragStart = (e, group) => {
     e.dataTransfer.setData('application/x-group-json', JSON.stringify({ id: group.id }));
     e.dataTransfer.effectAllowed = 'move';
+    const cardEl = e.currentTarget.closest('.group-card');
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      e.dataTransfer.setDragImage(cardEl, e.clientX - rect.left, e.clientY - rect.top);
+    }
     setDraggingGroup({ id: group.id });
   };
 
@@ -618,6 +623,10 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragStart={handleGroupItemDragStart}
                         onGroupDragEnd={handleGroupItemDragEnd}
                         draggingGroup={draggingGroup}
+                        dragOverTargetId={dragOverTargetId}
+                        onGroupDragOverUnbound={handleGroupDragOver}
+                        onGroupDropUnbound={handleGroupDrop}
+                        onGroupDragLeaveUnbound={handleGroupDragLeave}
                       />
                     );
                   }

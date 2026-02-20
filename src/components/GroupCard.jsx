@@ -21,7 +21,8 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   onGroupDragOver, onGroupDrop, onGroupDragLeave, isDragOver, onMoveBoard, existingGroups,
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
-  onGroupDragStart, onGroupDragEnd, draggingGroup }) {
+  onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
+  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const [expanded, setExpanded] = useState(true);
@@ -95,6 +96,14 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
                   onGroupDragStart={onGroupDragStart}
                   onGroupDragEnd={onGroupDragEnd}
                   draggingGroup={draggingGroup}
+                  onGroupDragOver={onGroupDragOverUnbound ? (e) => onGroupDragOverUnbound(e, sub.id) : undefined}
+                  onGroupDrop={onGroupDropUnbound ? (e) => onGroupDropUnbound(e, sub.id) : undefined}
+                  onGroupDragLeave={onGroupDragLeaveUnbound ? (e) => onGroupDragLeaveUnbound(e, sub.id) : undefined}
+                  isDragOver={dragOverTargetId === sub.id}
+                  dragOverTargetId={dragOverTargetId}
+                  onGroupDragOverUnbound={onGroupDragOverUnbound}
+                  onGroupDropUnbound={onGroupDropUnbound}
+                  onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
                 />
               ))}
               {addingSubgroup && (
