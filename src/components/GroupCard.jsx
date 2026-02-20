@@ -26,7 +26,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(depth === 0);
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
   const [movingBoardId, setMovingBoardId] = useState(null);
   const [addingSubgroup, setAddingSubgroup] = useState(false);
