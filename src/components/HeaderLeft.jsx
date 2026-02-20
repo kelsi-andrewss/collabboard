@@ -201,6 +201,7 @@ function HeaderLeftInner({ state, handlers }) {
 
         {setActiveTool && (
           <button
+            data-toolbar-item="select"
             className={`snap-toggle ${activeTool === 'select' ? 'active' : ''}`}
             onClick={() => setActiveTool(activeTool === 'select' ? 'pan' : 'select')}
             title={activeTool === 'select' ? 'Switch to Pan' : 'Switch to Select'}
