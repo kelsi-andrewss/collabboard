@@ -25,6 +25,7 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
   onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
+  const isCompact = depth >= 2;
   const [expanded, setExpanded] = useState(true);
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
   const [movingBoardId, setMovingBoardId] = useState(null);
@@ -67,7 +68,14 @@ export function GroupCard({ group, boards, onNavigateToGroup, onNavigateToBoard,
         )}
       </div>
 
-      {expanded && (
+      {isCompact && (
+        <div className="group-card-counts-section">
+          <span className="group-card-count">{boards.length} board{boards.length !== 1 ? 's' : ''}</span>
+          <span className="group-card-count">{subgroups.length} subgroup{subgroups.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
+      {!isCompact && expanded && (
         <>
           {(subgroups.length > 0 || addingSubgroup || (onCreateSubgroup && depth < 3)) && (
             <div className="group-card-subgroup-section">
