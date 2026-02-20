@@ -315,12 +315,14 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleAddBoard = (e) => {
     e.preventDefault();
+    if (newBoardVisibility === 'open' && !confirmOpenBoard) return;
     if (!newBoardName.trim()) return;
     submitCreate(newBoardName.trim(), selectedGroupId);
   };
 
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
+    if (groupModalData.visibility === 'open' && !confirmOpenGroup) return;
     if (!groupModalData.name.trim()) return;
     setGroupNameError('');
     try {
@@ -740,21 +742,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'private' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'private' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'private' })); setConfirmOpenGroup(false); }}
                   >
                     <Lock size={14} /> Private
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'public' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'public' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'public' })); setConfirmOpenGroup(false); }}
                   >
                     <Globe size={14} /> Public
                   </button>
                   <button
                     type="button"
                     className={`visibility-pill${groupModalData.visibility === 'open' ? ' visibility-pill--active' : ''}`}
-                    onClick={() => setGroupModalData(d => ({ ...d, visibility: 'open' }))}
+                    onClick={() => { setGroupModalData(d => ({ ...d, visibility: 'open' })); setConfirmOpenGroup(false); }}
                   >
                     <Users size={14} /> Open
                   </button>
