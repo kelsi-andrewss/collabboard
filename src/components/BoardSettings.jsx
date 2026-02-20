@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -11,6 +11,10 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [localVisibility, setLocalVisibility] = useState(board?.visibility || 'public');
   const userSearchTimerRef = useRef(null);
+
+  useEffect(() => {
+    setLocalVisibility(board?.visibility || 'public');
+  }, [board?.visibility]);
 
   if (!board) return null;
 

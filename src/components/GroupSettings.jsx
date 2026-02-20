@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -14,6 +14,14 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
   const userSearchTimerRef = useRef(null);
+
+  useEffect(() => {
+    setLocalVisibility(group?.visibility || 'private');
+  }, [group?.visibility]);
+
+  useEffect(() => {
+    setLocalProtected(group?.protected || false);
+  }, [group?.protected]);
 
   if (!group) return null;
 
@@ -223,6 +231,11 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
                 {localProtected ? 'On' : 'Off'}
               </button>
             </div>
+          </div>
+        )}
+
+        {canManage && (
+          <div className="board-settings-section">
             <button
               type="button"
               className="group-settings-save-btn"
