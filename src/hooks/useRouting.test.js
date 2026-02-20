@@ -69,10 +69,10 @@ describe('useRouting — initial state from hash', () => {
     expect(result.current.boardId).toBeNull();
   });
 
-  it('falls back to localStorage boardId when hash is empty', () => {
+  it('ignores localStorage boardId when hash is empty', () => {
     localStorage.setItem('collaboard_boardId', 'saved-board');
     const { result } = renderHook(() => useRouting());
-    expect(result.current.boardId).toBe('saved-board');
+    expect(result.current.boardId).toBeNull();
     expect(result.current.groupSlugs).toEqual([]);
   });
 });
