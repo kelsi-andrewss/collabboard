@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Search, LayoutGrid, Lock, Folder, ChevronRight, Trash2, Settings } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, Lock, ChevronRight, Trash2, Settings, Folder, ArrowUp, ArrowDown } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import { buildSlugChain, resolveSlugChain } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
 import { useGlobalPresence } from '../hooks/useGlobalPresence.js';
 import { GroupSettings } from './GroupSettings.jsx';
+import { GroupCard } from './GroupCard.jsx';
 import './GroupPage.css';
 
 export function formatDate(ts) {
@@ -20,7 +21,7 @@ export function formatDate(ts) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-const SUBGROUP_CARD_HEIGHT = 48;
+const SUBGROUP_CARD_HEIGHT = 200;
 const BOARD_CARD_HEIGHT = 116;
 const COLUMN_ITEM_GAP = 16;
 
@@ -51,7 +52,39 @@ function buildAncestorChain(groupObj, groups) {
   return chain;
 }
 
-export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavigateToGroup, user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember, onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade, allBoards = [] }) {
+const SORT_KEY = 'collaboard_group_sort';
+
+const loadGroupSort = () => {
+  try { return JSON.parse(localStorage.getItem(SORT_KEY)) || {}; } catch { return {}; }
+};
+const saveGroupSort = (mode, asc, view) =>
+  localStorage.setItem(SORT_KEY, JSON.stringify({ mode, asc, view }));
+
+const getGroupDepth = (groupId, allGroups) => {
+  let depth = 0;
+  let current = allGroups.find(g => g.id === groupId);
+  while (current?.parentGroupId) {
+    depth++;
+    current = allGroups.find(g => g.id === current.parentGroupId);
+  }
+  return depth;
+};
+
+const isAncestor = (candidateAncestorId, targetGroupId, allGroups) => {
+  let current = allGroups.find(g => g.id === targetGroupId);
+  while (current?.parentGroupId) {
+    if (current.parentGroupId === candidateAncestorId) return true;
+    current = allGroups.find(g => g.id === current.parentGroupId);
+  }
+  return false;
+};
+
+export function GroupPage({
+  groupSlugs, groups = [], onBack, onOpenBoard, onNavigateToGroup,
+  user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember,
+  onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade,
+  allBoards = [], moveBoard, moveGroup, createSubgroup,
+}) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, deleteBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
   const globalPresence = useGlobalPresence();
@@ -59,6 +92,21 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
   const [showSettings, setShowSettings] = useState(false);
   const masonryContainerRef = useRef(null);
   const [columnCount, setColumnCount] = useState(5);
+
+  const [sortMode, setSortMode] = useState(() => {
+    const m = loadGroupSort().mode;
+    return ['recent', 'name', 'count'].includes(m) ? m : 'recent';
+  });
+  const [sortAsc, setSortAsc] = useState(() => loadGroupSort().asc ?? false);
+  const [boardView, setBoardView] = useState(() => {
+    const v = loadGroupSort().view;
+    return ['my', 'public', 'all'].includes(v) ? v : 'all';
+  });
+
+  const [draggingBoard, setDraggingBoard] = useState(null);
+  const [draggingGroup, setDraggingGroup] = useState(null);
+  const [dragOverTargetId, setDragOverTargetId] = useState(null);
+  const [rootDropActive, setRootDropActive] = useState(false);
 
   useEffect(() => {
     const el = masonryContainerRef.current;
@@ -78,7 +126,6 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
   const ancestors = groupObj ? buildAncestorChain(groupObj, groups) : [];
   const childGroups = groups.filter(g => g.parentGroupId === groupId);
 
-  // Check if user is a member of this group (for private groups)
   const isMember = groupObj && user && (
     groupObj.ownerId === user.uid ||
     (groupObj.members && groupObj.members[user.uid])
@@ -87,16 +134,71 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
 
   const groupBoards = boards.filter(b => b.groupId === groupId);
 
-  const q = searchQuery.trim().toLowerCase();
-  const filtered = q
-    ? groupBoards.filter(b => b.name.toLowerCase().includes(q))
-    : groupBoards;
-
-  const sorted = [...filtered].sort((a, b) => {
-    const aTime = a.updatedAt?.toMillis?.() ?? (a.updatedAt?.seconds ?? 0) * 1000;
-    const bTime = b.updatedAt?.toMillis?.() ?? (b.updatedAt?.seconds ?? 0) * 1000;
-    return bTime - aTime;
+  const visibleBoards = groupBoards.filter(b => {
+    if (boardView === 'my') {
+      if (!user) return true;
+      if (!b.ownerId && !b.visibility) return true;
+      return b.ownerId === user.uid || (b.members && b.members[user.uid]);
+    }
+    if (boardView === 'public') {
+      return b.visibility === 'public' || b.visibility === 'open';
+    }
+    return true;
   });
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredBoards = q
+    ? visibleBoards.filter(b => b.name.toLowerCase().includes(q))
+    : visibleBoards;
+
+  const filteredSubgroups = q
+    ? childGroups.filter(g => g.name.toLowerCase().includes(q))
+    : childGroups;
+
+  const applySort = (items) => {
+    return [...items].sort((a, b) => {
+      if (sortMode === 'name') {
+        const aName = a.type === 'subgroup' ? (a.sub?.name || '') : (a.board?.name || '');
+        const bName = b.type === 'subgroup' ? (b.sub?.name || '') : (b.board?.name || '');
+        const cmp = aName.localeCompare(bName);
+        return sortAsc ? cmp : -cmp;
+      }
+      if (sortMode === 'count') {
+        const aCount = a.type === 'subgroup'
+          ? boards.filter(brd => brd.groupId === a.sub?.id).length
+          : 1;
+        const bCount = b.type === 'subgroup'
+          ? boards.filter(brd => brd.groupId === b.sub?.id).length
+          : 1;
+        const cmp = bCount - aCount;
+        return sortAsc ? -cmp : cmp;
+      }
+      const aTime = a.type === 'subgroup'
+        ? (boards.filter(brd => brd.groupId === a.sub?.id)[0]?.updatedAt?.toMillis?.() ?? 0)
+        : (a.board?.updatedAt?.toMillis?.() ?? (a.board?.updatedAt?.seconds ?? 0) * 1000);
+      const bTime = b.type === 'subgroup'
+        ? (boards.filter(brd => brd.groupId === b.sub?.id)[0]?.updatedAt?.toMillis?.() ?? 0)
+        : (b.board?.updatedAt?.toMillis?.() ?? (b.board?.updatedAt?.seconds ?? 0) * 1000);
+      const cmp = bTime - aTime;
+      return sortAsc ? -cmp : cmp;
+    });
+  };
+
+  const handleSortModeChange = (mode) => {
+    setSortMode(mode);
+    saveGroupSort(mode, sortAsc, boardView);
+  };
+
+  const handleSortDirectionToggle = () => {
+    const newAsc = !sortAsc;
+    setSortAsc(newAsc);
+    saveGroupSort(sortMode, newAsc, boardView);
+  };
+
+  const handleBoardViewChange = (view) => {
+    setBoardView(view);
+    saveGroupSort(sortMode, sortAsc, view);
+  };
 
   const handleBack = () => {
     if (groupObj?.parentGroupId) {
@@ -107,6 +209,93 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
       }
     }
     onBack();
+  };
+
+  const handleGroupDragStart = (e, group) => {
+    e.dataTransfer.setData('application/x-group-json', JSON.stringify({ id: group.id }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingGroup({ id: group.id });
+  };
+
+  const handleGroupDragEnd = () => {
+    setDraggingGroup(null);
+    setDragOverTargetId(null);
+  };
+
+  const handleBoardDragStart = (e, boardId, sourceGroupId) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({ boardId, sourceGroupId }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingBoard({ boardId, sourceGroupId });
+  };
+
+  const handleBoardDragEnd = () => {
+    setDraggingBoard(null);
+    setDragOverTargetId(null);
+  };
+
+  const handleGroupDragOver = (e, targetGroupId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverTargetId(targetGroupId);
+  };
+
+  const handleGroupDragLeave = (e, targetGroupId) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverTargetId(prev => prev === targetGroupId ? null : prev);
+    }
+  };
+
+  const handleGroupDrop = (e, targetGroupId) => {
+    e.preventDefault();
+    const groupPayload = e.dataTransfer.getData('application/x-group-json');
+    if (groupPayload) {
+      try {
+        const { id: draggedGroupId } = JSON.parse(groupPayload);
+        const normalizedTarget = targetGroupId || null;
+        if (normalizedTarget === draggedGroupId) {
+          setDraggingGroup(null);
+          setDragOverTargetId(null);
+          setRootDropActive(false);
+          return;
+        }
+        if (normalizedTarget !== null) {
+          if (draggedGroupId === normalizedTarget || isAncestor(draggedGroupId, normalizedTarget, groups)) {
+            setDraggingGroup(null);
+            setDragOverTargetId(null);
+            setRootDropActive(false);
+            return;
+          }
+          const targetDepth = getGroupDepth(normalizedTarget, groups);
+          if (targetDepth >= 2) {
+            setDraggingGroup(null);
+            setDragOverTargetId(null);
+            setRootDropActive(false);
+            return;
+          }
+        }
+        moveGroup && moveGroup(draggedGroupId, normalizedTarget);
+      } catch { /* ignore malformed drag data */ }
+      setDraggingGroup(null);
+      setDragOverTargetId(null);
+      setRootDropActive(false);
+      return;
+    }
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const { boardId: draggedBoardId, sourceGroupId } = data;
+      const normalizedSource = sourceGroupId || null;
+      const normalizedTarget = targetGroupId || null;
+      if (normalizedSource === normalizedTarget) {
+        setDraggingBoard(null);
+        setDragOverTargetId(null);
+        setRootDropActive(false);
+        return;
+      }
+      moveBoard && moveBoard(draggedBoardId, normalizedTarget);
+    } catch { /* ignore malformed drag data */ }
+    setDraggingBoard(null);
+    setDragOverTargetId(null);
+    setRootDropActive(false);
   };
 
   if (isPrivateAndNotMember) {
@@ -129,6 +318,12 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
       </div>
     );
   }
+
+  const rawMasonryItems = [
+    ...filteredSubgroups.map(sub => ({ type: 'subgroup', key: sub.id, sub })),
+    ...filteredBoards.map(board => ({ type: 'board', key: board.id, board })),
+  ];
+  const masonryItems = applySort(rawMasonryItems);
 
   return (
     <div className="group-page">
@@ -165,113 +360,180 @@ export function GroupPage({ groupSlugs, groups = [], onBack, onOpenBoard, onNavi
             </button>
           )}
         </div>
-        <div className="dashboard-search" style={{ marginTop: 0 }}>
-          <Search size={16} className="dashboard-search-icon" />
-          <input
-            type="text"
-            placeholder="Search boards..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="dashboard-search-input"
-          />
-          {searchQuery && (
-            <button className="dashboard-search-clear" onClick={() => setSearchQuery('')}>×</button>
-          )}
-        </div>
       </div>
 
       <div className="group-page-masonry-wrapper">
-        {(() => {
-          const masonryItems = [
-            ...childGroups.map(sub => ({ type: 'subgroup', key: sub.id, sub })),
-            ...sorted.map(board => ({ type: 'board', key: board.id, board })),
-          ];
-
-          return (
-            <div className="masonry-columns-container" ref={masonryContainerRef}>
-              {masonryItems.length === 0 && (
-                <div className="empty-state">
-                  <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
-                  <p className="empty-state-title">
-                    {q ? `No boards match "${q}"` : 'No boards in this group'}
-                  </p>
-                  {!q && <p className="empty-state-hint">Create a new board and assign it to this group</p>}
-                </div>
-              )}
-              {distributeToColumns(masonryItems, columnCount).map((colItems, colIdx) => (
-                <div key={colIdx} className="masonry-column">
-                  {colItems.map(item => {
-                    if (item.type === 'subgroup') {
-                      const sub = item.sub;
-                      return (
-                        <button
-                          key={sub.id}
-                          className="group-page-subgroup-card"
-                          onClick={() => onNavigateToGroup?.(buildSlugChain(sub, groups))}
-                        >
-                          <Folder size={16} className="group-card-icon" />
-                          <span>{sub.name}</span>
-                          <ChevronRight size={14} className="group-page-subgroup-arrow" />
-                        </button>
-                      );
-                    }
-                    const b = item.board;
-                    const onlineUsers = globalPresence?.[b.id] || [];
-                    const visibleOnline = onlineUsers.slice(0, 3);
-                    const extraOnline = onlineUsers.length - 3;
-                    const isOwner = b.ownerId === user?.uid;
-                    return (
-                      <div
-                        key={b.id}
-                        className="board-card standalone-board-card"
-                        onClick={() => onOpenBoard(groupSlugs, b.id, b.name)}
-                      >
-                        <div className="board-card-thumbnail">
-                          {b.thumbnail
-                            ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
-                            : <div className="board-card-thumbnail-placeholder" />
-                          }
-                        </div>
-                        <div className="board-card-info">
-                          <div className="board-card-row">
-                            <span className="board-card-name">{b.name}</span>
-                            {isOwner && deleteBoard && (
-                              <button
-                                className="board-card-delete-btn"
-                                title="Delete board"
-                                onClick={(e) => { e.stopPropagation(); deleteBoard(b.id); }}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="board-card-meta">
-                            <span className="board-card-date">{formatDate(b.updatedAt)}</span>
-                            {onlineUsers.length > 0 && (
-                              <div className="board-card-online">
-                                {visibleOnline.map((u, i) => (
-                                  <Avatar
-                                    key={i}
-                                    photoURL={u.photoURL}
-                                    name={u.name}
-                                    color={u.color}
-                                    size="xs"
-                                    className="board-card-avatar"
-                                  />
-                                ))}
-                                {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+        <div className="controls-bar">
+          <div className="dashboard-search">
+            <Search size={16} className="dashboard-search-icon" />
+            <input
+              type="text"
+              placeholder="Search boards..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="dashboard-search-input"
+            />
+            {searchQuery && (
+              <button className="dashboard-search-clear" onClick={() => setSearchQuery('')}>×</button>
+            )}
+          </div>
+          <div className="controls-bar-center">
+            {user && (
+              <div className="filter-pill-group">
+                {['my', 'public', 'all'].map(view => (
+                  <button
+                    key={view}
+                    className={`sort-btn${boardView === view ? ' sort-btn--active' : ''}`}
+                    onClick={() => handleBoardViewChange(view)}
+                  >
+                    {view === 'my' ? 'My Boards' : view === 'public' ? 'Browse' : 'All'}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="sort-pill-group">
+              {['recent', 'name', 'count'].map(mode => (
+                <button
+                  key={mode}
+                  className={`sort-btn${sortMode === mode ? ' sort-btn--active' : ''}`}
+                  onClick={() => handleSortModeChange(mode)}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
               ))}
             </div>
-          );
-        })()}
+            <button
+              className="sort-direction-btn"
+              onClick={handleSortDirectionToggle}
+              title={sortAsc ? 'Ascending' : 'Descending'}
+            >
+              {sortAsc ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+            </button>
+          </div>
+          <div className="new-buttons-group">
+            {createSubgroup && groupId && (
+              <button
+                className="new-group-btn"
+                onClick={() => {
+                  const name = window.prompt('Subgroup name');
+                  if (name?.trim()) createSubgroup(groupId, name.trim());
+                }}
+              >
+                <Folder size={15} />
+                New Subgroup
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div
+          className={`masonry-columns-container${rootDropActive ? ' masonry-drop-target--active' : ''}`}
+          ref={masonryContainerRef}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setRootDropActive(true); }}
+          onDrop={(e) => { setRootDropActive(false); handleGroupDrop(e, groupId); }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRootDropActive(false); }}
+        >
+          {masonryItems.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
+              <p className="empty-state-title">
+                {q ? `No boards match "${q}"` : 'No boards in this group'}
+              </p>
+              {!q && <p className="empty-state-hint">Create a new board and assign it to this group</p>}
+            </div>
+          )}
+          {distributeToColumns(masonryItems, columnCount).map((colItems, colIdx) => (
+            <div key={colIdx} className="masonry-column">
+              {colItems.map(item => {
+                if (item.type === 'subgroup') {
+                  const sub = item.sub;
+                  const subBoards = boards.filter(b => b.groupId === sub.id);
+                  const subSubgroups = groups.filter(g => g.parentGroupId === sub.id);
+                  return (
+                    <GroupCard
+                      key={sub.id}
+                      group={sub}
+                      boards={subBoards}
+                      subgroups={subSubgroups}
+                      allGroups={groups}
+                      onNavigateToGroup={onNavigateToGroup || (() => {})}
+                      onNavigateToBoard={(slugChain, id, name) => onOpenBoard(slugChain, id, name)}
+                      globalPresence={globalPresence}
+                      onDeleteBoard={deleteBoard}
+                      onDeleteGroup={(id) => onDeleteGroupCascade && onDeleteGroupCascade(id, groups, allBoards)}
+                      onCreateSubgroup={createSubgroup}
+                      onSetGroupProtected={onSetGroupProtected}
+                      onGroupDragOver={(e) => handleGroupDragOver(e, sub.id)}
+                      onGroupDrop={(e) => handleGroupDrop(e, sub.id)}
+                      onGroupDragLeave={(e) => handleGroupDragLeave(e, sub.id)}
+                      isDragOver={dragOverTargetId === sub.id}
+                      onMoveBoard={moveBoard}
+                      existingGroups={groups}
+                      user={user}
+                      draggingBoard={draggingBoard}
+                      onBoardDragStart={handleBoardDragStart}
+                      onBoardDragEnd={handleBoardDragEnd}
+                      onGroupDragStart={handleGroupDragStart}
+                      onGroupDragEnd={handleGroupDragEnd}
+                      draggingGroup={draggingGroup}
+                    />
+                  );
+                }
+                const b = item.board;
+                const onlineUsers = globalPresence?.[b.id] || [];
+                const visibleOnline = onlineUsers.slice(0, 3);
+                const extraOnline = onlineUsers.length - 3;
+                const isOwner = b.ownerId === user?.uid;
+                return (
+                  <div
+                    key={b.id}
+                    className="board-card standalone-board-card"
+                    onClick={() => onOpenBoard(groupSlugs, b.id, b.name)}
+                  >
+                    <div className="board-card-thumbnail">
+                      {b.thumbnail
+                        ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                        : <div className="board-card-thumbnail-placeholder" />
+                      }
+                    </div>
+                    <div className="board-card-info">
+                      <div className="board-card-row">
+                        <span className="board-card-name">{b.name}</span>
+                        {isOwner && deleteBoard && (
+                          <button
+                            className="board-card-delete-btn"
+                            title="Delete board"
+                            onClick={(e) => { e.stopPropagation(); deleteBoard(b.id); }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="board-card-meta">
+                        <span className="board-card-date">{formatDate(b.updatedAt)}</span>
+                        {onlineUsers.length > 0 && (
+                          <div className="board-card-online">
+                            {visibleOnline.map((u, i) => (
+                              <Avatar
+                                key={i}
+                                photoURL={u.photoURL}
+                                name={u.name}
+                                color={u.color}
+                                size="xs"
+                                className="board-card-avatar"
+                              />
+                            ))}
+                            {extraOnline > 0 && <div className="board-card-avatar board-card-avatar-extra">+{extraOnline}</div>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {showSettings && groupObj && (
