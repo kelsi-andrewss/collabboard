@@ -481,7 +481,7 @@
 
 .visibility-open-warning svg {
   flex-shrink: 0;
-  color: #d97706;
+  color: var(--accent-warning, #d97706);
 }
 
 .visibility-open-warning span {
