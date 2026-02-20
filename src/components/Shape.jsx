@@ -269,28 +269,19 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             const group = groupRef.current;
             const scaleX = group.scaleX();
             const scaleY = group.scaleY();
-            const rect = group.getClientRect({ skipShadow: true, skipStroke: true, relativeTo: group.getParent() });
-            const rawX = rect.x;
-            const rawY = rect.y;
-            const rawW = Math.max(5, rect.width);
-            const rawH = Math.max(5, rect.height);
+            const rawX = group.x();
+            const rawY = group.y();
+            const rawW = Math.max(5, sizeRef.current.w * scaleX);
+            const rawH = Math.max(5, sizeRef.current.h * scaleY);
             const isResize = Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001;
-            let finalX, finalY, finalW, finalH;
+            let finalX = rawX, finalY = rawY, finalW = rawW, finalH = rawH;
             if (snapToGrid && isResize) {
               const s = (v) => Math.round(v / gridSize) * gridSize;
-              finalX = s(rawX);
-              finalY = s(rawY);
+              finalX = s(rawX); finalY = s(rawY);
               finalW = Math.max(gridSize, s(rawX + rawW) - finalX);
               finalH = Math.max(gridSize, s(rawY + rawH) - finalY);
-            } else {
-              finalX = rawX;
-              finalY = rawY;
-              finalW = rawW;
-              finalH = rawH;
             }
-            // Update committed size ref immediately
             sizeRef.current = { w: finalW, h: finalH };
-            // Reset group scale and set final position
             group.scaleX(1);
             group.scaleY(1);
             group.position({ x: finalX, y: finalY });
