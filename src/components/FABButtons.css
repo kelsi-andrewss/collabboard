@@ -71,8 +71,15 @@
 }
 
 .ai-fab.active {
-  background: var(--accent-hover);
+  background: var(--accent-primary);
   transform: rotate(90deg);
+  box-shadow: var(--shadow-sm), inset 0 0 0 2px var(--accent-hover);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ai-fab.active {
+    box-shadow: var(--shadow-sm), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+  }
 }
 
 @keyframes ai-fab-pulse {
@@ -92,8 +99,11 @@
   inset: 0;
   border-radius: inherit;
   background: currentColor;
-  animation: ai-fab-pulse 1.8s ease-out infinite;
   pointer-events: none;
+}
+
+.ai-fab.pulse-active::before {
+  animation: ai-fab-pulse 1.8s ease-out infinite;
 }
 
 .ai-fab.active::before {

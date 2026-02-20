@@ -72,3 +72,25 @@
   color: var(--text-primary);
   line-height: 1.4;
 }
+
+.group-settings-save-btn {
+  margin-top: 12px;
+  padding: 7px 18px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.group-settings-save-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.group-settings-save-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

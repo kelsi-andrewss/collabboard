@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -11,7 +11,17 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [localProtected, setLocalProtected] = useState(group?.protected || false);
+  const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
   const userSearchTimerRef = useRef(null);
+
+  useEffect(() => {
+    setLocalVisibility(group?.visibility || 'private');
+  }, [group?.visibility]);
+
+  useEffect(() => {
+    setLocalProtected(group?.protected || false);
+  }, [group?.protected]);
 
   if (!group) return null;
 
@@ -19,11 +29,12 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const members = group.members || {};
   const isAdmin = members[currentUserId] === 'admin';
   const canManage = isOwner || isAdmin;
-  const visibility = group.visibility || 'private';
+  const protectedDirty = localProtected !== (group.protected || false);
+  const visibilityDirty = localVisibility !== (group.visibility || 'private');
 
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
-    onUpdateGroup({ visibility: newVisibility });
+    setLocalVisibility(newVisibility);
   };
 
   const handleUserSearch = (term) => {
@@ -86,32 +97,32 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
               <div className="visibility-pill-group">
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'private' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'private' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('private')}
                 >
                   <Lock size={14} /> Private
                 </button>
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'public' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'public' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('public')}
                 >
                   <Globe size={14} /> Public
                 </button>
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'open' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'open' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('open')}
                 >
                   <Users size={14} /> Open
                 </button>
               </div>
               <p className="visibility-description">
-                {visibility === 'private' && 'Only the owner and invited members can access this group.'}
-                {visibility === 'public' && 'Anyone can find and view this group. Only the owner and admins can make changes.'}
-                {visibility === 'open' && 'Anyone can find, view, and join this group.'}
+                {localVisibility === 'private' && 'Only the owner and invited members can access this group.'}
+                {localVisibility === 'public' && 'Anyone can find and view this group. Only the owner and admins can make changes.'}
+                {localVisibility === 'open' && 'Anyone can find, view, and join this group.'}
               </p>
-              {visibility === 'open' && (
+              {localVisibility === 'open' && (
                 <div className="visibility-open-warning">
                   <AlertTriangle size={16} />
                   <span>Anyone can find, view, and edit this group.</span>
@@ -120,9 +131,9 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
             </>
           ) : (
             <div className="visibility-toggle disabled">
-              {visibility === 'private' && <><Lock size={16} /> Private</>}
-              {visibility === 'public' && <><Globe size={16} /> Public</>}
-              {visibility === 'open' && <><Users size={16} /> Open</>}
+              {localVisibility === 'private' && <><Lock size={16} /> Private</>}
+              {localVisibility === 'public' && <><Globe size={16} /> Public</>}
+              {localVisibility === 'open' && <><Users size={16} /> Open</>}
             </div>
           )}
         </div>
@@ -214,12 +225,28 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
               <span>Protect this group from deletion</span>
               <button
                 type="button"
-                className={`group-settings-toggle-btn${group.protected ? ' group-settings-toggle-btn--on' : ''}`}
-                onClick={() => onSetProtected(!group.protected)}
+                className={`group-settings-toggle-btn${localProtected ? ' group-settings-toggle-btn--on' : ''}`}
+                onClick={() => setLocalProtected(v => !v)}
               >
-                {group.protected ? 'On' : 'Off'}
+                {localProtected ? 'On' : 'Off'}
               </button>
             </div>
+          </div>
+        )}
+
+        {canManage && (
+          <div className="board-settings-section">
+            <button
+              type="button"
+              className="group-settings-save-btn"
+              disabled={!protectedDirty && !visibilityDirty}
+              onClick={() => {
+                if (protectedDirty) onSetProtected(localProtected);
+                if (visibilityDirty) onUpdateGroup({ visibility: localVisibility });
+              }}
+            >
+              Save
+            </button>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -9,18 +9,28 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [localVisibility, setLocalVisibility] = useState(board?.visibility || 'public');
   const userSearchTimerRef = useRef(null);
+
+  useEffect(() => {
+    setLocalVisibility(board?.visibility || 'public');
+  }, [board?.visibility]);
 
   if (!board) return null;
 
   const isOwner = board.ownerId === currentUserId;
   const canManage = isOwner || isGroupAdminProp;
   const members = board.members || {};
-  const visibility = board.visibility || 'public';
+  const savedVisibility = board.visibility || 'public';
+  const visibilityDirty = localVisibility !== savedVisibility;
 
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
-    onUpdateSettings({ visibility: newVisibility });
+    setLocalVisibility(newVisibility);
+  };
+
+  const handleSaveVisibility = () => {
+    onUpdateSettings({ visibility: localVisibility });
   };
 
   const handleUserSearch = (term) => {
@@ -83,43 +93,51 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
               <div className="visibility-pill-group">
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'private' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'private' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('private')}
                 >
                   <Lock size={14} /> Private
                 </button>
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'public' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'public' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('public')}
                 >
                   <Globe size={14} /> Public
                 </button>
                 <button
                   type="button"
-                  className={`visibility-pill${visibility === 'open' ? ' visibility-pill--active' : ''}`}
+                  className={`visibility-pill${localVisibility === 'open' ? ' visibility-pill--active' : ''}`}
                   onClick={() => handleVisibilityChange('open')}
                 >
                   <Users size={14} /> Open
                 </button>
               </div>
               <p className="visibility-description">
-                {visibility === 'private' && 'Only the owner and invited members can access this board.'}
-                {visibility === 'public' && 'Anyone with the link can view this board. Only the owner and editors can make changes.'}
-                {visibility === 'open' && 'Anyone with the link can view and edit this board.'}
+                {localVisibility === 'private' && 'Only the owner and invited members can access this board.'}
+                {localVisibility === 'public' && 'Anyone with the link can view this board. Only the owner and editors can make changes.'}
+                {localVisibility === 'open' && 'Anyone with the link can view and edit this board.'}
               </p>
-              {visibility === 'open' && (
+              {localVisibility === 'open' && (
                 <div className="visibility-open-warning">
                   <AlertTriangle size={16} />
                   <span>Anyone with the link can view and edit this board. Objects may be added, changed, or deleted by anyone.</span>
                 </div>
               )}
+              <button
+                type="button"
+                className="settings-save-btn"
+                disabled={!visibilityDirty}
+                onClick={handleSaveVisibility}
+              >
+                Save
+              </button>
             </>
           ) : (
             <div className="visibility-toggle disabled">
-              {visibility === 'private' && <><Lock size={16} /> Private</>}
-              {visibility === 'public' && <><Globe size={16} /> Public</>}
-              {visibility === 'open' && <><Users size={16} /> Open</>}
+              {localVisibility === 'private' && <><Lock size={16} /> Private</>}
+              {localVisibility === 'public' && <><Globe size={16} /> Public</>}
+              {localVisibility === 'open' && <><Users size={16} /> Open</>}
             </div>
           )}
         </div>

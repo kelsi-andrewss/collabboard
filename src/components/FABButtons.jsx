@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Sun, Moon, Maximize } from 'lucide-react';
 import './FABButtons.css';
 
 function FABButtonsInner({ state, handlers }) {
   const { showAI, darkMode, isOffCenter, canEdit } = state;
   const { setShowAI, setDarkMode, handleRecenter } = handlers;
+  const [pulseActive, setPulseActive] = useState(false);
+
+  useEffect(() => {
+    const hasClicked = sessionStorage.getItem('aiClicked');
+    setPulseActive(!hasClicked);
+  }, []);
+
+  const handleAIClick = () => {
+    if (!sessionStorage.getItem('aiClicked')) {
+      sessionStorage.setItem('aiClicked', '1');
+      setPulseActive(false);
+    }
+    setShowAI(!showAI);
+  };
 
   return (
     <>
       {canEdit !== false && (
         <button
           data-fab-item="ai"
-          className={`ai-fab${showAI ? ' active' : ''}`}
-          onClick={() => setShowAI(!showAI)}
+          className={`ai-fab${showAI ? ' active' : ''}${pulseActive ? ' pulse-active' : ''}`}
+          onClick={handleAIClick}
           title="Toggle AI Assistant"
         >
           <MessageSquare size={24} />
