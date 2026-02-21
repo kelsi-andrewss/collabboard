@@ -25,8 +25,9 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 // Stub heavy child components and hooks that have their own Firebase deps
+const mockGroupCard = vi.fn(() => null);
 vi.mock('./GroupCard.jsx', () => ({
-  GroupCard: () => null,
+  get GroupCard() { return mockGroupCard; },
 }));
 
 vi.mock('./Avatar.jsx', () => ({
@@ -409,6 +410,7 @@ describe('BoardSelector — Browse tab template filter', () => {
   beforeEach(() => {
     localStorage.clear();
     mockUseBoardsListReturn.boards = [];
+    mockGroupCard.mockClear();
   });
 
   afterEach(() => {
@@ -464,6 +466,25 @@ describe('BoardSelector — Browse tab template filter', () => {
 
     expect(screen.queryByText('Not A Template')).toBeNull();
     expect(screen.getByText('No boards yet')).toBeTruthy();
+  });
+
+  it('does not render GroupCard on the Browse tab even when a template board belongs to a group', () => {
+    const groupId = 'grp-1';
+    mockUseBoardsListReturn.boards = [
+      { id: 'b1', name: 'Grouped Template', template: true, ownerId: 'other', updatedAt: null, groupId },
+    ];
+    const groups = [{ id: groupId, name: 'My Group', parentGroupId: null }];
+
+    render(<BoardSelector {...defaultProps({ groups })} />);
+
+    // Verify GroupCard renders on My Boards tab (baseline — board is other-owned so won't show, but group resolves)
+    mockGroupCard.mockClear();
+
+    const buttons = screen.getAllByRole('button');
+    const browseBtn = buttons.find(b => b.textContent === 'Browse');
+    fireEvent.click(browseBtn);
+
+    expect(mockGroupCard).not.toHaveBeenCalled();
   });
 });
 
