@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Search, LayoutGrid, Lock, ChevronRight, Trash2, Settings, Folder, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, Lock, ChevronRight, Trash2, Settings, Folder, ArrowUp, ArrowDown, GripVertical, RefreshCw } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import { buildSlugChain, resolveSlugChain } from '../utils/slugUtils.js';
 import { useBoardsList } from '../hooks/useBoardsList.js';
@@ -70,6 +70,9 @@ export function GroupPage({
   const [draggingGroup, setDraggingGroup] = useState(null);
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
   const [rootDropActive, setRootDropActive] = useState(false);
+
+  const [refreshKey, setRefreshKey] = useState(0);
+  const frozenItemsRef = useRef(null);
 
   useEffect(() => {
     const el = masonryContainerRef.current;
@@ -146,6 +149,18 @@ export function GroupPage({
       return sortAsc ? -cmp : cmp;
     });
   };
+
+  const rawMasonryItems = [
+    ...filteredSubgroups.map(sub => ({ type: 'subgroup', key: sub.id, sub })),
+    ...filteredBoards.map(board => ({ type: 'board', key: board.id, board })),
+  ];
+  const masonryItems = applySort(rawMasonryItems);
+
+  useEffect(() => {
+    frozenItemsRef.current = masonryItems;
+  }, [searchQuery, boardView, sortMode, sortAsc, groupId, refreshKey]);
+
+  const displayItems = frozenItemsRef.current ?? masonryItems;
 
   const handleSortModeChange = (mode) => {
     setSortMode(mode);
@@ -292,12 +307,6 @@ export function GroupPage({
     );
   }
 
-  const rawMasonryItems = [
-    ...filteredSubgroups.map(sub => ({ type: 'subgroup', key: sub.id, sub })),
-    ...filteredBoards.map(board => ({ type: 'board', key: board.id, board })),
-  ];
-  const masonryItems = applySort(rawMasonryItems);
-
   return (
     <div className="group-page">
       <div className="group-page-header">
@@ -396,6 +405,14 @@ export function GroupPage({
                 New Subgroup
               </button>
             )}
+            <button
+              className="new-group-btn"
+              title="Refresh board list"
+              onClick={() => setRefreshKey(k => k + 1)}
+            >
+              <RefreshCw size={15} />
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -407,7 +424,7 @@ export function GroupPage({
           onDrop={(e) => { setRootDropActive(false); handleGroupDrop(e, groupId); }}
           onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRootDropActive(false); }}
         >
-          {masonryItems.length === 0 && (
+          {displayItems.length === 0 && (
             <div className="empty-state">
               <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
               <p className="empty-state-title">
@@ -416,7 +433,7 @@ export function GroupPage({
               {!q && <p className="empty-state-hint">Create a new board and assign it to this group</p>}
             </div>
           )}
-          {distributeToColumns(masonryItems, columnCount).map((colItems, colIdx) => (
+          {distributeToColumns(displayItems, columnCount).map((colItems, colIdx) => (
             <div key={colIdx} className="masonry-column">
               {colItems.map(item => {
                 if (item.type === 'subgroup') {
@@ -467,10 +484,12 @@ export function GroupPage({
                 const thumb = darkMode
                   ? (b.thumbnailDark || b.thumbnailLight || b.thumbnail)
                   : (b.thumbnailLight || b.thumbnailDark || b.thumbnail);
+                let standaloneCardRef = null;
                 return (
                   <div
                     key={b.id}
                     className="board-card standalone-board-card"
+                    ref={el => { standaloneCardRef = el; }}
                     onClick={() => onOpenBoard(groupSlugs, b.id, b.name)}
                   >
                     <div className="board-card-thumbnail">
@@ -478,6 +497,24 @@ export function GroupPage({
                         ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
                         : <div className="board-card-thumbnail-placeholder" />
                       }
+                      {isOwner && (
+                        <span
+                          className="board-card-drag-handle"
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            if (standaloneCardRef) {
+                              const rect = standaloneCardRef.getBoundingClientRect();
+                              e.dataTransfer.setDragImage(standaloneCardRef, rect.width - 8, 8);
+                            }
+                            handleBoardDragStart(e, b.id, groupId);
+                          }}
+                          onDragEnd={handleBoardDragEnd}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical size={12} />
+                        </span>
+                      )}
                     </div>
                     <div className="board-card-info">
                       <div className="board-card-row">
