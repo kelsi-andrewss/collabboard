@@ -50,10 +50,16 @@ export function App() {
     if (document.visibilityState !== 'visible') return;
     const stage = stageRef.current;
     if (!stage || !bId) return;
+    const bgRect = stage.findOne('.bg-rect');
+    const originalFill = bgRect ? bgRect.fill() : null;
     try {
+      if (bgRect) bgRect.fill('#ffffff');
       const dataUrl = stage.toDataURL({ pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 });
       saveThumbnail(bId, dataUrl).catch(() => {});
-    } catch {}
+    } catch {
+    } finally {
+      if (bgRect) bgRect.fill(originalFill);
+    }
   };
 
   useEffect(() => {
