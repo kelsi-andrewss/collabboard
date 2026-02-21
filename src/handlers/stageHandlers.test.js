@@ -8,6 +8,7 @@ import { makeStageHandlers } from './stageHandlers.js';
 function makeConfig(overrides = {}) {
   return {
     setSelectedId: vi.fn(),
+    setSelectedIds: vi.fn(),
     setStagePos: vi.fn(),
     setStageScale: vi.fn(),
     presence: { updateCursor: vi.fn() },
@@ -125,6 +126,15 @@ describe('handleStageClick', () => {
     expect(cfg.setSelectedId).toHaveBeenCalledWith(null);
   });
 
+  it('calls setSelectedIds(new Set()) when clicking the stage background', () => {
+    const cfg = makeConfig();
+    const { handleStageClick } = makeStageHandlers(cfg);
+
+    const fakeStage = { getStage: () => fakeStage, name: () => 'stage', getPointerPosition: () => ({ x: 0, y: 0 }), x: () => 0, y: () => 0, scaleX: () => 1, scaleY: () => 1 };
+    handleStageClick({ target: fakeStage });
+    expect(cfg.setSelectedIds).toHaveBeenCalledWith(new Set());
+  });
+
   it('calls setSelectedId(null) when clicking bg-rect', () => {
     const cfg = makeConfig();
     const { handleStageClick } = makeStageHandlers(cfg);
@@ -132,6 +142,15 @@ describe('handleStageClick', () => {
     const fakeStage = { name: () => 'bg-rect', getStage: () => fakeStage, getPointerPosition: () => ({ x: 0, y: 0 }), x: () => 0, y: () => 0, scaleX: () => 1, scaleY: () => 1 };
     handleStageClick({ target: fakeStage });
     expect(cfg.setSelectedId).toHaveBeenCalledWith(null);
+  });
+
+  it('calls setSelectedIds(new Set()) when clicking bg-rect', () => {
+    const cfg = makeConfig();
+    const { handleStageClick } = makeStageHandlers(cfg);
+
+    const fakeStage = { name: () => 'bg-rect', getStage: () => fakeStage, getPointerPosition: () => ({ x: 0, y: 0 }), x: () => 0, y: () => 0, scaleX: () => 1, scaleY: () => 1 };
+    handleStageClick({ target: fakeStage });
+    expect(cfg.setSelectedIds).toHaveBeenCalledWith(new Set());
   });
 
   it('invokes onPendingToolPlace when a pending tool is active', () => {
@@ -155,6 +174,7 @@ describe('handleStageClick', () => {
     handleStageClick({ target: fakeTarget });
     expect(cfg.onPendingToolPlace).toHaveBeenCalledWith('sticky', 100, 200);
     expect(cfg.setSelectedId).not.toHaveBeenCalled();
+    expect(cfg.setSelectedIds).not.toHaveBeenCalled();
   });
 });
 

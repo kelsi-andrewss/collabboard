@@ -490,7 +490,7 @@ export function App() {
   };
 
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
-    setSelectedId, setStagePos, setStageScale, presence, objectsRef,
+    setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
   });
   handleRecenterRef.current = handleRecenter;
