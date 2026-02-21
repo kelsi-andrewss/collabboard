@@ -18,11 +18,6 @@ const SHAPE_SVGS = {
       <polygon points="12,3 21,21 3,21" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   ),
-  line: (
-    <svg viewBox="0 0 24 24" width="24" height="24">
-      <line x1="3" y1="21" x2="21" y2="3" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  ),
 };
 
 export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelector }) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type, Minus, MoveRight } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -71,9 +71,7 @@ function HeaderLeftInner({ state, handlers }) {
     if (setPendingTool) {
       setPendingTool(type);
     } else {
-      if (type === 'line') handleAddLine();
-      else if (type === 'arrow') handleAddArrow();
-      else handleAddShape(type);
+      handleAddShape(type);
     }
     setShowColorPicker(null);
   };
@@ -183,10 +181,44 @@ function HeaderLeftInner({ state, handlers }) {
                   history={colorHistory}
                   onSelect={updateActiveColor}
                   shapeSelector={{
-                    types: ['rectangle', 'circle', 'triangle', 'line', 'arrow'],
+                    types: ['rectangle', 'circle', 'triangle'],
                     activeType: activeShapeType,
                     onSelect: handleShapeAdd,
                   }}
+                />
+              )}
+            </div>
+
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="line" className={pendingTool === 'line' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'line' ? null : 'line') : handleAddLine()} title="Add Line (click to place)">
+                <Minus size={18} stroke={shapeColors.shapes.active} strokeWidth={2} />
+              </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'line' ? null : 'line')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'line' && (
+                <ColorPickerMenu
+                  type="line"
+                  data={shapeColors.shapes}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                />
+              )}
+            </div>
+
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="arrow" className={pendingTool === 'arrow' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'arrow' ? null : 'arrow') : handleAddArrow()} title="Add Arrow (click to place)">
+                <MoveRight size={18} stroke={shapeColors.shapes.active} strokeWidth={2} />
+              </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'arrow' ? null : 'arrow')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'arrow' && (
+                <ColorPickerMenu
+                  type="arrow"
+                  data={shapeColors.shapes}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
                 />
               )}
             </div>
