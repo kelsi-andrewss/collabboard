@@ -21,6 +21,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
 
   const isOwner = board.ownerId === currentUserId;
   const canManage = isOwner || isGroupAdminProp || (board.members?.[currentUserId] === 'editor');
+  const canManageMembers = isOwner || isGroupAdminProp;
   const members = board.members || {};
   const savedVisibility = board.visibility || 'public';
   const visibilityDirty = localVisibility !== savedVisibility;
@@ -181,7 +182,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
             {memberEntries.map(([uid, role]) => (
               <div key={uid} className="member-row">
                 <span className="member-uid">{uid === currentUserId ? 'You' : uid}</span>
-                {canManage ? (
+                {canManageMembers ? (
                   <select
                     className="member-role-select"
                     value={role}
@@ -193,7 +194,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
                 ) : (
                   <span className="member-role">{role}</span>
                 )}
-                {canManage && uid !== currentUserId && (
+                {canManageMembers && uid !== currentUserId && (
                   <button className="member-remove-btn" onClick={() => onRemoveMember(uid)}>
                     <Trash2 size={12} />
                   </button>
@@ -202,7 +203,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
             ))}
           </div>
 
-          {canManage && (
+          {canManageMembers && (
             <div className="invite-search-wrapper">
               <div className="invite-search-row">
                 <input
