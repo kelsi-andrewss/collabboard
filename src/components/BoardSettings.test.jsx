@@ -354,7 +354,7 @@ describe('BoardSettings — editor role gets canManage access', () => {
     expect(onUpdateSettings).toHaveBeenCalledWith({ visibility: 'public' });
   });
 
-  it('renders a member search input for a member with editor role', () => {
+  it('does not render a member search input for a member with editor role', () => {
     const board = makeBoard({
       ownerId: 'owner-uid',
       members: { 'editor-uid': 'editor' },
@@ -364,7 +364,7 @@ describe('BoardSettings — editor role gets canManage access', () => {
         {...defaultProps({ board, currentUserId: 'editor-uid' })}
       />
     );
-    expect(screen.getByPlaceholderText('Add member...')).toBeTruthy();
+    expect(screen.queryByPlaceholderText('Add member...')).toBeNull();
   });
 
   it('does not render interactive visibility pills for a member with viewer role', () => {
@@ -395,7 +395,7 @@ describe('BoardSettings — editor role gets canManage access', () => {
     expect(screen.queryByPlaceholderText('Add member...')).toBeNull();
   });
 
-  it('renders remove buttons for other members when the current user is an editor', () => {
+  it('does not render remove buttons for other members when the current user is an editor', () => {
     const board = makeBoard({
       ownerId: 'owner-uid',
       members: { 'editor-uid': 'editor', 'other-uid': 'viewer' },
@@ -406,11 +406,10 @@ describe('BoardSettings — editor role gets canManage access', () => {
       />
     );
     const removeBtns = container.querySelectorAll('.member-remove-btn');
-    // editor-uid is the current user so no remove btn for self; other-uid gets one
-    expect(removeBtns.length).toBe(1);
+    expect(removeBtns.length).toBe(0);
   });
 
-  it('calls onRemoveMember when an editor clicks a remove button', () => {
+  it('does not call onRemoveMember when the current user is an editor (no remove button rendered)', () => {
     const onRemoveMember = vi.fn();
     const board = makeBoard({
       ownerId: 'owner-uid',
@@ -422,8 +421,8 @@ describe('BoardSettings — editor role gets canManage access', () => {
       />
     );
     const removeBtn = container.querySelector('.member-remove-btn');
-    fireEvent.click(removeBtn);
-    expect(onRemoveMember).toHaveBeenCalledWith('other-uid');
+    expect(removeBtn).toBeNull();
+    expect(onRemoveMember).not.toHaveBeenCalled();
   });
 
   it('renders a template checkbox for a member with editor role', () => {
