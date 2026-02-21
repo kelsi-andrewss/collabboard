@@ -137,7 +137,7 @@ export function App() {
     deleteObject: rawBoard?.deleteObject,
     createBoard: aiCreateBoard,
     getBoards: () => allBoards
-  }, board?.objects);
+  }, board?.objects, user);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
   const [showHomeAI, setShowHomeAI] = useState(false);
