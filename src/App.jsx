@@ -76,6 +76,26 @@ export function App() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  const prevUserRef = useRef(null);
+  useEffect(() => {
+    const wasNull = prevUserRef.current === null;
+    prevUserRef.current = user;
+    if (user && wasNull && !boardId) {
+      const hash = window.location.hash.slice(1);
+      const tokens = hash.split('/');
+      if (tokens[0] === 'board' && tokens[1]) {
+        setBoardId(tokens[1]);
+        return;
+      }
+      const savedId = localStorage.getItem('collaboard_boardId');
+      const savedName = localStorage.getItem('collaboard_boardName');
+      if (savedId) {
+        setBoardId(savedId);
+        if (savedName) setBoardName(savedName);
+      }
+    }
+  }, [user]);
+
   const { stagePos, setStagePos, stageScale, setStageScale } = useCanvasViewport(boardId, handleRecenterRef, user?.uid);
   const { shapeColors, setShapeColors, colorHistory, updateColorHistory } = useShapeColors(boardId);
 
