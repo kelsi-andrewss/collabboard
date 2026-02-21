@@ -197,6 +197,10 @@ export function App() {
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [activeTool, setActiveTool] = useState('pan');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const selectedIdsRef = useRef(new Set());
+  selectedIdsRef.current = selectedIds;
+  const [pendingTool, setPendingTool] = useState(null);
   const [connectorState, setConnectorState] = useState(null);
   const connectorStateRef = useRef(null);
   connectorStateRef.current = connectorState;
@@ -205,10 +209,6 @@ export function App() {
       setConnectorState(null);
     }
   }, [pendingTool]);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const selectedIdsRef = useRef(new Set());
-  selectedIdsRef.current = selectedIds;
-  const [pendingTool, setPendingTool] = useState(null);
   const [pendingToolCount, setPendingToolCount] = useState(0);
   const pendingToolRef = useRef(null);
   const pendingToolCountRef = useRef(0);
