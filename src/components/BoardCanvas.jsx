@@ -60,7 +60,8 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
       ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
     } else {
       ox = obj.x ?? 0; oy = obj.y ?? 0;
-      ow = obj.width ?? 150; oh = obj.height ?? 150;
+      ow = obj.width ?? 150;
+      oh = obj.type === 'text' ? (obj.height ?? 600) : (obj.height ?? 150);
     }
     if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
       visibleIds.add(obj.id);

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Text, Group, Transformer } from 'react-konva';
+import { Text, Rect, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 function TextShapeInner({
   id, x, y, width = 200, text = '', fontSize = 16, color = '#1a1a1a',
-  rotation = 0, isSelected, onSelect, onDragEnd,
+  rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd,
   onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false,
-  gridSize = 50, dragLayerRef, mainLayerRef, dragPos,
+  gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos,
   onTypingChange, canEdit = true,
 }) {
   const groupRef = useRef();
@@ -87,6 +87,32 @@ function TextShapeInner({
           onDragEnd(id, pos);
         }}
       >
+        {isMultiSelected && (
+          <Rect
+            x={0}
+            y={0}
+            width={width}
+            height={textRef.current?.height() || fontSize * 4}
+            fill="transparent"
+            stroke="#6366f1"
+            strokeWidth={3}
+            dash={[6, 3]}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        )}
+        {dragState?.draggingId === id && dragState?.illegalDrag && (
+          <Rect
+            x={0}
+            y={0}
+            width={width}
+            height={textRef.current?.height() || fontSize * 4}
+            fill="#ef4444"
+            opacity={0.35}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        )}
         {!isEditing ? (
           <Text
             ref={textRef}
