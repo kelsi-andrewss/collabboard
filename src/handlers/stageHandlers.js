@@ -1,5 +1,8 @@
 import { getContentBounds } from '../utils/frameUtils.js';
 
+export const MIN_SCALE = 0.1;
+export const MAX_SCALE = 5;
+
 const HEADER_HEIGHT = 60;
 
 export function makeStageHandlers({
@@ -31,7 +34,7 @@ export function makeStageHandlers({
       y: (pointer.y - stage.y()) / oldScale,
     };
 
-    const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy));
 
     setStageScale(newScale);
     setStagePos({
@@ -76,11 +79,11 @@ export function makeStageHandlers({
       setStageScale(1);
       return;
     }
-    const scale = Math.min(
+    const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(
       (viewW - PADDING * 2) / contentW,
       (viewH - PADDING * 2) / contentH,
       1
-    );
+    )));
     setStageScale(scale);
     setStagePos({
       x: (viewW - contentW * scale) / 2 - minX * scale,

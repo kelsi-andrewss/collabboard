@@ -7,10 +7,11 @@ import './BoardSwitcher.css';
 import { buildSlugChain } from '../utils/slugUtils.js';
 
 function HeaderLeftInner({ state, handlers }) {
-  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive } = state;
+  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
     handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
+    setStageScale, setStagePos,
   } = handlers;
 
   const [showBoardSwitcher, setShowBoardSwitcher] = useState(false);
@@ -101,6 +102,20 @@ function HeaderLeftInner({ state, handlers }) {
     if (activeShapeType === 'line') handleAddLine();
     else if (activeShapeType === 'arrow') handleAddArrow();
     else handleAddShape(activeShapeType);
+  };
+
+  const applyZoom = (newScale) => {
+    if (!setStageScale || !setStagePos) return;
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const stage = document.querySelector('.konvajs-content canvas')?.parentElement;
+    if (!stage) return;
+    const oldScale = stageScale || 1;
+    setStageScale(newScale);
+    setStagePos(prev => ({
+      x: centerX - ((centerX - prev.x) / oldScale) * newScale,
+      y: centerY - ((centerY - prev.y) / oldScale) * newScale,
+    }));
   };
 
   return (
@@ -301,6 +316,35 @@ function HeaderLeftInner({ state, handlers }) {
             <Undo2 size={18} />
           </button>
         )}
+
+        {stageScale != null && (
+          <>
+            <span className="header-divider" />
+            <div className="zoom-indicator">
+              <button
+                className="zoom-btn"
+                onClick={() => applyZoom(Math.max(0.1, (stageScale || 1) / 1.15))}
+                title="Zoom Out (Ctrl+-)"
+              >
+                &minus;
+              </button>
+              <button
+                className="zoom-pct"
+                onClick={() => applyZoom(1)}
+                title="Reset to 100% (Ctrl+0)"
+              >
+                {Math.round((stageScale || 1) * 100)}%
+              </button>
+              <button
+                className="zoom-btn"
+                onClick={() => applyZoom(Math.min(5, (stageScale || 1) * 1.15))}
+                title="Zoom In (Ctrl++)"
+              >
+                +
+              </button>
+            </div>
+          </>
+        )}
       </div>}
     </div>
   );
@@ -324,7 +368,8 @@ function areEqual(prev, next) {
     ps.activeTool === ns.activeTool &&
     ps.canEdit === ns.canEdit &&
     ps.isAdmin === ns.isAdmin &&
-    ps.adminViewActive === ns.adminViewActive
+    ps.adminViewActive === ns.adminViewActive &&
+    ps.stageScale === ns.stageScale
   );
 }
 

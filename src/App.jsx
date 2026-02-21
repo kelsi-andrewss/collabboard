@@ -19,7 +19,7 @@ import { makeObjectHandlers } from './handlers/objectHandlers.js';
 import { makeObjectCreationHandlers } from './handlers/objectCreationHandlers.js';
 import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
-import { makeStageHandlers } from './handlers/stageHandlers.js';
+import { makeStageHandlers, MIN_SCALE, MAX_SCALE } from './handlers/stageHandlers.js';
 import { getContentBounds } from './utils/frameUtils.js';
 import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
@@ -456,6 +456,51 @@ export function App() {
         setSelectedIds(allIds);
         return;
       }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        const stage = stageRef.current;
+        if (!stage) return;
+        const oldScale = stage.scaleX();
+        const newScale = Math.min(MAX_SCALE, oldScale * 1.15);
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const pointX = (centerX - stage.x()) / oldScale;
+        const pointY = (centerY - stage.y()) / oldScale;
+        setStageScale(newScale);
+        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault();
+        const stage = stageRef.current;
+        if (!stage) return;
+        const oldScale = stage.scaleX();
+        const newScale = Math.max(MIN_SCALE, oldScale / 1.15);
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const pointX = (centerX - stage.x()) / oldScale;
+        const pointY = (centerY - stage.y()) / oldScale;
+        setStageScale(newScale);
+        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault();
+        const stage = stageRef.current;
+        if (!stage) return;
+        const oldScale = stage.scaleX();
+        const newScale = 1;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const pointX = (centerX - stage.x()) / oldScale;
+        const pointY = (centerY - stage.y()) / oldScale;
+        setStageScale(newScale);
+        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
+        return;
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -578,8 +623,8 @@ export function App() {
     <div className="app-container">
       <div className="header">
         <HeaderLeft
-          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive }}
-          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool }}
+          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale }}
+          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
         />
         <div className="header-right">
           {user && boardId && (

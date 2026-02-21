@@ -211,3 +211,49 @@
   font-weight: 600;
   color: var(--accent-primary);
 }
+
+.zoom-indicator {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoom-indicator .zoom-btn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.zoom-indicator .zoom-btn:hover {
+  background: var(--toolbar-bg);
+  color: white;
+}
+
+.zoom-indicator .zoom-pct {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 4px;
+  min-width: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.zoom-indicator .zoom-pct:hover {
+  background: var(--toolbar-bg);
+  color: white;
+}

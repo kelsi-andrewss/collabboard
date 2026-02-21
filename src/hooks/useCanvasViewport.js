@@ -19,7 +19,7 @@ export function useCanvasViewport(boardId, handleRecenterRef, userId) {
   const [stageScale, setStageScale] = useState(() => {
     try {
       const saved = localStorage.getItem(getKey());
-      if (saved) { const v = JSON.parse(saved); return v.scale ?? 1; }
+      if (saved) { const v = JSON.parse(saved); return Math.max(0.1, Math.min(5, v.scale ?? 1)); }
     } catch {}
     return 1;
   });
@@ -37,7 +37,7 @@ export function useCanvasViewport(boardId, handleRecenterRef, userId) {
       if (saved) {
         const v = JSON.parse(saved);
         setStagePos({ x: v.x ?? 0, y: v.y ?? 0 });
-        setStageScale(v.scale ?? 1);
+        setStageScale(Math.max(0.1, Math.min(5, v.scale ?? 1)));
         return;
       }
     } catch {}
