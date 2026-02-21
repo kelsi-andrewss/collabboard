@@ -46,7 +46,7 @@ export function GroupPage({
   groupSlugs, groups = [], onBack, onOpenBoard, onNavigateToGroup,
   user, isAdmin, adminViewActive, onUpdateGroup, onInviteGroupMember,
   onRemoveGroupMember, onSetGroupProtected, onDeleteGroupCascade,
-  allBoards = [], moveBoard, moveGroup, createSubgroup,
+  allBoards = [], moveBoard, moveGroup, createSubgroup, darkMode = false,
 }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, deleteBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
@@ -455,6 +455,7 @@ export function GroupPage({
                       onGroupDragOverUnbound={handleGroupDragOver}
                       onGroupDropUnbound={handleGroupDrop}
                       onGroupDragLeaveUnbound={handleGroupDragLeave}
+                      darkMode={darkMode}
                     />
                   );
                 }
@@ -463,6 +464,9 @@ export function GroupPage({
                 const visibleOnline = onlineUsers.slice(0, 3);
                 const extraOnline = onlineUsers.length - 3;
                 const isOwner = b.ownerId === user?.uid;
+                const thumb = darkMode
+                  ? (b.thumbnailDark || b.thumbnailLight || b.thumbnail)
+                  : (b.thumbnailLight || b.thumbnailDark || b.thumbnail);
                 return (
                   <div
                     key={b.id}
@@ -470,8 +474,8 @@ export function GroupPage({
                     onClick={() => onOpenBoard(groupSlugs, b.id, b.name)}
                   >
                     <div className="board-card-thumbnail">
-                      {b.thumbnail
-                        ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                      {thumb
+                        ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
                         : <div className="board-card-thumbnail-placeholder" />
                       }
                     </div>
