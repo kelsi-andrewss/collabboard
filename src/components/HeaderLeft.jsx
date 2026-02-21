@@ -71,9 +71,7 @@ function HeaderLeftInner({ state, handlers }) {
     if (setPendingTool) {
       setPendingTool(type);
     } else {
-      if (type === 'line') handleAddLine();
-      else if (type === 'arrow') handleAddArrow();
-      else handleAddShape(type);
+      handleAddShape(type);
     }
     setShowColorPicker(null);
   };
