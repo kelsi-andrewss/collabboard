@@ -28,6 +28,33 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
   const ShapeComponent = isArrow ? Arrow : Line;
   const arrowProps = isArrow ? { pointerLength: 12, pointerWidth: 10, fill: isMultiSelected ? '#6366f1' : color } : {};
 
+  // Compute effectivePts: if dragPos matches a connected endpoint's object,
+  // override that endpoint's position using getPortCoords with the live drag position.
+  let effectivePts = points;
+  if (dragPos && objects) {
+    const pts = [...points];
+    let modified = false;
+    if (startConnectedId && startConnectedPort && dragPos.id === startConnectedId) {
+      const target = objects[startConnectedId];
+      if (target) {
+        const p = getPortCoords({ ...target, x: dragPos.x, y: dragPos.y }, startConnectedPort);
+        pts[0] = p.x - x;
+        pts[1] = p.y - y;
+        modified = true;
+      }
+    }
+    if (endConnectedId && endConnectedPort && dragPos.id === endConnectedId) {
+      const target = objects[endConnectedId];
+      if (target) {
+        const p = getPortCoords({ ...target, x: dragPos.x, y: dragPos.y }, endConnectedPort);
+        pts[pts.length - 2] = p.x - x;
+        pts[pts.length - 1] = p.y - y;
+        modified = true;
+      }
+    }
+    if (modified) effectivePts = pts;
+  }
+
   const nearbyPorts = [];
   if (draggingEndpoint && objects) {
     const excludeIds = new Set([id]);
@@ -89,7 +116,7 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
       >
         <ShapeComponent
           ref={lineRef}
-          points={points}
+          points={effectivePts}
           stroke={isMultiSelected ? '#6366f1' : color}
           strokeWidth={isMultiSelected ? strokeWidth + 2 : strokeWidth}
           hitStrokeWidth={20}
@@ -99,7 +126,7 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           {...arrowProps}
         />
         {isSelected && canEdit && (() => {
-          const pts = points || [0, 0, 200, 0];
+          const pts = effectivePts || [0, 0, 200, 0];
           const startX = pts[0];
           const startY = pts[1];
           const endX = pts[pts.length - 2];
@@ -210,7 +237,7 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           );
         })()}
         {dragState?.draggingId === id && dragState?.illegalDrag && (() => {
-          const pts = points || [0, 0, 200, 0];
+          const pts = effectivePts || [0, 0, 200, 0];
           let minPx = Infinity, minPy = Infinity, maxPx = -Infinity, maxPy = -Infinity;
           for (let i = 0; i < pts.length; i += 2) {
             minPx = Math.min(minPx, pts[i]); maxPx = Math.max(maxPx, pts[i]);
