@@ -36,8 +36,8 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete, id]);
 
-  const titleBarHeight = Math.max(32, Math.min(52, height * 0.12));
-  const titleFontSize = Math.max(13, Math.min(20, titleBarHeight * 0.5));
+  const titleBarHeight = Math.max(40, Math.min(64, height * 0.13));
+  const titleFontSize = Math.max(16, Math.min(28, titleBarHeight * 0.55));
   const titleColor = color;
 
   return (
