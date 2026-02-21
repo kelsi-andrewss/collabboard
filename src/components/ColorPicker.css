@@ -149,8 +149,8 @@
 }
 
 .shape-btn.active {
-  background: #1a1a1a;
-  border-color: #1a1a1a;
-  color: #ffffff;
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-primary);
   border-radius: 8px;
 }

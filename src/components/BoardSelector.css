@@ -103,8 +103,8 @@
 }
 
 .mini-chip {
-  background: #374151;
-  color: #9ca3af;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   font-size: 0.625rem;
 }
 

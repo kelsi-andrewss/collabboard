@@ -5,7 +5,7 @@
   --bg-tertiary: #f3f4f6;
   --text-primary: #111827;
   --text-secondary: #4b5563;
-  --text-tertiary: #9ca3af;
+  --text-tertiary: #6b7280;
   --border-color: #e5e7eb;
   --header-bg: #1f2937;
   --toolbar-bg: #374151;
@@ -22,7 +22,7 @@
   --bg-tertiary: #374151;
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
-  --text-tertiary: #9ca3af;
+  --text-tertiary: #b0b8c4;
   --border-color: #374151;
   --header-bg: #030712;
   --toolbar-bg: #1f2937;
@@ -150,12 +150,13 @@
 }
 
 .board-wrapper.cursor-crosshair,
-.board-wrapper.cursor-crosshair canvas {
-  cursor: crosshair !important;
+.board-wrapper.cursor-crosshair canvas,
+.board-wrapper.cursor-crosshair canvas * {
+  cursor: crosshair;
 }
 
-.tool-active {
-  background: rgba(99, 102, 241, 0.3) !important;
+.tool-active.tool-active {
+  background: rgba(99, 102, 241, 0.3);
   box-shadow: inset 0 0 0 1.5px var(--accent-primary);
   border-radius: 4px;
 }
