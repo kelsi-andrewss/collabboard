@@ -263,10 +263,10 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const handleMouseMoveWrapped = (e) => {
     handleMouseMove(e);
     const stage = e.target.getStage();
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-    const canvasX = (pointer.x - stage.x()) / stage.scaleX();
-    const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+    const pos = stage.getRelativePointerPosition();
+    if (!pos) return;
+    const canvasX = pos.x;
+    const canvasY = pos.y;
 
     if (ghostNodeRef.current) {
       const node = ghostNodeRef.current;

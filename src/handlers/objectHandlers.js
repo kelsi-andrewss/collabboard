@@ -13,7 +13,7 @@ import { showErrorTooltip } from '../utils/tooltipUtils.js';
 import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeObjectHandlers({
-  board, stageRef, snap, setDragState, setSelectedId,
+  board, stageRef, snap, setDragState, setSelectedId, setSelectedIds,
   stagePos, stageScale, setShapeColors,
   setDragPos, updateColorHistory,
   setResizeTooltip, resizeTooltipTimer,
@@ -213,6 +213,7 @@ export function makeObjectHandlers({
     const maxZ = Math.max(0, ...Object.values(board.objects).map(o => o.zIndex || 0));
     board.updateObject(id, { zIndex: maxZ + 1 });
     setSelectedId(id);
+    setSelectedIds(new Set());
   };
 
   const handleSendToBack = (id) => {
