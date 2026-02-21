@@ -64,7 +64,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupModalData, setGroupModalData] = useState({ name: '', visibility: 'private' });
   const [groupNameError, setGroupNameError] = useState('');
-  const [boardRows, setBoardRows] = useState([{ name: '' }]);
+  const [boardRows, setBoardRows] = useState([]);
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
   const [groupSearchText, setGroupSearchText] = useState('');
   const [newBoardVisibility, setNewBoardVisibility] = useState('private');
@@ -156,6 +156,9 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   };
 
   const handleGroupDrop = (e, targetGroupId) => {
+    const closestGroupEl = e.target.closest('[data-group-id]');
+    const closestGroupId = closestGroupEl ? closestGroupEl.dataset.groupId : null;
+    if (closestGroupId !== (targetGroupId ?? null)) return;
     e.stopPropagation();
     e.preventDefault();
     const groupPayload = e.dataTransfer.getData('application/x-group-json');
@@ -299,7 +302,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const resetGroupModalState = () => {
     setGroupModalData({ name: '', visibility: 'private' });
     setGroupNameError('');
-    setBoardRows([{ name: '' }]);
+    setBoardRows([]);
     setConfirmOpenGroup(false);
     setShowGroupModal(false);
   };
@@ -464,6 +467,11 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     saveGroupSort(sortMode, [], sortAsc, view);
   };
 
+  const handleQuickAddBoard = (groupId) => {
+    setSelectedGroupId(groupId || null);
+    setShowModal(true);
+  };
+
   return (
     <div className="board-selector-container">
       <div className="board-selector-inner">
@@ -580,6 +588,21 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
         const onlineForBoard = (boardId) => globalPresence?.[boardId] || [];
 
+        const getGroupBreadcrumb = (groupId) => {
+          if (!groupId) return null;
+          const group = groupsProp.find(g => g.id === groupId);
+          if (!group || !group.parentGroupId) return null;
+          const parts = [group.name];
+          let current = group;
+          while (current.parentGroupId) {
+            const parent = groupsProp.find(g => g.id === current.parentGroupId);
+            if (!parent) break;
+            parts.unshift(parent.name);
+            current = parent;
+          }
+          return parts.join(' / ');
+        };
+
         return (
           <>
           <div
@@ -615,7 +638,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onNavigateToGroup={onNavigateToGroup || (() => {})}
                         onNavigateToBoard={onNavigateToBoard || ((slug, id, name) => onSelectBoard(id, name))}
                         globalPresence={globalPresence}
-                        onDeleteBoard={deleteBoard}
+                        onDeleteBoard={null}
                         onDeleteGroup={(id) => deleteGroupCascade(id, groupsProp, boards)}
                         onCreateSubgroup={createSubgroup}
                         onSetGroupProtected={setGroupProtected}
@@ -637,6 +660,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragOverUnbound={handleGroupDragOver}
                         onGroupDropUnbound={handleGroupDrop}
                         onGroupDragLeaveUnbound={handleGroupDragLeave}
+                        onAddBoard={handleQuickAddBoard}
                       />
                     );
                   }
@@ -646,6 +670,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   const extraOnline = onlineUsers.length - 3;
                   const isOwner = b.ownerId === user?.uid;
                   const isDragging = draggingBoard?.boardId === b.id;
+                  const groupBreadcrumb = getGroupBreadcrumb(b.groupId);
                   let standaloneCardRef = null;
                   return (
                     <div
@@ -679,9 +704,15 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         )}
                       </div>
                       <div className="board-card-info">
+                        {groupBreadcrumb && (
+                          <div className="board-card-group-breadcrumb">
+                            <Folder size={10} className="board-card-group-breadcrumb-icon" />
+                            <span>{groupBreadcrumb}</span>
+                          </div>
+                        )}
                         <div className="board-card-row">
                           <span className="board-card-name">{b.name}</span>
-                          {deleteBoard && (
+                          {deleteBoard && !b.groupId && (
                             <button
                               className="board-card-delete-btn"
                               title="Delete board"
@@ -765,21 +796,18 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <p className="visibility-description">
                   {groupModalData.visibility === 'private' && 'Only you and invited members can see this.'}
                   {groupModalData.visibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
-                  {groupModalData.visibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
                 {groupModalData.visibility === 'open' && (
-                  <div className="visibility-open-confirm-block">
-                    <div className="visibility-open-warning">
-                      <AlertTriangle size={16} />
-                      <span>This group will be visible to everyone. Anyone can view and edit it.</span>
-                    </div>
+                  <div className="visibility-open-warning">
+                    <AlertTriangle size={16} />
+                    <span>This group will be visible to everyone. Anyone can view and edit it.</span>
                     <label className="visibility-open-confirm-checkbox">
                       <input
                         type="checkbox"
                         checked={confirmOpenGroup}
                         onChange={(e) => setConfirmOpenGroup(e.target.checked)}
                       />
-                      <span>I understand that anyone can edit this group</span>
+                      <span>I understand</span>
                     </label>
                   </div>
                 )}
@@ -924,21 +952,18 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <p className="visibility-description">
                   {newBoardVisibility === 'private' && 'Only you and invited members can see this.'}
                   {newBoardVisibility === 'public' && 'Anyone can find and view this, but only members can edit.'}
-                  {newBoardVisibility === 'open' && 'Anyone can find, view, and edit this.'}
                 </p>
                 {newBoardVisibility === 'open' && (
-                  <div className="visibility-open-confirm-block">
-                    <div className="visibility-open-warning">
-                      <AlertTriangle size={16} />
-                      <span>This board will be visible to everyone. Anyone can view and edit it.</span>
-                    </div>
+                  <div className="visibility-open-warning">
+                    <AlertTriangle size={16} />
+                    <span>This board will be visible to everyone. Anyone can view and edit it.</span>
                     <label className="visibility-open-confirm-checkbox">
                       <input
                         type="checkbox"
                         checked={confirmOpenBoard}
                         onChange={(e) => setConfirmOpenBoard(e.target.checked)}
                       />
-                      <span>I understand that anyone can edit this board</span>
+                      <span>I understand</span>
                     </label>
                   </div>
                 )}
@@ -946,9 +971,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               {newBoardVisibility === 'private' && (
                 <div className="form-group">
                   <label>Invite Members <span className="label-optional">(optional)</span></label>
-                  {pendingInvites.length === 0 && (
-                    <div className="member-empty">No members invited yet</div>
-                  )}
                   {pendingInvites.length > 0 && (
                     <div className="pending-invites">
                       {pendingInvites.map(inv => (

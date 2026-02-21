@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { formatDate, estimateItemHeight, distributeToColumns, isAncestor } from '../utils/groupUtils.js';
 
 describe('formatDate', () => {
@@ -481,5 +481,120 @@ describe('handleGroupDrop self-drop guard logic', () => {
 
   it('allows dropping an unrelated group onto a target', () => {
     expect(wouldGroupDropBeBlocked('sibling', 'child')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleGroupDrop nested-group bubbling guard
+//
+// Both GroupPage.jsx and BoardSelector.jsx prefix handleGroupDrop with:
+//
+//   const closestGroupEl = e.target.closest('[data-group-id]');
+//   const closestGroupId = closestGroupEl ? closestGroupEl.dataset.groupId : null;
+//   if (closestGroupId !== (targetGroupId ?? null)) return;
+//
+// This guard prevents a drop event that bubbled up from a nested GroupCard
+// from triggering the parent handler. The tests below model this guard as a
+// pure predicate and verify its behaviour under each relevant scenario.
+// ---------------------------------------------------------------------------
+
+describe('handleGroupDrop nested-group bubbling guard', () => {
+  // Pure predicate mirroring the guard at the top of handleGroupDrop.
+  // Returns true when the handler would bail out (not process the drop).
+  function wouldHandlerBailOut(closestDataGroupId, targetGroupId) {
+    const closestGroupId = closestDataGroupId ?? null;
+    const normalizedTarget = targetGroupId ?? null;
+    return closestGroupId !== normalizedTarget;
+  }
+
+  // Simulate the full handleGroupDrop guard + moveGroup call path.
+  function simulateGroupDrop({ closestDataGroupId, targetGroupId, draggedGroupId, groups, moveGroup }) {
+    const closestGroupId = closestDataGroupId ?? null;
+    const normalizedTarget = targetGroupId ?? null;
+    if (closestGroupId !== normalizedTarget) return 'bailed';
+
+    const payload = JSON.stringify({ id: draggedGroupId });
+    const { id: parsed } = JSON.parse(payload);
+    if (normalizedTarget === parsed) return 'self-drop-blocked';
+    if (normalizedTarget !== null) {
+      if (isAncestor(parsed, normalizedTarget, groups)) return 'ancestor-blocked';
+    }
+    moveGroup(parsed, normalizedTarget);
+    return 'moved';
+  }
+
+  let moveGroup;
+
+  beforeEach(() => {
+    moveGroup = vi.fn();
+  });
+
+  it('bails out when the drop target element belongs to a nested group, not the parent group', () => {
+    // e.target is inside a nested GroupCard with data-group-id="child",
+    // but this handler was registered for targetGroupId="parent".
+    expect(wouldHandlerBailOut('child', 'parent')).toBe(true);
+  });
+
+  it('does not bail out when the closest data-group-id matches the handler target', () => {
+    expect(wouldHandlerBailOut('parent', 'parent')).toBe(false);
+  });
+
+  it('does not call moveGroup when the event came from a nested group element', () => {
+    const groups = [
+      { id: 'parent', parentGroupId: null },
+      { id: 'child', parentGroupId: 'parent' },
+    ];
+    const result = simulateGroupDrop({
+      closestDataGroupId: 'child',
+      targetGroupId: 'parent',
+      draggedGroupId: 'sibling',
+      groups,
+      moveGroup,
+    });
+    expect(result).toBe('bailed');
+    expect(moveGroup).not.toHaveBeenCalled();
+  });
+
+  it('calls moveGroup when the closest data-group-id matches the handler target', () => {
+    const groups = [
+      { id: 'parent', parentGroupId: null },
+      { id: 'sibling', parentGroupId: 'parent' },
+    ];
+    const result = simulateGroupDrop({
+      closestDataGroupId: 'parent',
+      targetGroupId: 'parent',
+      draggedGroupId: 'sibling',
+      groups,
+      moveGroup,
+    });
+    expect(result).toBe('moved');
+    expect(moveGroup).toHaveBeenCalledWith('sibling', 'parent');
+  });
+
+  it('bails out for the root drop zone when the closest element is a child group (not null)', () => {
+    // Root zone has targetGroupId=null. If e.target is inside a GroupCard
+    // with data-group-id="child", the guard correctly bails.
+    expect(wouldHandlerBailOut('child', null)).toBe(true);
+  });
+
+  it('does not bail out for the root drop zone when no group element is found (closestDataGroupId is null)', () => {
+    // e.target has no ancestor with data-group-id, so closestDataGroupId is null.
+    // Root zone targetGroupId is also null — the drop proceeds.
+    expect(wouldHandlerBailOut(null, null)).toBe(false);
+  });
+
+  it('does not call moveGroup when dropped on nested group in root drop zone context', () => {
+    const groups = [
+      { id: 'child', parentGroupId: null },
+    ];
+    const result = simulateGroupDrop({
+      closestDataGroupId: 'child',
+      targetGroupId: null,
+      draggedGroupId: 'other',
+      groups,
+      moveGroup,
+    });
+    expect(result).toBe('bailed');
+    expect(moveGroup).not.toHaveBeenCalled();
   });
 });

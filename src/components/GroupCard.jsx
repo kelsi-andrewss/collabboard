@@ -22,11 +22,12 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   user, draggingBoard, onBoardDragStart, onBoardDragEnd,
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
-  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound }) {
+  onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound,
+  onAddBoard }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(depth === 0);
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
   const [movingBoardId, setMovingBoardId] = useState(null);
   const [addingSubgroup, setAddingSubgroup] = useState(false);
@@ -35,6 +36,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   return (
     <div
       className={`group-card${isDragOver ? ' drag-over' : ''}${depth > 0 ? ' group-card--nested' : ''}`}
+      data-group-id={groupId}
       style={{ '--depth': depth }}
       onDragOver={onGroupDragOver}
       onDrop={onGroupDrop}
@@ -115,7 +117,6 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDragOverUnbound={onGroupDragOverUnbound}
                   onGroupDropUnbound={onGroupDropUnbound}
                   onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
-                  allBoards={allBoards}
                 />
               ))}
               {addingSubgroup && (
@@ -305,12 +306,22 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
             );
           })()}
           {group && (
-            <button
-              className="board-cards-see-all"
-              onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
-            >
-              {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
-            </button>
+            <div className="group-card-footer-row">
+              <button
+                className="board-cards-see-all"
+                onClick={(e) => { e.stopPropagation(); onNavigateToGroup(buildSlugChain(group, allGroups)); }}
+              >
+                {boards.length > 3 ? `See all ${boards.length} boards →` : 'Open group →'}
+              </button>
+              {onAddBoard && (
+                <button
+                  className="group-card-add-board-btn"
+                  onClick={(e) => { e.stopPropagation(); onAddBoard(groupId); }}
+                >
+                  + board
+                </button>
+              )}
+            </div>
           )}
         </>
       )}

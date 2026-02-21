@@ -366,6 +366,13 @@
   color: var(--text-primary);
 }
 
+.group-card-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
 .board-cards-see-all {
   grid-column: 1 / -1;
   background: transparent;
@@ -377,9 +384,30 @@
   padding: 6px 4px;
   border-radius: 4px;
   transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  flex: 1;
 }
 
 .board-cards-see-all:hover {
+  background: var(--bg-tertiary);
+}
+
+.group-card-add-board-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.12s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.group-card-add-board-btn:hover {
+  color: var(--accent-primary);
   background: var(--bg-tertiary);
 }
 
@@ -449,6 +477,7 @@
 .group-card--nested {
   border-radius: 8px;
   border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
 .group-card--nested .group-card-header {
@@ -494,6 +523,8 @@
   text-align: left;
   width: 100%;
   transition: color 0.15s, background 0.12s;
+  display: flex;
+  align-items: center;
 }
 
 .group-card-add-subgroup-btn:hover {
@@ -552,4 +583,27 @@
   opacity: 0.35;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.board-card-group-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  margin-bottom: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board-card-group-breadcrumb-icon {
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  opacity: 0.7;
+}
+
+.board-card-group-breadcrumb span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

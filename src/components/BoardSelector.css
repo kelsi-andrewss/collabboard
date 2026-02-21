@@ -1,5 +1,5 @@
 .board-selector-container {
-  padding: 40px;
+  padding: 0 40px 40px;
   background: var(--bg-primary);
   flex: 1;
   overflow-y: auto;
@@ -15,7 +15,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 0 0 20px;
+  padding: 20px 0 16px;
 }
 
 .controls-bar-center {
@@ -477,6 +477,7 @@
   border-radius: 8px;
   margin-top: 12px;
   font-size: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .visibility-open-warning svg {
@@ -489,12 +490,6 @@
   line-height: 1.4;
 }
 
-.visibility-open-confirm-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-}
 
 .visibility-open-confirm-checkbox {
   display: flex;
@@ -503,6 +498,8 @@
   cursor: pointer;
   font-size: 0.8rem;
   color: var(--text-primary);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .visibility-open-confirm-checkbox input[type="checkbox"] {
