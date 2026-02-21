@@ -51,6 +51,25 @@ function HeaderLeftInner({ state, handlers }) {
     };
   }, [showConnectorDropdown]);
 
+  useEffect(() => {
+    if (showColorPicker !== 'connector') return;
+    const handleClick = (e) => {
+      if (!connectorRef.current?.contains(e.target)) {
+        setShowColorPicker(null);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowColorPicker(null);
+    };
+    const timer = setTimeout(() => document.addEventListener('click', handleClick), 0);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showColorPicker, setShowColorPicker]);
+
   const q = boardSearch.trim().toLowerCase();
   const getGroupName = (b) => {
     if (b.groupId) {
@@ -227,17 +246,31 @@ function HeaderLeftInner({ state, handlers }) {
                 title={activeConnectorType === 'arrow' ? 'Add Arrow (click to place)' : 'Add Line (click to place)'}
               >
                 {activeConnectorType === 'arrow'
-                  ? <MoveRight size={18} stroke={shapeColors.shapes.active} strokeWidth={2} />
-                  : <Minus size={18} stroke={shapeColors.shapes.active} strokeWidth={2} />
+                  ? <MoveRight size={18} stroke={shapeColors.line.active} strokeWidth={2} />
+                  : <Minus size={18} stroke={shapeColors.line.active} strokeWidth={2} />
                 }
               </button>
               <button
+                className="dropdown-arrow color-swatch-btn"
+                style={{ background: shapeColors.line.active }}
+                onClick={() => { setShowConnectorDropdown(false); setShowColorPicker(showColorPicker === 'connector' ? null : 'connector'); }}
+                title="Connector color"
+              />
+              <button
                 className="dropdown-arrow"
-                onClick={() => setShowConnectorDropdown(v => !v)}
+                onClick={() => { setShowColorPicker(null); setShowConnectorDropdown(v => !v); }}
                 title="Switch connector type"
               >
                 <ChevronDown size={14} />
               </button>
+              {showColorPicker === 'connector' && (
+                <ColorPickerMenu
+                  type={activeConnectorType}
+                  data={shapeColors.line}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                />
+              )}
               {showConnectorDropdown && (
                 <div className="connector-type-dropdown">
                   <button

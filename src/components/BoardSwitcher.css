@@ -116,6 +116,17 @@
   padding: 6px 4px;
 }
 
+.tool-split-button .color-swatch-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  padding: 0;
+  margin: 0 2px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .tool-split-button.no-outline {
   border: none;
 }
