@@ -117,7 +117,6 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDragOverUnbound={onGroupDragOverUnbound}
                   onGroupDropUnbound={onGroupDropUnbound}
                   onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
-                  allBoards={allBoards}
                 />
               ))}
               {addingSubgroup && (
