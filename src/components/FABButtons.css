@@ -81,7 +81,7 @@
 
 .ai-fab:focus-visible {
   background: var(--accent-primary);
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid white;
   outline-offset: 3px;
 }
 
