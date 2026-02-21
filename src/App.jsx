@@ -783,6 +783,8 @@ export function App() {
                   ]
                 : [
                     { label: 'Paste', shortcut: '⌘V', action: async () => {
+                      const canvasX = contextMenu.canvasX;
+                      const canvasY = contextMenu.canvasY;
                       let items = clipboardRef.current;
                       if (navigator.clipboard?.readText) {
                         try {
@@ -800,11 +802,11 @@ export function App() {
                       const OFFSET = 20;
                       const firstX = items[0].x + OFFSET;
                       const firstY = items[0].y + OFFSET;
-                      const dx = contextMenu.canvasX - firstX;
-                      const dy = contextMenu.canvasY - firstY;
+                      const dx = canvasX - firstX;
+                      const dy = canvasY - firstY;
                       items.forEach((snapshot, i) => {
-                        const x = i === 0 ? contextMenu.canvasX : snapshot.x + OFFSET + dx;
-                        const y = i === 0 ? contextMenu.canvasY : snapshot.y + OFFSET + dy;
+                        const x = i === 0 ? canvasX : snapshot.x + OFFSET + dx;
+                        const y = i === 0 ? canvasY : snapshot.y + OFFSET + dy;
                         board.addObject({ ...snapshot, x, y });
                       });
                     }},
