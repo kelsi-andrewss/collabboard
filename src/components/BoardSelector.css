@@ -506,3 +506,9 @@
   cursor: pointer;
   accent-color: var(--accent-warning, #d97706);
 }
+
+.member-search-error {
+  color: var(--color-error, #ef4444);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}

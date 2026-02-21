@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus, LayoutGrid, Users, GripVertical, AlertTriangle } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, getDocs, limit, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
@@ -76,6 +76,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const userSearchTimerRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState(() => {
@@ -231,6 +232,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleUserSearch = (term) => {
     setUserSearchQuery(term);
+    setSearchError(null);
     clearTimeout(userSearchTimerRef.current);
     if (!term.trim()) {
       setUserSearchResults([]);
@@ -259,8 +261,24 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
       } catch (err) {
         console.error('[user search]', err);
         setUserSearchResults([]);
+        setSearchError('Search unavailable. Please try again.');
       }
     }, 200);
+  };
+
+  const backfillDisplayNameLower = async () => {
+    const snap = await getDocs(collection(db, 'users'));
+    const batch = writeBatch(db);
+    let count = 0;
+    snap.docs.forEach(d => {
+      if (!d.data().displayNameLower) {
+        const name = d.data().displayName || 'Anonymous';
+        batch.update(doc(db, 'users', d.id), { displayNameLower: name.toLowerCase() });
+        count++;
+      }
+    });
+    if (count > 0) await batch.commit();
+    alert(`Backfilled ${count} user(s).`);
   };
 
   const handleUserSelect = (u) => {
@@ -524,12 +542,17 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         </div>
         <div className="new-buttons-group">
           {isAdmin && migrateGroupStrings && (
-            <button className="migrate-btn" onClick={async () => {
-              await migrateGroupStrings();
-              alert('Migration complete');
-            }}>
-              Migrate Groups
-            </button>
+            <>
+              <button className="migrate-btn" onClick={async () => {
+                await migrateGroupStrings();
+                alert('Migration complete');
+              }}>
+                Migrate Groups
+              </button>
+              <button className="migrate-btn" onClick={backfillDisplayNameLower}>
+                Backfill Search Index
+              </button>
+            </>
           )}
           <button className="new-group-btn" onClick={() => setShowGroupModal(true)}>
             <Folder size={15} />
@@ -1029,6 +1052,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         ))}
                       </div>
                     )}
+                    {searchError && <p className="member-search-error">{searchError}</p>}
                   </div>
                 </div>
               )}

@@ -10,6 +10,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
@@ -39,6 +40,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
 
   const handleUserSearch = (term) => {
     setUserSearchQuery(term);
+    setSearchError(null);
     clearTimeout(userSearchTimerRef.current);
     if (!term.trim()) {
       setUserSearchResults([]);
@@ -69,6 +71,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
       } catch (err) {
         console.error('[group user search]', err);
         setUserSearchResults([]);
+        setSearchError('Search unavailable. Please try again.');
       }
     }, 200);
   };
@@ -213,6 +216,7 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
                   ))}
                 </div>
               )}
+              {searchError && <p className="member-search-error">{searchError}</p>}
             </div>
           )}
         </div>

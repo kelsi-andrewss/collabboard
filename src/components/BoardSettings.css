@@ -344,3 +344,9 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.member-search-error {
+  color: var(--color-error, #ef4444);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
