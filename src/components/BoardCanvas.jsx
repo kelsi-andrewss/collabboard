@@ -99,11 +99,13 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
   const [selRect, setSelRect] = useState(null);
   const selStartRef = useRef(null);
+  const shiftDragRef = useRef(false);
 
   const isSelectMode = activeTool === 'select';
 
   const handleMouseDown = (e) => {
-    if (!isSelectMode) return;
+    const isShiftDrag = e.evt.shiftKey;
+    if (!isSelectMode && !isShiftDrag) return;
     const target = e.target;
     const stage = target.getStage();
     if (target !== stage && target.name() !== 'bg-rect') return;
@@ -112,12 +114,13 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     const canvasX = (pointer.x - stage.x()) / stage.scaleX();
     const canvasY = (pointer.y - stage.y()) / stage.scaleY();
     selStartRef.current = { x: canvasX, y: canvasY };
+    shiftDragRef.current = isShiftDrag && !isSelectMode;
     setSelRect({ x: canvasX, y: canvasY, width: 0, height: 0 });
   };
 
   const handleMouseMoveWrapped = (e) => {
     handleMouseMove(e);
-    if (!selStartRef.current || !isSelectMode) return;
+    if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
@@ -133,9 +136,10 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   };
 
   const handleMouseUp = () => {
-    if (!selStartRef.current || !isSelectMode) return;
+    if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const rect = selRect;
     selStartRef.current = null;
+    shiftDragRef.current = false;
     setSelRect(null);
     if (!rect || rect.width < 5 || rect.height < 5) return;
     const hit = new Set();
@@ -143,6 +147,27 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       if (multiSelectHit(obj, rect)) hit.add(obj.id);
     }
     if (setSelectedIds) setSelectedIds(hit);
+  };
+
+  const handleStageClickWrapped = (e) => {
+    if (e.evt.shiftKey && activeTool === 'select') {
+      const target = e.target;
+      const stage = target.getStage();
+      if (target !== stage && target.name() !== 'bg-rect') {
+        const id = target.id() || target.parent?.id();
+        if (id && setSelectedIds) {
+          const next = new Set(selectedIds);
+          if (next.has(id)) {
+            next.delete(id);
+          } else {
+            next.add(id);
+          }
+          setSelectedIds(next);
+          return;
+        }
+      }
+    }
+    handleStageClick(e);
   };
 
   return (
@@ -153,7 +178,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       onMouseMove={handleMouseMoveWrapped}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onClick={handleStageClick}
+      onClick={handleStageClickWrapped}
       draggable={activeTool === 'pan' && !selectedId}
       x={stagePos.x}
       y={stagePos.y}

@@ -254,6 +254,8 @@ export function App() {
   boardRef.current = board;
   const handleDeleteRef = useRef(null);
   const handleDuplicateRef = useRef(null);
+  const handleDuplicateMultipleRef = useRef(null);
+  const clipboardRef = useRef([]);
 
   // Keyboard shortcuts — registered once; reads via refs
   useEffect(() => {
@@ -311,17 +313,91 @@ export function App() {
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (!canEditRef.current) return;
+        e.preventDefault();
+        const ids = selectedIdsRef.current;
+        const snapshots = [];
+        if (ids.size > 0) {
+          for (const id of ids) {
+            const obj = objectsRef.current[id];
+            if (!obj) continue;
+            const { id: _id, createdAt, updatedAt, ...rest } = obj;
+            snapshots.push(rest);
+          }
+        } else {
+          const id = selectedIdRef.current;
+          if (id) {
+            const obj = objectsRef.current[id];
+            if (obj) {
+              const { id: _id, createdAt, updatedAt, ...rest } = obj;
+              snapshots.push(rest);
+            }
+          }
+        }
+        clipboardRef.current = snapshots;
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        if (!canEditRef.current) return;
+        e.preventDefault();
+        const ids = selectedIdsRef.current;
+        const snapshots = [];
+        if (ids.size > 0) {
+          for (const id of ids) {
+            const obj = objectsRef.current[id];
+            if (!obj) continue;
+            const { id: _id, createdAt, updatedAt, ...rest } = obj;
+            snapshots.push(rest);
+          }
+          clipboardRef.current = snapshots;
+          for (const id of ids) handleDeleteRef.current?.(id);
+          setSelectedIds(new Set());
+        } else {
+          const id = selectedIdRef.current;
+          if (id) {
+            const obj = objectsRef.current[id];
+            if (obj) {
+              const { id: _id, createdAt, updatedAt, ...rest } = obj;
+              snapshots.push(rest);
+            }
+            clipboardRef.current = snapshots;
+            handleDeleteRef.current?.(id);
+          }
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (!canEditRef.current) return;
+        e.preventDefault();
+        const items = clipboardRef.current;
+        if (items.length === 0) return;
+        const OFFSET = 20;
+        for (const snapshot of items) {
+          boardRef.current.addObject({ ...snapshot, x: snapshot.x + OFFSET, y: snapshot.y + OFFSET });
+        }
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         if (!canEditRef.current) return;
         e.preventDefault();
-        const id = selectedIdRef.current;
-        if (id) handleDuplicateRef.current?.(id);
+        const ids = selectedIdsRef.current;
+        if (ids.size > 1) {
+          handleDuplicateMultipleRef.current?.(ids);
+        } else {
+          const id = selectedIdRef.current;
+          if (id) handleDuplicateRef.current?.(id);
+        }
         return;
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        // TODO: multi-select not yet supported; prevent browser default (text selection)
         e.preventDefault();
+        const allIds = new Set(Object.keys(objectsRef.current));
+        setSelectedIds(allIds);
         return;
       }
     };
@@ -350,6 +426,7 @@ export function App() {
     handleDeleteWithCleanup,
     handleSelectAndRaise,
     handleDuplicate,
+    handleDuplicateMultiple,
   } = makeObjectHandlers({
     board, stageRef, snap, setDragState: updateDragState, setSelectedId,
     stagePos, stageScale, setShapeColors,
@@ -358,6 +435,7 @@ export function App() {
   });
   handleDeleteRef.current = handleDeleteWithCleanup;
   handleDuplicateRef.current = handleDuplicate;
+  handleDuplicateMultipleRef.current = handleDuplicateMultiple;
 
   const {
     handleAddSticky,
@@ -571,14 +649,80 @@ export function App() {
             )}
             {contextMenu && canEdit && (() => {
               const obj = contextMenu.targetId ? board.objects[contextMenu.targetId] : null;
-              const items = obj
+              const hasClipboard = clipboardRef.current.length > 0;
+              const multiSelected = selectedIds.size > 1 && contextMenu.targetId && selectedIds.has(contextMenu.targetId);
+              const objItems = obj
                 ? [
-                    { label: 'Duplicate', shortcut: '⌘D', action: () => handleDuplicate(obj.id) },
-                    { label: 'Delete', shortcut: '⌫', danger: true, action: () => handleDeleteWithCleanup(obj.id) },
+                    ...(multiSelected ? [
+                      { label: 'Cut Selection', shortcut: '⌘X', action: () => {
+                        const snapshots = [];
+                        for (const id of selectedIds) {
+                          const o = board.objects[id];
+                          if (!o) continue;
+                          const { id: _id, createdAt, updatedAt, ...rest } = o;
+                          snapshots.push(rest);
+                        }
+                        clipboardRef.current = snapshots;
+                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        setSelectedIds(new Set());
+                      }},
+                      { label: 'Copy Selection', shortcut: '⌘C', action: () => {
+                        const snapshots = [];
+                        for (const id of selectedIds) {
+                          const o = board.objects[id];
+                          if (!o) continue;
+                          const { id: _id, createdAt, updatedAt, ...rest } = o;
+                          snapshots.push(rest);
+                        }
+                        clipboardRef.current = snapshots;
+                      }},
+                    ] : [
+                      { label: 'Cut', shortcut: '⌘X', action: () => {
+                        const { id: _id, createdAt, updatedAt, ...rest } = obj;
+                        clipboardRef.current = [rest];
+                        handleDeleteWithCleanup(obj.id);
+                      }},
+                      { label: 'Copy', shortcut: '⌘C', action: () => {
+                        const { id: _id, createdAt, updatedAt, ...rest } = obj;
+                        clipboardRef.current = [rest];
+                      }},
+                    ]),
+                    ...(multiSelected
+                      ? [{ label: 'Duplicate Selection', shortcut: '⌘D', action: () => handleDuplicateMultiple(selectedIds) }]
+                      : [{ label: 'Duplicate', shortcut: '⌘D', action: () => handleDuplicate(obj.id) }]
+                    ),
+                    { label: 'Delete', shortcut: '⌫', danger: true, action: () => {
+                      if (multiSelected) {
+                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        setSelectedIds(new Set());
+                      } else {
+                        handleDeleteWithCleanup(obj.id);
+                      }
+                    }},
                     { separator: true },
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
                   ]
                 : [
+                    ...(hasClipboard ? [
+                      { label: 'Paste', shortcut: '⌘V', action: () => {
+                        const items = clipboardRef.current;
+                        if (items.length === 0) return;
+                        const OFFSET = 20;
+                        const firstX = items[0].x + OFFSET;
+                        const firstY = items[0].y + OFFSET;
+                        const dx = contextMenu.canvasX - firstX;
+                        const dy = contextMenu.canvasY - firstY;
+                        items.forEach((snapshot, i) => {
+                          const x = i === 0 ? contextMenu.canvasX : snapshot.x + OFFSET + dx;
+                          const y = i === 0 ? contextMenu.canvasY : snapshot.y + OFFSET + dy;
+                          board.addObject({ ...snapshot, x, y });
+                        });
+                      }},
+                    ] : []),
+                    { label: 'Select All', shortcut: '⌘A', action: () => {
+                      const allIds = new Set(Object.keys(board.objects));
+                      setSelectedIds(allIds);
+                    }},
                     { label: 'Add Sticky here', action: () => {
                       board.addObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
                     }},
@@ -597,7 +741,7 @@ export function App() {
                 <ContextMenu
                   x={contextMenu.screenX}
                   y={contextMenu.screenY}
-                  items={items}
+                  items={objItems}
                   onClose={() => setContextMenu(null)}
                 />
               );
