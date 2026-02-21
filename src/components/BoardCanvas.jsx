@@ -4,6 +4,7 @@ import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
 import { LineShape } from './LineShape';
+import { TextShape } from './TextShape';
 import { Cursors } from './Cursors';
 import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 
@@ -426,6 +427,30 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  canEdit={canEdit}
+                />
+              );
+            }
+            if (obj.type === 'text') {
+              return (
+                <TextShape
+                  key={obj.id}
+                  {...obj}
+                  isSelected={obj.id === selectedId}
+                  isMultiSelected={isMultiSelected}
+                  onSelect={setSelectedId}
+                  onDragEnd={handleContainedDragEnd}
+                  onTransformEnd={handleTransformEnd}
+                  onUpdate={updateObject}
+                  onDelete={handleDeleteWithCleanup}
+                  onDragMove={handleDragMove}
+                  snapToGrid={snapToGrid}
+                  gridSize={GRID_SIZE}
+                  dragState={dragState}
+                  dragLayerRef={dragLayerRef}
+                  mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
+                  onTypingChange={onTypingChange}
                   canEdit={canEdit}
                 />
               );
