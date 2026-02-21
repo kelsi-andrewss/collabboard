@@ -6,7 +6,7 @@ export function getContentBounds(objects) {
   if (!items.length) return null;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const o of items) {
-    if (o.type === 'line') {
+    if (o.type === 'line' || o.type === 'arrow') {
       const pts = o.points;
       if (!pts || pts.length < 2) continue;
       for (let i = 0; i < pts.length - 1; i += 2) {
@@ -90,7 +90,7 @@ export function computeAncestorExpansions(childX, childY, childW, childH, parent
     for (const siblingId of (currentParent.childIds || [])) {
       const sib = working[siblingId];
       if (!sib) continue;
-      const sb = sib.type === 'line' ? getLineBounds(sib) : sib;
+      const sb = (sib.type === 'line' || sib.type === 'arrow') ? getLineBounds(sib) : sib;
       minLeft   = Math.min(minLeft,   sb.x);
       minTop    = Math.min(minTop,    sb.y);
       maxRight  = Math.max(maxRight,  sb.x + (sb.width || 150));
@@ -176,7 +176,7 @@ export function hasDisallowedSiblingOverlap(objectId, objectType, proposedBounds
   for (const sibId of siblingIds) {
     const sib = allObjects[sibId];
     if (!sib) continue;
-    const sibBounds = sib.type === 'line'
+    const sibBounds = (sib.type === 'line' || sib.type === 'arrow')
       ? getLineBounds(sib)
       : { x: sib.x, y: sib.y, width: sib.width || (sib.type === 'frame' ? 400 : 150), height: sib.height || (sib.type === 'frame' ? 300 : 150) };
     if (objectType === 'frame') {

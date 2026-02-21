@@ -9,6 +9,7 @@ import {
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
 import { showErrorTooltip } from '../utils/tooltipUtils.js';
+import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeFrameDragHandlers({
   board, stageRef, snap, frameDragRef, setDragState, handleDragMove, stagePos, stageScale,
@@ -191,6 +192,26 @@ export function makeFrameDragHandlers({
       allUpdates.push({ id: absorbId, data: { frameId: id } });
     }
     for (const exp of ancestorExpansions) allUpdates.push(exp);
+
+    // Update connected line/arrow endpoints for the frame and all descendants
+    const tempObjects = { ...board.objects };
+    tempObjects[id] = { ...frame, ...snapped, frameId: newFrameId || null };
+    for (const childId of descendants) {
+      const child = board.objects[childId];
+      if (child) tempObjects[childId] = { ...child, x: child.x + dx, y: child.y + dy };
+    }
+    const movedIds = new Set([id, ...descendants]);
+    const connUpdateIds = new Set();
+    for (const movedId of movedIds) {
+      const connUpdates = getConnectedEndpointUpdates(movedId, tempObjects);
+      for (const cu of connUpdates) {
+        if (!connUpdateIds.has(cu.id)) {
+          connUpdateIds.add(cu.id);
+          allUpdates.push(cu);
+        }
+      }
+    }
+
     // Set dragPos override so the frame holds its drop position while Firestore catches up
     if (setDragPos) setDragPos({ id, x: snapped.x, y: snapped.y });
     // Single batch write for all changes

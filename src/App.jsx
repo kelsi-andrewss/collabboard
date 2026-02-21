@@ -450,6 +450,7 @@ export function App() {
     handleAddShape,
     handleAddFrame,
     handleAddLine,
+    handleAddArrow,
     handleAddText,
     handleAISubmit,
   } = makeObjectCreationHandlers({
@@ -476,6 +477,8 @@ export function App() {
       board.addObject({ type: 'sticky', text: 'New Sticky Note', x: canvasX - 75, y: canvasY - 75, color: shapeColors.sticky.active, ...defaults });
     } else if (toolType === 'line') {
       board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, 200, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+    } else if (toolType === 'arrow') {
+      board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, 200, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
@@ -520,7 +523,7 @@ export function App() {
       <div className="header">
         <HeaderLeft
           state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive }}
-          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool }}
+          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool }}
         />
         <div className="header-right">
           {user && boardId && (

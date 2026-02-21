@@ -27,7 +27,7 @@ export function computeGridDimensions(stagePos, stageScale, windowWidth, windowH
 export function multiSelectHit(obj, rect) {
   if (obj.type === 'frame') return false;
   let ox, oy, ow, oh;
-  if (obj.type === 'line') {
+  if (obj.type === 'line' || obj.type === 'arrow') {
     const lb = getLineBounds(obj);
     ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
   } else {
@@ -55,7 +55,7 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
   const visibleIds = new Set();
   for (const obj of allObjs) {
     let ox, oy, ow, oh;
-    if (obj.type === 'line') {
+    if (obj.type === 'line' || obj.type === 'arrow') {
       const lb = getLineBounds(obj);
       ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
     } else {
@@ -410,7 +410,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                 />
               );
             }
-            if (obj.type === 'line') {
+            if (obj.type === 'line' || obj.type === 'arrow') {
               return (
                 <LineShape
                   key={obj.id}
@@ -422,6 +422,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onTransformEnd={handleTransformEnd}
                   onDelete={handleDeleteWithCleanup}
                   onDragMove={handleDragMove}
+                  onUpdate={updateObject}
                   snapToGrid={snapToGrid}
                   gridSize={GRID_SIZE}
                   dragState={dragState}
@@ -429,6 +430,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
                   canEdit={canEdit}
+                  objects={objects}
                 />
               );
             }

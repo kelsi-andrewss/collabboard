@@ -16,11 +16,11 @@ export const toolDeclarations = [
   },
   {
     name: "createShape",
-    description: "Creates a shape (rectangle, circle, triangle, or line) on the board. Use frameIndex to place it inside a frame created in the same batch.",
+    description: "Creates a shape (rectangle, circle, triangle, line, or arrow) on the board. Use frameIndex to place it inside a frame created in the same batch.",
     parameters: {
       type: "OBJECT",
       properties: {
-        type: { type: "STRING", enum: ["rectangle", "circle", "triangle", "line"] },
+        type: { type: "STRING", enum: ["rectangle", "circle", "triangle", "line", "arrow"] },
         x: { type: "NUMBER" },
         y: { type: "NUMBER" },
         width: { type: "NUMBER" },
@@ -238,7 +238,7 @@ PLACEMENT DEFAULTS: When the user does not specify a board or group for a new ob
 
 TOOLS AVAILABLE:
 - createStickyNote: Create a new sticky note (auto-avoids overlaps)
-- createShape: Create a shape (auto-avoids overlaps)
+- createShape: Create a shape including arrows (auto-avoids overlaps). Use type:'arrow' for arrows with arrowheads.
 - createFrame: Create a frame container (auto-avoids overlaps). Frames CAN be moved and resized.
 - moveObject: Move ANY object (sticky, shape, frame, line) to new coordinates
 - resizeObject: Resize ANY object (sticky, shape, frame, line) — works on frames too

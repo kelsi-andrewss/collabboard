@@ -256,12 +256,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
       if (!groups[t]) groups[t] = [];
       groups[t].push(o);
     }
-    const typeOrder = ['frame', 'sticky', 'rectangle', 'circle', 'triangle', 'line', 'other'];
+    const typeOrder = ['frame', 'sticky', 'rectangle', 'circle', 'triangle', 'line', 'arrow', 'other'];
     const sortedTypes = Object.keys(groups).sort((a, b) =>
       (typeOrder.indexOf(a) === -1 ? 99 : typeOrder.indexOf(a)) -
       (typeOrder.indexOf(b) === -1 ? 99 : typeOrder.indexOf(b))
     );
-    const uniformSizes = { sticky: { w: 150, h: 150 }, rectangle: { w: 120, h: 120 }, circle: { w: 120, h: 120 }, triangle: { w: 120, h: 120 }, frame: null, line: null };
+    const uniformSizes = { sticky: { w: 150, h: 150 }, rectangle: { w: 120, h: 120 }, circle: { w: 120, h: 120 }, triangle: { w: 120, h: 120 }, frame: null, line: null, arrow: null };
     let groupX = 50;
     for (const type of sortedTypes) {
       const typeItems = groups[type];
