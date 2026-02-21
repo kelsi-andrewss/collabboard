@@ -51,18 +51,20 @@ export function useAI(boardId, boardActions, objects, user) {
     functionDeclarations: toolDeclarations,
   }), []);
 
+  const userIdentityLine = useMemo(() => {
+    if (!user) return '';
+    const name = user.displayName || user.uid;
+    return `\n\nYou are acting as the logged-in user: ${name} (uid: ${user.uid}). All actions you take are performed on behalf of this user.`;
+  }, [user]);
+
   const model = useMemo(() => {
     if (!boardId) return null;
-    const currentUser = userRef.current;
-    const userIdentityLine = currentUser
-      ? `\n\nYou are acting as the logged-in user: ${currentUser.displayName || currentUser.email || currentUser.uid} (uid: ${currentUser.uid}). All actions you take are performed on behalf of this user.`
-      : '';
     return getGenerativeModel(ai, {
       model: "gemini-2.0-flash",
       tools: [tools],
       systemInstruction: systemPrompt + userIdentityLine,
     });
-  }, [boardId, tools]);
+  }, [boardId, tools, userIdentityLine]);
 
   const chat = useMemo(() => {
     if (!model) return null;
@@ -77,7 +79,10 @@ export function useAI(boardId, boardActions, objects, user) {
         const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
         desc += `, text:"${truncated}"`;
       }
-      if (obj.title) desc += `, title:"${obj.title}"`;
+      if (obj.title) {
+        const truncatedTitle = obj.title.length > 500 ? obj.title.slice(0, 500) + '...' : obj.title;
+        desc += `, title:"${truncatedTitle}"`;
+      }
       if (obj.color) desc += `, color:${obj.color}`;
       if (obj.width) desc += `, size:${Math.round(obj.width)}x${Math.round(obj.height || obj.width)}`;
       if (obj.rotation) desc += `, rotation:${Math.round(obj.rotation)}`;
