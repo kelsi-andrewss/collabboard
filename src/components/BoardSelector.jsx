@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Folder, Trash2, ArrowUp, ArrowDown, Globe, Lock, UserPlus, LayoutGrid, Users, GripVertical, AlertTriangle } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
-import { collection, doc, query, where, orderBy, getDocs, limit, writeBatch } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useBoardsList } from '../hooks/useBoardsList';
 import { useGlobalPresence } from '../hooks/useGlobalPresence';
@@ -54,7 +54,7 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
   const globalPresence = useGlobalPresence();
@@ -264,23 +264,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         setSearchError('Search unavailable. Please try again.');
       }
     }, 200);
-  };
-
-  const backfillDisplayNameLower = async () => {
-    const snap = await getDocs(collection(db, 'users'));
-    const toFix = snap.docs.filter(d => !d.data().displayNameLower);
-    const CHUNK = 500;
-    let totalFixed = 0;
-    for (let i = 0; i < toFix.length; i += CHUNK) {
-      const batch = writeBatch(db);
-      toFix.slice(i, i + CHUNK).forEach(d => {
-        const name = d.data().displayName || 'Anonymous';
-        batch.update(doc(db, 'users', d.id), { displayNameLower: name.toLowerCase() });
-      });
-      await batch.commit();
-      totalFixed += toFix.slice(i, i + CHUNK).length;
-    }
-    alert(`Backfilled ${totalFixed} user(s).`);
   };
 
   const handleUserSelect = (u) => {
@@ -543,19 +526,6 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
           </button>
         </div>
         <div className="new-buttons-group">
-          {isAdmin && migrateGroupStrings && (
-            <>
-              <button className="migrate-btn" onClick={async () => {
-                await migrateGroupStrings();
-                alert('Migration complete');
-              }}>
-                Migrate Groups
-              </button>
-              <button className="migrate-btn" onClick={backfillDisplayNameLower}>
-                Backfill Search Index
-              </button>
-            </>
-          )}
           <button className="new-group-btn" onClick={() => setShowGroupModal(true)}>
             <Folder size={15} />
             New Group

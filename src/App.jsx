@@ -32,6 +32,7 @@ import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
 import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
 import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
+import { AdminPanel } from './components/AdminPanel.jsx';
 import './App.css';
 
 export function App() {
@@ -188,6 +189,7 @@ export function App() {
   const resizeTooltipTimer = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
   const [showBoardSettings, setShowBoardSettings] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [activeTool, setActiveTool] = useState('pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
@@ -529,7 +531,7 @@ export function App() {
               {user && (
                 <>
                   <span className="header-divider" />
-                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} />
+                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} />
                 </>
               )}
             </>
@@ -588,7 +590,6 @@ export function App() {
                 deleteGroupDoc={deleteGroupDoc}
                 isAdmin={isAdmin}
                 adminViewActive={adminViewActive}
-                migrateGroupStrings={migrateGroupStrings}
                 createSubgroup={createSubgroup}
                 deleteGroupCascade={deleteGroupCascade}
                 setGroupProtected={setGroupProtected}
@@ -602,6 +603,13 @@ export function App() {
             <AIPanel
               state={{ showAI: showHomeAI, aiPrompt: homeAiPrompt, isTyping: homeAI.isTyping, error: homeAI.error }}
               handlers={{ handleAISubmit: handleHomeAISubmit, setAiPrompt: setHomeAiPrompt, clearError: homeAI.clearError }}
+            />
+            <AdminPanel
+              isOpen={showAdminPanel}
+              onClose={() => setShowAdminPanel(false)}
+              allBoards={allBoards}
+              groups={groups}
+              migrateGroupStrings={migrateGroupStrings}
             />
           </div>
         )}

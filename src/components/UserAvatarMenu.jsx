@@ -3,7 +3,7 @@ import { LogOut, Shield } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import './UserAvatarMenu.css';
 
-export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView }) {
+export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView, onOpenAdminPanel }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -44,6 +44,10 @@ export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggl
           {isAdmin && (
             <>
               <div className="dropdown-divider" />
+              <button className="dropdown-item" onClick={() => { setOpen(false); onOpenAdminPanel?.(); }}>
+                <Shield size={16} />
+                Admin Panel
+              </button>
               <button className="dropdown-item" onClick={onToggleAdminView}>
                 <Shield size={16} />
                 {adminViewActive ? 'Switch to User View' : 'Switch to Admin View'}
