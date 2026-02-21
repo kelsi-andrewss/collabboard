@@ -172,13 +172,13 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                   const newPts = [...pointsRef.current];
                   newPts[0] = newX;
                   newPts[1] = newY;
-                  node.x(newX);
-                  node.y(newY);
                   setDraggingEndpoint(null);
                   if (onUpdate) {
                     const groupX = groupNode ? groupNode.x() : x;
                     const groupY = groupNode ? groupNode.y() : y;
                     const bounds = recalcBounds(newPts, groupX, groupY);
+                    node.x(bounds.points[0]);
+                    node.y(bounds.points[1]);
                     onUpdate(id, { ...bounds, startConnectedId: connId, startConnectedPort: connPort });
                   }
                 }}
@@ -222,13 +222,13 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                   const newPts = [...pointsRef.current];
                   newPts[newPts.length - 2] = newX;
                   newPts[newPts.length - 1] = newY;
-                  node.x(newX);
-                  node.y(newY);
                   setDraggingEndpoint(null);
                   if (onUpdate) {
                     const groupX = groupNode ? groupNode.x() : x;
                     const groupY = groupNode ? groupNode.y() : y;
                     const bounds = recalcBounds(newPts, groupX, groupY);
+                    node.x(bounds.points[bounds.points.length - 2]);
+                    node.y(bounds.points[bounds.points.length - 1]);
                     onUpdate(id, { ...bounds, endConnectedId: connId, endConnectedPort: connPort });
                   }
                 }}
