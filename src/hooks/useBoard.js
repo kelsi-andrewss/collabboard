@@ -158,19 +158,19 @@ export function useBoard(boardId, user) {
       }
     });
     for (const [pid, ids] of Object.entries(parentRemoves)) {
-      if (deleteSet.has(pid)) continue;
+      if (deleteSet.has(pid) || !objects[pid]) continue;
       batch.update(doc(db, 'boards', boardId, 'objects', pid),
         { childIds: arrayRemove(...ids), updatedAt: serverTimestamp() });
     }
     for (const [pid, ids] of Object.entries(parentAdds)) {
-      if (deleteSet.has(pid)) continue;
+      if (deleteSet.has(pid) || !objects[pid]) continue;
       batch.update(doc(db, 'boards', boardId, 'objects', pid),
         { childIds: arrayUnion(...ids), updatedAt: serverTimestamp() });
     }
     deleteIds.forEach(id => {
       batch.delete(doc(db, 'boards', boardId, 'objects', id));
       const deletedObj = objects[id];
-      if (deletedObj?.frameId && !deleteSet.has(deletedObj.frameId)) {
+      if (deletedObj?.frameId && !deleteSet.has(deletedObj.frameId) && objects[deletedObj.frameId]) {
         batch.update(
           doc(db, 'boards', boardId, 'objects', deletedObj.frameId),
           { childIds: arrayRemove(id), updatedAt: serverTimestamp() }

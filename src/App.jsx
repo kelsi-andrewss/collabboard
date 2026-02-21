@@ -525,11 +525,14 @@ export function App() {
     if (!canEditRef.current) return;
     const defaults = { userId: user.uid };
     if (toolType === 'sticky') {
-      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: canvasX - 75, y: canvasY - 75, color: shapeColors.sticky.active, ...defaults });
+      const sz = Math.round(200 / stageScale);
+      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: canvasX - sz / 2, y: canvasY - sz / 2, width: sz, height: sz, color: shapeColors.sticky.active, ...defaults });
     } else if (toolType === 'line') {
-      board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, 200, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      const len = Math.round(200 / stageScale);
+      board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'arrow') {
-      board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, 200, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      const len = Math.round(200 / stageScale);
+      board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);

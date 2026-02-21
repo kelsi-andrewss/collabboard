@@ -56,12 +56,13 @@ export function makeObjectCreationHandlers({
   };
 
   const handleAddLine = () => {
-    const pos = findOpenSpot(200, 3);
+    const len = Math.round(200 / stageScale);
+    const pos = findOpenSpot(len, 3);
     board.addObject({
       type: 'line',
       x: pos.x,
       y: pos.y,
-      points: [0, 0, 200, 0],
+      points: [0, 0, len, 0],
       color: shapeColors.shapes.active,
       strokeWidth: 3,
       userId: user.uid,
@@ -69,12 +70,13 @@ export function makeObjectCreationHandlers({
   };
 
   const handleAddArrow = () => {
-    const pos = findOpenSpot(200, 3);
+    const len = Math.round(200 / stageScale);
+    const pos = findOpenSpot(len, 3);
     board.addObject({
       type: 'arrow',
       x: pos.x,
       y: pos.y,
-      points: [0, 0, 200, 0],
+      points: [0, 0, len, 0],
       color: shapeColors.shapes.active,
       strokeWidth: 3,
       userId: user.uid,

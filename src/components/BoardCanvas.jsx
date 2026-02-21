@@ -26,7 +26,7 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
           ref={nodeRef}
           x={OFFSCREEN}
           y={OFFSCREEN}
-          points={[0, 0, 120 / stageScale, 0]}
+          points={[0, 0, 200 / stageScale, 0]}
           stroke="#6366f1"
           strokeWidth={strokeW * 2}
           dash={[dashLen, dashGap]}
@@ -45,7 +45,7 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
           ref={nodeRef}
           x={OFFSCREEN}
           y={OFFSCREEN}
-          points={[0, 0, 120 / stageScale, 0]}
+          points={[0, 0, 200 / stageScale, 0]}
           stroke="#6366f1"
           strokeWidth={strokeW * 2}
           fill="#6366f1"
@@ -84,14 +84,15 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
   }
 
   if (pendingTool === 'sticky') {
+    const sw = 200 / stageScale;
     return (
       <Layer ref={layerRef}>
         <Rect
           ref={nodeRef}
           x={OFFSCREEN}
           y={OFFSCREEN}
-          width={150}
-          height={150}
+          width={sw}
+          height={sw}
           fill="rgba(250,204,21,0.25)"
           stroke="rgba(250,204,21,0.8)"
           strokeWidth={strokeW}
@@ -272,8 +273,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       const node = ghostNodeRef.current;
       const tool = pendingTool;
       if (tool === 'sticky') {
-        node.x(canvasX - 75);
-        node.y(canvasY - 75);
+        node.x(canvasX - 100 / stageScale);
+        node.y(canvasY - 100 / stageScale);
       } else if (tool === 'line' || tool === 'arrow') {
         node.x(canvasX);
         node.y(canvasY);
