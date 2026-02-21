@@ -204,4 +204,34 @@ describe('batchWriteAndDelete — skips batch.update on frame when frame is also
     const frameUpdates = updatedPaths.filter(p => p.includes('frame-1'));
     expect(frameUpdates).toHaveLength(0);
   });
+
+  it('does NOT call batch.update on the parent frame when updates clears a child frameId and the frame is also in deleteIds', async () => {
+    // Child's frameId is being cleared via the updates array, but the parent
+    // frame is also being deleted in the same call. The parentRemoves loop
+    // must skip the frame because it is in deleteSet.
+    const objects = {
+      'frame-1': { type: 'frame', frameId: null, childIds: ['child-1'] },
+      'child-1': { type: 'sticky', frameId: 'frame-1', childIds: [] },
+    };
+
+    const { result } = renderBoard(objects);
+
+    await act(async () => {
+      await result.current.batchWriteAndDelete(
+        [{ id: 'child-1', data: { frameId: null } }],
+        ['frame-1']
+      );
+    });
+
+    // batch.update must have been called for child-1 (the updates entry)
+    const updatedPaths = mockBatchUpdate.mock.calls.map(([ref]) => ref.path);
+    expect(updatedPaths).toContain(`boards/${boardId}/objects/child-1`);
+
+    // batch.update must NOT have been called for frame-1 (it is being deleted)
+    expect(updatedPaths).not.toContain(`boards/${boardId}/objects/frame-1`);
+
+    // batch.delete must have been called for frame-1
+    const deletedPaths = mockBatchDelete.mock.calls.map(([ref]) => ref.path);
+    expect(deletedPaths).toContain(`boards/${boardId}/objects/frame-1`);
+  });
 });

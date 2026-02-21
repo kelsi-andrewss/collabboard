@@ -139,6 +139,7 @@ export function useBoard(boardId, user) {
   const batchWriteAndDelete = async (updates, deleteIds) => {
     if (!boardId) return;
     const batch = writeBatch(db);
+    const deleteSet = new Set(deleteIds);
     const parentAdds = {};
     const parentRemoves = {};
     updates.forEach(({ id, data }) => {
@@ -157,14 +158,15 @@ export function useBoard(boardId, user) {
       }
     });
     for (const [pid, ids] of Object.entries(parentRemoves)) {
+      if (deleteSet.has(pid)) continue;
       batch.update(doc(db, 'boards', boardId, 'objects', pid),
         { childIds: arrayRemove(...ids), updatedAt: serverTimestamp() });
     }
     for (const [pid, ids] of Object.entries(parentAdds)) {
+      if (deleteSet.has(pid)) continue;
       batch.update(doc(db, 'boards', boardId, 'objects', pid),
         { childIds: arrayUnion(...ids), updatedAt: serverTimestamp() });
     }
-    const deleteSet = new Set(deleteIds);
     deleteIds.forEach(id => {
       batch.delete(doc(db, 'boards', boardId, 'objects', id));
       const deletedObj = objects[id];
