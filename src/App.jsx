@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Eye } from 'lucide-react';
+import { Sun, Moon, Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
@@ -623,7 +623,25 @@ export function App() {
             />
           </div>
         )}
-        {user && boardId && (
+        {user && boardId && !board.loading && !currentBoard && (
+          <div className="board-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 24px' }}>
+              <button
+                onClick={navigateHome}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '6px 0' }}
+              >
+                <ArrowLeft size={16} />
+                All Boards
+              </button>
+            </div>
+            <div className="empty-state">
+              <Lock size={32} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>You don't have permission to view this board</p>
+              <p>Ask the board owner to invite you</p>
+            </div>
+          </div>
+        )}
+        {user && boardId && (board.loading || currentBoard) && (
           <div className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
             {board.loading && (
               <div className="board-loading">
