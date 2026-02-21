@@ -344,6 +344,21 @@ export async function executeToolCall(toolName, toolArgs, context) {
         });
       }
     }
+  } else if (toolName === "createTextElement") {
+    const { x, y, text, width = 200, fontSize = 16, color = '#1a1a1a' } = toolArgs;
+    const w = width, h = 600;
+    const pos = findNonOverlappingPos(x, y, w, h);
+    const frameId = findContainingFrame(pos.x, pos.y, w, h);
+    await act().addObject({
+      type: 'text',
+      x: pos.x,
+      y: pos.y,
+      text,
+      width,
+      fontSize,
+      color,
+      ...(frameId ? { frameId } : {})
+    });
   } else if (toolName === "createBoard") {
     const { name, group } = toolArgs;
     if (act().createBoard) {

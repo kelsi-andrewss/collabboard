@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -10,7 +10,7 @@ function HeaderLeftInner({ state, handlers }) {
   const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
-    handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
+    handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
   } = handlers;
 
   const [showBoardSwitcher, setShowBoardSwitcher] = useState(false);
@@ -192,6 +192,12 @@ function HeaderLeftInner({ state, handlers }) {
             <div className="tool-split-button no-outline">
               <button data-toolbar-item="frame" className={pendingTool === 'frame' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'frame' ? null : 'frame') : handleAddFrame()} title="Add Frame (click to place)">
                 <AppWindow size={18} />
+              </button>
+            </div>
+
+            <div className="tool-split-button no-outline">
+              <button data-toolbar-item="text" onClick={() => { handleAddText(); setActiveTool('select'); }} title="Add Text">
+                <Type size={18} />
               </button>
             </div>
 

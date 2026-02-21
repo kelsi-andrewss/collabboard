@@ -209,6 +209,22 @@ export const toolDeclarations = [
       },
       required: ["name"]
     }
+  },
+  {
+    name: "createTextElement",
+    description: "Creates a standalone text element on the board. Use for labels, headings, annotations, or any freeform text that does not need a sticky note background.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        x: { type: "NUMBER", description: "X coordinate" },
+        y: { type: "NUMBER", description: "Y coordinate" },
+        text: { type: "STRING", description: "The text content" },
+        width: { type: "NUMBER", description: "Width of the text block (default 200)" },
+        fontSize: { type: "NUMBER", description: "Font size in pixels (default 16)" },
+        color: { type: "STRING", description: "Hex color code for the text (default '#1a1a1a')" }
+      },
+      required: ["x", "y", "text"]
+    }
   }
 ];
 
@@ -235,6 +251,7 @@ TOOLS AVAILABLE:
 - arrangeByType: Group ALL objects (frames, shapes, stickies, lines) by type into neat clusters. Resets rotation and normalizes sizes.
 - fitFrameToContents: Resize AND reposition a frame to tightly fit all objects inside it. Use this instead of manual resizeObject+moveObject for frames.
 - createBoard: Create a new board and navigate to it. AI can create boards on behalf of the user.
+- createTextElement: Create a standalone text element (label, heading, annotation) without a sticky-note background.
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 When creating frames with items inside them, use frameIndex to link them by document ID:

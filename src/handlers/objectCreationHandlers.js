@@ -66,6 +66,23 @@ export function makeObjectCreationHandlers({
     });
   };
 
+  const handleAddText = () => {
+    const pos = findOpenSpot(200, 20);
+    board.addObject({
+      type: 'text',
+      text: '',
+      x: pos.x,
+      y: pos.y,
+      width: 200,
+      fontSize: 16,
+      color: '#1a1a1a',
+      rotation: 0,
+      frameId: null,
+      childIds: [],
+      userId: user.uid,
+    });
+  };
+
   const handleAISubmit = async (e) => {
     e.preventDefault();
     if (!aiPrompt.trim()) return;
@@ -74,5 +91,5 @@ export function makeObjectCreationHandlers({
     await ai.sendCommand(prompt);
   };
 
-  return { findOpenSpot, handleAddSticky, handleAddShape, handleAddFrame, handleAddLine, handleAISubmit };
+  return { findOpenSpot, handleAddSticky, handleAddShape, handleAddFrame, handleAddLine, handleAddText, handleAISubmit };
 }

@@ -4,6 +4,7 @@ import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
 import { LineShape } from './LineShape';
+import { TextShape } from './TextShape';
 import { Cursors } from './Cursors';
 import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 
@@ -59,7 +60,8 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
       ox = lb.x; oy = lb.y; ow = lb.width; oh = lb.height;
     } else {
       ox = obj.x ?? 0; oy = obj.y ?? 0;
-      ow = obj.width ?? 150; oh = obj.height ?? 150;
+      ow = obj.width ?? 150;
+      oh = obj.type === 'text' ? (obj.height ?? 600) : (obj.height ?? 150);
     }
     if (ox + ow >= vLeft && ox <= vRight && oy + oh >= vTop && oy <= vBottom) {
       visibleIds.add(obj.id);
@@ -426,6 +428,30 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
+                  canEdit={canEdit}
+                />
+              );
+            }
+            if (obj.type === 'text') {
+              return (
+                <TextShape
+                  key={obj.id}
+                  {...obj}
+                  isSelected={obj.id === selectedId}
+                  isMultiSelected={isMultiSelected}
+                  onSelect={setSelectedId}
+                  onDragEnd={handleContainedDragEnd}
+                  onTransformEnd={handleTransformEnd}
+                  onUpdate={updateObject}
+                  onDelete={handleDeleteWithCleanup}
+                  onDragMove={handleDragMove}
+                  snapToGrid={snapToGrid}
+                  gridSize={GRID_SIZE}
+                  dragState={dragState}
+                  dragLayerRef={dragLayerRef}
+                  mainLayerRef={mainLayerRef}
+                  dragPos={dragPos}
+                  onTypingChange={onTypingChange}
                   canEdit={canEdit}
                 />
               );
