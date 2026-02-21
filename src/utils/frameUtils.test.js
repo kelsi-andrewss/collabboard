@@ -11,6 +11,7 @@ import {
   findObjectsToAbsorb,
   getDescendantIds,
   computeAncestorExpansions,
+  computeAutoFitBounds,
   FRAME_MARGIN,
 } from './frameUtils';
 
@@ -286,5 +287,106 @@ describe('computeAncestorExpansions', () => {
     expect(expansions.length).toBe(2);
     expect(expansions[0].id).toBe('parent');
     expect(expansions[1].id).toBe('grandparent');
+  });
+});
+
+describe('computeAutoFitBounds', () => {
+  it('returns null when frame has no children', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const objects = { frame };
+    expect(computeAutoFitBounds(frame, objects)).toBeNull();
+  });
+
+  it('computes bounds for a single child', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const child = { id: 'child', type: 'sticky', x: 50, y: 50, width: 100, height: 100, frameId: 'frame' };
+    const objects = { frame, child };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds).toBeDefined();
+    expect(bounds.x).toBeLessThanOrEqual(50 - FRAME_MARGIN);
+    expect(bounds.y).toBeLessThanOrEqual(50 - FRAME_MARGIN);
+    expect(bounds.width).toBeGreaterThanOrEqual(100 + FRAME_MARGIN * 2);
+    expect(bounds.height).toBeGreaterThanOrEqual(100 + FRAME_MARGIN * 2);
+  });
+
+  it('envelopes multiple children', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 500, height: 500 };
+    const child1 = { id: 'c1', type: 'sticky', x: 10, y: 10, width: 50, height: 50, frameId: 'frame' };
+    const child2 = { id: 'c2', type: 'sticky', x: 200, y: 200, width: 50, height: 50, frameId: 'frame' };
+    const objects = { frame, child1, child2 };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds.x).toBeLessThanOrEqual(10 - FRAME_MARGIN);
+    expect(bounds.y).toBeLessThanOrEqual(10 - FRAME_MARGIN);
+    expect(bounds.width + bounds.x).toBeGreaterThanOrEqual(250 + FRAME_MARGIN);
+    expect(bounds.height + bounds.y).toBeGreaterThanOrEqual(250 + FRAME_MARGIN);
+  });
+
+  it('handles line children with points', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const line = { id: 'line', type: 'line', x: 50, y: 50, points: [0, 0, 100, 100], frameId: 'frame' };
+    const objects = { frame, line };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds).toBeDefined();
+    expect(bounds.x).toBeLessThanOrEqual(50 - FRAME_MARGIN);
+    expect(bounds.y).toBeLessThanOrEqual(50 - FRAME_MARGIN);
+  });
+
+  it('handles arrow children with points', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const arrow = { id: 'arrow', type: 'arrow', x: 100, y: 100, points: [0, 0, 50, 50], frameId: 'frame' };
+    const objects = { frame, arrow };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds).toBeDefined();
+    expect(bounds.width).toBeGreaterThanOrEqual(50 + FRAME_MARGIN * 2);
+  });
+
+  it('respects minimum width and height', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const child = { id: 'child', type: 'sticky', x: 0, y: 0, width: 1, height: 1, frameId: 'frame' };
+    const objects = { frame, child };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds.width).toBeGreaterThanOrEqual(100);
+    expect(bounds.height).toBeGreaterThanOrEqual(80);
+  });
+
+  it('uses default dimensions for children without width/height', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const child = { id: 'child', type: 'rectangle', x: 50, y: 50, frameId: 'frame' };
+    const objects = { frame, child };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds).toBeDefined();
+    expect(bounds.width).toBeGreaterThanOrEqual(150 + FRAME_MARGIN * 2);
+    expect(bounds.height).toBeGreaterThanOrEqual(150 + FRAME_MARGIN * 2);
+  });
+
+  it('accounts for title bar height in vertical positioning', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const child = { id: 'child', type: 'sticky', x: 50, y: 100, width: 50, height: 50, frameId: 'frame' };
+    const objects = { frame, child };
+    const bounds = computeAutoFitBounds(frame, objects);
+    const titleBarHeight = Math.max(32, Math.min(52, frame.height * 0.12));
+    expect(bounds.y).toBeLessThanOrEqual(100 - titleBarHeight - FRAME_MARGIN);
+    expect(bounds.height).toBeGreaterThanOrEqual(50 + titleBarHeight + FRAME_MARGIN * 2);
+  });
+
+  it('mixes regular children with lines/arrows', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 500, height: 500 };
+    const sticky = { id: 'sticky', type: 'sticky', x: 20, y: 20, width: 40, height: 40, frameId: 'frame' };
+    const line = { id: 'line', type: 'line', x: 100, y: 100, points: [0, 0, 80, 80], frameId: 'frame' };
+    const objects = { frame, sticky, line };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds.x).toBeLessThanOrEqual(20 - FRAME_MARGIN);
+    expect(bounds.y).toBeLessThanOrEqual(20 - FRAME_MARGIN);
+    expect(bounds.width + bounds.x).toBeGreaterThanOrEqual(180 + FRAME_MARGIN);
+    expect(bounds.height + bounds.y).toBeGreaterThanOrEqual(180 + FRAME_MARGIN);
+  });
+
+  it('ignores objects that are not children of the frame', () => {
+    const frame = { id: 'frame', type: 'frame', x: 0, y: 0, width: 400, height: 300 };
+    const child = { id: 'child', type: 'sticky', x: 50, y: 50, width: 50, height: 50, frameId: 'frame' };
+    const outsider = { id: 'outsider', type: 'sticky', x: 300, y: 300, width: 50, height: 50, frameId: null };
+    const objects = { frame, child, outsider };
+    const bounds = computeAutoFitBounds(frame, objects);
+    expect(bounds.width).toBeLessThan(300 + 50 + FRAME_MARGIN);
   });
 });

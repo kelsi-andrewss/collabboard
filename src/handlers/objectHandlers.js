@@ -3,6 +3,7 @@ import {
   findFrameAtPoint,
   hasDisallowedSiblingOverlap,
   computeAncestorExpansions,
+  computeAutoFitBounds,
   getDescendantIds,
   rectsOverlap,
   getLineBounds,
@@ -237,6 +238,26 @@ export function makeObjectHandlers({
     }
   };
 
+  const handleFrameAutoFit = (frameId) => {
+    const frame = board.objects[frameId];
+    if (!frame) return;
+    const fitBounds = computeAutoFitBounds(frame, board.objects);
+    if (!fitBounds) return;
+    const allUpdates = [{ id: frameId, data: fitBounds }];
+    if (frame.frameId) {
+      const expansions = computeAncestorExpansions(
+        fitBounds.x, fitBounds.y, fitBounds.width, fitBounds.height,
+        frame.frameId, board.objects, FRAME_MARGIN
+      );
+      for (const exp of expansions) allUpdates.push(exp);
+    }
+    if (allUpdates.length === 1) {
+      board.updateObject(frameId, fitBounds);
+    } else {
+      board.batchUpdateObjects(allUpdates);
+    }
+  };
+
   return {
     updateActiveColor,
     handleDragMove,
@@ -247,5 +268,6 @@ export function makeObjectHandlers({
     handleSelectAndRaise,
     handleDuplicate,
     handleDuplicateMultiple,
+    handleFrameAutoFit,
   };
 }
