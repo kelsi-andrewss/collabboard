@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle, Line as KonvaLine } from 'react-konva';
+import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
@@ -90,18 +90,17 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
   const dragLayerRef = useRef();
-  const inProgressLineRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
-    activeTool, selectedIds, canEdit, connectorState, pendingTool,
+    activeTool, selectedIds, canEdit, pendingTool,
   } = state;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
     handleDragMove, handleResizeClamped, setSelectedId, onContextMenu, onTypingChange,
-    setSelectedIds, onPortClick, handleFrameAutoFit,
+    setSelectedIds, handleFrameAutoFit,
   } = handlers;
 
   const [selRect, setSelRect] = useState(null);
@@ -125,9 +124,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     setSelRect({ x: canvasX, y: canvasY, width: 0, height: 0 });
   };
 
-  const connectorStateRef = useRef(connectorState);
-  connectorStateRef.current = connectorState;
-
   const handleMouseMoveWrapped = (e) => {
     handleMouseMove(e);
     const stage = e.target.getStage();
@@ -135,13 +131,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     if (!pointer) return;
     const canvasX = (pointer.x - stage.x()) / stage.scaleX();
     const canvasY = (pointer.y - stage.y()) / stage.scaleY();
-
-    if (inProgressLineRef.current && connectorStateRef.current?.active) {
-      const cs = connectorStateRef.current;
-      inProgressLineRef.current.points([cs.x, cs.y, canvasX, canvasY]);
-      const layer = inProgressLineRef.current.getLayer();
-      if (layer) layer.batchDraw();
-    }
 
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const start = selStartRef.current;
@@ -526,34 +515,14 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   fill="rgba(99,102,241,0.15)"
                   stroke="#6366f1"
                   strokeWidth={strokeW}
-                  listening={isConnectorTool && !!onPortClick}
+                  listening={false}
                   perfectDrawEnabled={false}
-                  onClick={isConnectorTool && onPortClick ? (e) => {
-                    e.cancelBubble = true;
-                    onPortClick({ objectId: obj.id, port, x: p.x, y: p.y });
-                  } : undefined}
-                  onTap={isConnectorTool && onPortClick ? (e) => {
-                    e.cancelBubble = true;
-                    onPortClick({ objectId: obj.id, port, x: p.x, y: p.y });
-                  } : undefined}
                 />
               );
             }
           }
           return circles;
         })()}
-        {connectorState?.active && (
-          <KonvaLine
-            ref={inProgressLineRef}
-            points={[connectorState.x, connectorState.y, connectorState.x, connectorState.y]}
-            stroke="#6366f1"
-            strokeWidth={2 / stageScale}
-            dash={[8 / stageScale, 4 / stageScale]}
-            lineCap="round"
-            listening={false}
-            perfectDrawEnabled={false}
-          />
-        )}
         {selRect && (
           <Rect
             x={selRect.x}
