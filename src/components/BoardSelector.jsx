@@ -546,7 +546,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
           .flatMap(([, bs]) => bs);
 
         const allItems = [
-          ...groupedEntries.map(([groupId, groupBoards]) => {
+          ...(boardView !== 'public' ? groupedEntries.map(([groupId, groupBoards]) => {
             const groupObj = groupsProp.find(g => g.id === groupId) || null;
             return {
               type: 'group',
@@ -556,7 +556,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
               sortTime: groupBoards[0]?.updatedAt?.toMillis?.() ?? (groupBoards[0]?.updatedAt?.seconds ?? 0) * 1000,
               sortName: groupObj?.name || groupId,
             };
-          }),
+          }) : []),
           ...ungroupedBoards.map(board => ({
             type: 'board',
             key: board.id,
