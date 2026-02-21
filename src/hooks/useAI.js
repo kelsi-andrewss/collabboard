@@ -32,7 +32,7 @@ function getRecentTimestamps(timestamps) {
   return timestamps.filter(ts => ts > cutoff);
 }
 
-export function useAI(boardId, boardActions, objects, user) {
+export function useAI(boardId, boardActions, objects, user, isAdmin) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
 
@@ -114,19 +114,21 @@ export function useAI(boardId, boardActions, objects, user) {
     if (!chat) return "AI is not initialized.";
 
     // Rate limit: max 50 requests per 24-hour window, tracked in sessionStorage
-    const now = Date.now();
-    const recent = getRecentTimestamps(requestTimestampsRef.current);
-    if (recent.length >= RATE_LIMIT_MAX) {
-      const oldestTs = Math.min(...recent);
-      const resetMs = RATE_LIMIT_WINDOW_MS - (now - oldestTs);
-      const resetHours = Math.ceil(resetMs / (60 * 60 * 1000));
-      const msg = `Rate limit reached: ${RATE_LIMIT_MAX} requests per 24 hours. Resets in approximately ${resetHours} hour${resetHours !== 1 ? 's' : ''}.`;
-      setError(msg);
-      return msg;
+    if (!isAdmin) {
+      const now = Date.now();
+      const recent = getRecentTimestamps(requestTimestampsRef.current);
+      if (recent.length >= RATE_LIMIT_MAX) {
+        const oldestTs = Math.min(...recent);
+        const resetMs = RATE_LIMIT_WINDOW_MS - (now - oldestTs);
+        const resetHours = Math.ceil(resetMs / (60 * 60 * 1000));
+        const msg = `Rate limit reached: ${RATE_LIMIT_MAX} requests per 24 hours. Resets in approximately ${resetHours} hour${resetHours !== 1 ? 's' : ''}.`;
+        setError(msg);
+        return msg;
+      }
+      const updated = [...recent, now];
+      requestTimestampsRef.current = updated;
+      saveTimestamps(updated);
     }
-    const updated = [...recent, now];
-    requestTimestampsRef.current = updated;
-    saveTimestamps(updated);
 
     const contextPrompt = buildBoardContext() + prompt;
     setIsTyping(true);
