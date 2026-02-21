@@ -9,6 +9,7 @@ import {
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
 import { showErrorTooltip } from '../utils/tooltipUtils.js';
+import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeObjectHandlers({
   board, stageRef, snap, setDragState, setSelectedId,
@@ -19,7 +20,7 @@ export function makeObjectHandlers({
   const updateActiveColor = (type, color) => {
     setShapeColors(prev => {
       if (prev[type]?.active === color) return prev;
-      const SHAPE_TYPES = ['rectangle', 'circle', 'triangle', 'line'];
+      const SHAPE_TYPES = ['rectangle', 'circle', 'triangle', 'line', 'arrow'];
       const updates = { [type]: { ...prev[type], active: color } };
       // Sync all shape types to the same color
       if (SHAPE_TYPES.includes(type)) {
@@ -66,7 +67,7 @@ export function makeObjectHandlers({
     }
     let illegalDrag = false;
     const newFrameIdForCheck = overFrame ? overFrame.id : null;
-    const bounds = obj.type === 'line'
+    const bounds = (obj.type === 'line' || obj.type === 'arrow')
       ? getLineBounds({ ...obj, x: pos.x, y: pos.y })
       : { x: pos.x, y: pos.y, width: obj.width || 150, height: obj.height || 150 };
     illegalDrag = hasDisallowedSiblingOverlap(id, obj.type, bounds, newFrameIdForCheck, board.objects, FRAME_MARGIN);
@@ -99,8 +100,8 @@ export function makeObjectHandlers({
       snapped.y = Math.max(minY, snapped.y);
     }
 
-    // Compute bounding box (lines use points array, others use width/height)
-    const lineBounds = obj.type === 'line' ? getLineBounds({ ...obj, x: snapped.x, y: snapped.y }) : null;
+    // Compute bounding box (lines/arrows use points array, others use width/height)
+    const lineBounds = (obj.type === 'line' || obj.type === 'arrow') ? getLineBounds({ ...obj, x: snapped.x, y: snapped.y }) : null;
     const ow = lineBounds ? lineBounds.width : (obj.width || 150);
     const oh = lineBounds ? lineBounds.height : (obj.height || 150);
 
@@ -164,6 +165,11 @@ export function makeObjectHandlers({
       );
       for (const exp of expansions) allUpdates.push(exp);
     }
+
+    // Update connected line/arrow endpoints when a connected object moves
+    const tempObjects = { ...board.objects, [id]: { ...obj, ...snapped } };
+    const connUpdates = getConnectedEndpointUpdates(id, tempObjects);
+    for (const cu of connUpdates) allUpdates.push(cu);
 
     // Snap toolbar to clamped position before write to prevent snap-back glitch
     setDragPos({ id, x: snapped.x, y: snapped.y });

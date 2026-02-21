@@ -1,10 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { Line, Group, Transformer, Rect } from 'react-konva';
+import { Line, Arrow, Group, Transformer, Rect, Circle } from 'react-konva';
+import { findSnapTarget, getPortCoords } from '../utils/connectorUtils.js';
 
-function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true }) {
+const PORTS = ['top', 'right', 'bottom', 'left'];
+const SNAP_DISTANCE = 20;
+const PORT_RADIUS = 5;
+
+function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
+  const draggingEndpointRef = useRef(null);
+  const snapIndicatorRef = useRef(null);
 
   useEffect(() => {
     if (isSelected && trRef.current && lineRef.current) {
@@ -24,6 +31,31 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
   }, [isSelected, onDelete, id]);
 
   const snap = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
+
+  const isArrow = type === 'arrow';
+  const ShapeComponent = isArrow ? Arrow : Line;
+  const arrowProps = isArrow ? { pointerLength: 12, pointerWidth: 10, fill: isMultiSelected ? '#6366f1' : color } : {};
+
+  const nearbyPorts = [];
+  if (draggingEndpointRef.current && objects) {
+    const excludeIds = new Set([id]);
+    for (const obj of Object.values(objects)) {
+      if (excludeIds.has(obj.id)) continue;
+      if (obj.type === 'line' || obj.type === 'arrow') continue;
+      for (const port of PORTS) {
+        const p = getPortCoords(obj, port);
+        const epIdx = draggingEndpointRef.current === 'start' ? 0 : points.length - 2;
+        const epX = x + points[epIdx];
+        const epY = y + points[epIdx + 1];
+        const dx = epX - p.x;
+        const dy = epY - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < SNAP_DISTANCE * 2) {
+          nearbyPorts.push({ x: p.x, y: p.y, isSnapped: dist < SNAP_DISTANCE });
+        }
+      }
+    }
+  }
 
   return (
     <>
@@ -85,7 +117,7 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           });
         }}
       >
-        <Line
+        <ShapeComponent
           ref={lineRef}
           points={points}
           stroke={isMultiSelected ? '#6366f1' : color}
@@ -94,7 +126,113 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           lineCap="round"
           lineJoin="round"
           perfectDrawEnabled={false}
+          {...arrowProps}
         />
+        {isSelected && canEdit && (() => {
+          const pts = points || [0, 0, 200, 0];
+          const startX = pts[0];
+          const startY = pts[1];
+          const endX = pts[pts.length - 2];
+          const endY = pts[pts.length - 1];
+          return (
+            <>
+              <Circle
+                x={startX}
+                y={startY}
+                radius={6}
+                fill="#2563eb"
+                stroke="#ffffff"
+                strokeWidth={2}
+                draggable
+                onDragStart={() => { draggingEndpointRef.current = 'start'; }}
+                onDragMove={(e) => {
+                  const node = e.target;
+                  const newPts = [...pts];
+                  newPts[0] = node.x();
+                  newPts[1] = node.y();
+                  if (lineRef.current) lineRef.current.points(newPts);
+                  const layer = node.getLayer();
+                  if (layer) layer.batchDraw();
+                }}
+                onDragEnd={(e) => {
+                  const node = e.target;
+                  let newX = node.x();
+                  let newY = node.y();
+                  const groupNode = groupRef.current;
+                  const absX = (groupNode ? groupNode.x() : x) + newX;
+                  const absY = (groupNode ? groupNode.y() : y) + newY;
+                  let connId = null;
+                  let connPort = null;
+                  if (objects) {
+                    const snapTarget = findSnapTarget(absX, absY, objects, new Set([id]));
+                    if (snapTarget) {
+                      newX = snapTarget.x - (groupNode ? groupNode.x() : x);
+                      newY = snapTarget.y - (groupNode ? groupNode.y() : y);
+                      connId = snapTarget.objectId;
+                      connPort = snapTarget.port;
+                    }
+                  }
+                  const newPts = [...pts];
+                  newPts[0] = newX;
+                  newPts[1] = newY;
+                  node.x(newX);
+                  node.y(newY);
+                  draggingEndpointRef.current = null;
+                  if (onUpdate) {
+                    onUpdate(id, { points: newPts, startConnectedId: connId, startConnectedPort: connPort });
+                  }
+                }}
+              />
+              <Circle
+                x={endX}
+                y={endY}
+                radius={6}
+                fill="#2563eb"
+                stroke="#ffffff"
+                strokeWidth={2}
+                draggable
+                onDragStart={() => { draggingEndpointRef.current = 'end'; }}
+                onDragMove={(e) => {
+                  const node = e.target;
+                  const newPts = [...pts];
+                  newPts[newPts.length - 2] = node.x();
+                  newPts[newPts.length - 1] = node.y();
+                  if (lineRef.current) lineRef.current.points(newPts);
+                  const layer = node.getLayer();
+                  if (layer) layer.batchDraw();
+                }}
+                onDragEnd={(e) => {
+                  const node = e.target;
+                  let newX = node.x();
+                  let newY = node.y();
+                  const groupNode = groupRef.current;
+                  const absX = (groupNode ? groupNode.x() : x) + newX;
+                  const absY = (groupNode ? groupNode.y() : y) + newY;
+                  let connId = null;
+                  let connPort = null;
+                  if (objects) {
+                    const snapTarget = findSnapTarget(absX, absY, objects, new Set([id]));
+                    if (snapTarget) {
+                      newX = snapTarget.x - (groupNode ? groupNode.x() : x);
+                      newY = snapTarget.y - (groupNode ? groupNode.y() : y);
+                      connId = snapTarget.objectId;
+                      connPort = snapTarget.port;
+                    }
+                  }
+                  const newPts = [...pts];
+                  newPts[newPts.length - 2] = newX;
+                  newPts[newPts.length - 1] = newY;
+                  node.x(newX);
+                  node.y(newY);
+                  draggingEndpointRef.current = null;
+                  if (onUpdate) {
+                    onUpdate(id, { points: newPts, endConnectedId: connId, endConnectedPort: connPort });
+                  }
+                }}
+              />
+            </>
+          );
+        })()}
         {dragState?.draggingId === id && dragState?.illegalDrag && (() => {
           const pts = points || [0, 0, 200, 0];
           let minPx = Infinity, minPy = Infinity, maxPx = -Infinity, maxPy = -Infinity;
@@ -111,6 +249,19 @@ function LineShapeInner({ id, x, y, points = [0, 0, 200, 0], color = '#3b82f6', 
           );
         })()}
       </Group>
+      {nearbyPorts.map((p, i) => (
+        <Circle
+          key={i}
+          x={p.x}
+          y={p.y}
+          radius={PORT_RADIUS}
+          fill={p.isSnapped ? '#2563eb' : 'transparent'}
+          stroke={p.isSnapped ? '#2563eb' : '#94a3b8'}
+          strokeWidth={1.5}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ))}
       {isSelected && canEdit && (
         <Transformer
           ref={trRef}

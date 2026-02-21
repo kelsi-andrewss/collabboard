@@ -10,7 +10,7 @@ function HeaderLeftInner({ state, handlers }) {
   const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
-    handleAddSticky, handleAddShape, handleAddLine, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
+    handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
   } = handlers;
 
   const [showBoardSwitcher, setShowBoardSwitcher] = useState(false);
@@ -72,6 +72,7 @@ function HeaderLeftInner({ state, handlers }) {
       setPendingTool(type);
     } else {
       if (type === 'line') handleAddLine();
+      else if (type === 'arrow') handleAddArrow();
       else handleAddShape(type);
     }
     setShowColorPicker(null);
@@ -79,6 +80,7 @@ function HeaderLeftInner({ state, handlers }) {
 
   const handleActiveShapeAdd = () => {
     if (activeShapeType === 'line') handleAddLine();
+    else if (activeShapeType === 'arrow') handleAddArrow();
     else handleAddShape(activeShapeType);
   };
 
@@ -181,7 +183,7 @@ function HeaderLeftInner({ state, handlers }) {
                   history={colorHistory}
                   onSelect={updateActiveColor}
                   shapeSelector={{
-                    types: ['rectangle', 'circle', 'triangle', 'line'],
+                    types: ['rectangle', 'circle', 'triangle', 'line', 'arrow'],
                     activeType: activeShapeType,
                     onSelect: handleShapeAdd,
                   }}

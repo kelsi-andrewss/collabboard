@@ -66,6 +66,19 @@ export function makeObjectCreationHandlers({
     });
   };
 
+  const handleAddArrow = () => {
+    const pos = findOpenSpot(200, 3);
+    board.addObject({
+      type: 'arrow',
+      x: pos.x,
+      y: pos.y,
+      points: [0, 0, 200, 0],
+      color: shapeColors.shapes.active,
+      strokeWidth: 3,
+      userId: user.uid,
+    });
+  };
+
   const handleAddText = () => {
     const pos = findOpenSpot(200, 20);
     board.addObject({
@@ -91,5 +104,5 @@ export function makeObjectCreationHandlers({
     await ai.sendCommand(prompt);
   };
 
-  return { findOpenSpot, handleAddSticky, handleAddShape, handleAddFrame, handleAddLine, handleAddText, handleAISubmit };
+  return { findOpenSpot, handleAddSticky, handleAddShape, handleAddFrame, handleAddLine, handleAddArrow, handleAddText, handleAISubmit };
 }

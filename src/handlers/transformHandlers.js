@@ -5,6 +5,7 @@ import {
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
 import { showErrorTooltip } from '../utils/tooltipUtils.js';
+import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeTransformHandlers({
   board, stageRef, stageScale, stagePos, setResizeTooltip, resizeTooltipTimer,
@@ -17,7 +18,7 @@ export function makeTransformHandlers({
 
     // Overlap check for all types
     {
-      const proposedBounds = obj.type === 'line'
+      const proposedBounds = (obj.type === 'line' || obj.type === 'arrow')
         ? getLineBounds({ ...obj, x: u.x ?? obj.x, y: u.y ?? obj.y, points: u.points ?? obj.points })
         : {
             x: u.x ?? obj.x,
@@ -84,8 +85,16 @@ export function makeTransformHandlers({
       }
     }
 
+    const updatedObj = { ...obj, ...u };
+    const tempObjects = { ...board.objects, [id]: updatedObj };
+    const connUpdates = getConnectedEndpointUpdates(id, tempObjects);
+
     if (!obj.frameId) {
-      board.updateObject(id, u);
+      if (connUpdates.length > 0) {
+        board.batchUpdateObjects([{ id, data: u }, ...connUpdates]);
+      } else {
+        board.updateObject(id, u);
+      }
       return { x: u.x, y: u.y, width: u.width, height: u.height };
     }
     const childX = u.x ?? obj.x;
@@ -95,8 +104,9 @@ export function makeTransformHandlers({
     const expansions = computeAncestorExpansions(
       childX, childY, childW, childH, obj.frameId, board.objects, FRAME_MARGIN
     );
-    if (expansions.length > 0) {
-      board.batchUpdateObjects([{ id, data: u }, ...expansions]);
+    const allUpdates = [{ id, data: u }, ...expansions, ...connUpdates];
+    if (allUpdates.length > 1) {
+      board.batchUpdateObjects(allUpdates);
     } else {
       board.updateObject(id, u);
     }
