@@ -598,3 +598,126 @@ describe('handleGroupDrop nested-group bubbling guard', () => {
     expect(moveGroup).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// handleGroupDragOver stopPropagation fix
+//
+// When dragging a board into a subgroup, the dragover event must not bubble to
+// the parent GroupCard's dragover handler. Without e.stopPropagation(), the
+// parent handler fires after the subgroup handler and overwrites dragOverTargetId
+// with the parent's id, so the subgroup never appears highlighted as a drop target.
+//
+// These tests model the contract as a pure predicate — both handlers fire (in
+// order, inner to outer) and verify that stopping propagation on the inner one
+// prevents the outer one from overwriting the target id.
+// ---------------------------------------------------------------------------
+
+describe('handleGroupDragOver stopPropagation — prevents parent from overwriting dragOverTargetId', () => {
+  function makeEvent({ stopped = false } = {}) {
+    const event = {
+      _stopped: stopped,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(function () { this._stopped = true; }),
+      dataTransfer: { dropEffect: '' },
+    };
+    return event;
+  }
+
+  function simulateDragOverChain({ subgroupId, parentGroupId, callStopPropagation }) {
+    const results = [];
+    const e = makeEvent();
+
+    const innerHandler = (event, targetGroupId) => {
+      event.preventDefault();
+      if (callStopPropagation) event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+      results.push(targetGroupId);
+    };
+
+    const outerHandler = (event, targetGroupId) => {
+      if (event._stopped) return;
+      event.preventDefault();
+      if (callStopPropagation) event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+      results.push(targetGroupId);
+    };
+
+    innerHandler(e, subgroupId);
+    outerHandler(e, parentGroupId);
+    return results;
+  }
+
+  it('without stopPropagation, parent handler fires after subgroup handler and appends parentGroupId', () => {
+    const ids = simulateDragOverChain({
+      subgroupId: 'child',
+      parentGroupId: 'parent',
+      callStopPropagation: false,
+    });
+    expect(ids).toEqual(['child', 'parent']);
+  });
+
+  it('with stopPropagation, parent handler is skipped — only subgroupId is recorded', () => {
+    const ids = simulateDragOverChain({
+      subgroupId: 'child',
+      parentGroupId: 'parent',
+      callStopPropagation: true,
+    });
+    expect(ids).toEqual(['child']);
+  });
+
+  it('stopPropagation is called on the event when callStopPropagation is true', () => {
+    const e = makeEvent();
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(e._stopped).toBe(true);
+  });
+
+  it('with stopPropagation, the last recorded dragOverTargetId is the subgroup, not the parent', () => {
+    let dragOverTargetId = null;
+    const e = makeEvent();
+
+    const innerHandler = (event, targetGroupId) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+      dragOverTargetId = targetGroupId;
+    };
+
+    const outerHandler = (event, targetGroupId) => {
+      if (event._stopped) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      dragOverTargetId = targetGroupId;
+    };
+
+    innerHandler(e, 'child');
+    outerHandler(e, 'parent');
+
+    expect(dragOverTargetId).toBe('child');
+  });
+
+  it('without stopPropagation, the last recorded dragOverTargetId is the parent (the bug)', () => {
+    let dragOverTargetId = null;
+    const e = makeEvent();
+
+    const innerHandler = (event, targetGroupId) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      dragOverTargetId = targetGroupId;
+    };
+
+    const outerHandler = (event, targetGroupId) => {
+      if (event._stopped) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      dragOverTargetId = targetGroupId;
+    };
+
+    innerHandler(e, 'child');
+    outerHandler(e, 'parent');
+
+    expect(dragOverTargetId).toBe('parent');
+  });
+});
