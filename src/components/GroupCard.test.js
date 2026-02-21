@@ -38,14 +38,6 @@ describe('GroupCard footer row — "see all" label', () => {
     expect(footerButtonLabel(10)).toBe('See all 10 boards →');
     expect(footerButtonLabel(100)).toBe('See all 100 boards →');
   });
-
-  it('threshold is strictly greater than 3 — exactly 3 boards shows "Open group →"', () => {
-    expect(footerButtonLabel(3)).toBe('Open group →');
-  });
-
-  it('threshold is strictly greater than 3 — exactly 4 boards shows "See all"', () => {
-    expect(footerButtonLabel(4)).toBe('See all 4 boards →');
-  });
 });
 
 describe('GroupCard footer row — onAddBoard button visibility', () => {

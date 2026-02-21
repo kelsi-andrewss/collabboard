@@ -243,187 +243,136 @@ function makeApplySort(sortMode, sortAsc, boards) {
   };
 }
 
-describe('applySort — name mode', () => {
-  it('sorts boards and subgroups by name ascending', () => {
-    const items = [
-      { type: 'board', key: 'b2', board: { name: 'Zebra' } },
-      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Alpha' } },
-      { type: 'board', key: 'b1', board: { name: 'Mango' } },
-    ];
-    const sorted = makeApplySort('name', true, [])(items);
-    const names = sorted.map(i => (i.type === 'board' ? i.board.name : i.sub.name));
-    expect(names).toEqual(['Alpha', 'Mango', 'Zebra']);
-  });
-
-  it('sorts by name descending when sortAsc is false', () => {
-    const items = [
-      { type: 'board', key: 'b1', board: { name: 'Alpha' } },
-      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Zebra' } },
-    ];
-    const sorted = makeApplySort('name', false, [])(items);
-    const names = sorted.map(i => (i.type === 'board' ? i.board.name : i.sub.name));
-    expect(names).toEqual(['Zebra', 'Alpha']);
-  });
-
-  it('treats missing name as empty string — empty names sort before non-empty ascending', () => {
-    const items = [
-      { type: 'board', key: 'b1', board: { name: 'Beta' } },
-      { type: 'subgroup', key: 's1', sub: { id: 'g1' } },
-    ];
-    const sorted = makeApplySort('name', true, [])(items);
-    expect(sorted[0].type).toBe('subgroup');
-    expect(sorted[1].type).toBe('board');
-  });
-
-  it('returns a stable result when all names are equal', () => {
-    const items = [
-      { type: 'board', key: 'b1', board: { name: 'Same' } },
-      { type: 'board', key: 'b2', board: { name: 'Same' } },
-    ];
-    const sorted = makeApplySort('name', true, [])(items);
-    expect(sorted).toHaveLength(2);
-  });
-});
-
-describe('applySort — count mode', () => {
-  const boards = [
+describe('applySort', () => {
+  const countBoards = [
     { id: 'b1', groupId: 'g1' },
     { id: 'b2', groupId: 'g1' },
     { id: 'b3', groupId: 'g2' },
   ];
-
-  it('sorts subgroups by board count descending when sortAsc is false', () => {
-    const items = [
-      { type: 'subgroup', key: 's2', sub: { id: 'g2', name: 'Small Group' } },
-      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Big Group' } },
-    ];
-    const sorted = makeApplySort('count', false, boards)(items);
-    expect(sorted[0].sub.id).toBe('g1');
-    expect(sorted[1].sub.id).toBe('g2');
-  });
-
-  it('sorts subgroups by board count ascending when sortAsc is true', () => {
-    const items = [
-      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Big Group' } },
-      { type: 'subgroup', key: 's2', sub: { id: 'g2', name: 'Small Group' } },
-    ];
-    const sorted = makeApplySort('count', true, boards)(items);
-    expect(sorted[0].sub.id).toBe('g2');
-    expect(sorted[1].sub.id).toBe('g1');
-  });
-
-  it('board items count as 1 — subgroup with 2 boards sorts before a standalone board (descending)', () => {
-    const items = [
-      { type: 'board', key: 'b1', board: { name: 'A Board' } },
-      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Big Group' } },
-    ];
-    const sorted = makeApplySort('count', false, boards)(items);
-    expect(sorted[0].type).toBe('subgroup');
-    expect(sorted[1].type).toBe('board');
-  });
-
-  it('subgroup with zero boards sorts after a standalone board (descending)', () => {
-    const items = [
-      { type: 'subgroup', key: 's1', sub: { id: 'g_empty', name: 'Empty Group' } },
-      { type: 'board', key: 'b1', board: { name: 'A Board' } },
-    ];
-    const sorted = makeApplySort('count', false, boards)(items);
-    expect(sorted[0].type).toBe('board');
-    expect(sorted[1].type).toBe('subgroup');
-  });
-});
-
-describe('applySort — recent mode (default)', () => {
   const now = Date.now();
-  const allBoards = [
+  const recentBoards = [
     { id: 'b1', groupId: 'g1', updatedAt: { toMillis: () => now - 1000 } },
     { id: 'b2', groupId: 'g2', updatedAt: { toMillis: () => now - 5000 } },
   ];
 
-  it('sorts by most recent update descending by default', () => {
-    const items = [
-      {
-        type: 'board',
-        key: 'old',
-        board: { name: 'Old', updatedAt: { toMillis: () => now - 5000 } },
-      },
-      {
-        type: 'board',
-        key: 'new',
-        board: { name: 'New', updatedAt: { toMillis: () => now - 1000 } },
-      },
-    ];
-    const sorted = makeApplySort('recent', false, [])(items);
-    expect(sorted[0].key).toBe('new');
-    expect(sorted[1].key).toBe('old');
+  describe.each([
+    { sortMode: 'name', sortAsc: true, label: 'name ascending' },
+    { sortMode: 'name', sortAsc: false, label: 'name descending' },
+  ])('$label', ({ sortMode, sortAsc }) => {
+    it('sorts boards and subgroups by name', () => {
+      const items = [
+        { type: 'board', key: 'b2', board: { name: 'Zebra' } },
+        { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Alpha' } },
+        { type: 'board', key: 'b1', board: { name: 'Mango' } },
+      ];
+      const sorted = makeApplySort(sortMode, sortAsc, [])(items);
+      const names = sorted.map(i => (i.type === 'board' ? i.board.name : i.sub.name));
+      if (sortAsc) {
+        expect(names).toEqual(['Alpha', 'Mango', 'Zebra']);
+      } else {
+        expect(names).toEqual(['Zebra', 'Mango', 'Alpha']);
+      }
+    });
+
+    it('treats missing name as empty string', () => {
+      const items = [
+        { type: 'board', key: 'b1', board: { name: 'Beta' } },
+        { type: 'subgroup', key: 's1', sub: { id: 'g1' } },
+      ];
+      const sorted = makeApplySort(sortMode, sortAsc, [])(items);
+      if (sortAsc) {
+        expect(sorted[0].type).toBe('subgroup');
+      } else {
+        expect(sorted[0].type).toBe('board');
+      }
+    });
   });
 
-  it('sorts oldest first when sortAsc is true', () => {
-    const items = [
-      {
-        type: 'board',
-        key: 'new',
-        board: { name: 'New', updatedAt: { toMillis: () => now - 1000 } },
-      },
-      {
-        type: 'board',
-        key: 'old',
-        board: { name: 'Old', updatedAt: { toMillis: () => now - 5000 } },
-      },
-    ];
-    const sorted = makeApplySort('recent', true, [])(items);
-    expect(sorted[0].key).toBe('old');
-    expect(sorted[1].key).toBe('new');
+  describe.each([
+    { sortAsc: true, label: 'count ascending' },
+    { sortAsc: false, label: 'count descending' },
+  ])('$label', ({ sortAsc }) => {
+    it('sorts subgroups by board count', () => {
+      const items = [
+        { type: 'subgroup', key: 's2', sub: { id: 'g2', name: 'Small Group' } },
+        { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Big Group' } },
+      ];
+      const sorted = makeApplySort('count', sortAsc, countBoards)(items);
+      if (sortAsc) {
+        expect(sorted[0].sub.id).toBe('g2');
+        expect(sorted[1].sub.id).toBe('g1');
+      } else {
+        expect(sorted[0].sub.id).toBe('g1');
+        expect(sorted[1].sub.id).toBe('g2');
+      }
+    });
+
+    it('board items count as 1 vs subgroup board count', () => {
+      const items = [
+        { type: 'board', key: 'b1', board: { name: 'A Board' } },
+        { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Big Group' } },
+      ];
+      const sorted = makeApplySort('count', sortAsc, countBoards)(items);
+      if (sortAsc) {
+        expect(sorted[0].type).toBe('board');
+      } else {
+        expect(sorted[0].type).toBe('subgroup');
+      }
+    });
   });
 
-  it('uses the most recent board in a subgroup as the subgroup timestamp', () => {
+  it('count mode: subgroup with zero boards sorts after standalone board (descending)', () => {
     const items = [
-      {
-        type: 'subgroup',
-        key: 's1',
-        sub: { id: 'g1', name: 'Group 1' },
-      },
-      {
-        type: 'board',
-        key: 'b_old',
-        board: { name: 'Old Board', updatedAt: { toMillis: () => now - 10000 } },
-      },
+      { type: 'subgroup', key: 's1', sub: { id: 'g_empty', name: 'Empty Group' } },
+      { type: 'board', key: 'b1', board: { name: 'A Board' } },
     ];
-    const sorted = makeApplySort('recent', false, allBoards)(items);
+    const sorted = makeApplySort('count', false, countBoards)(items);
+    expect(sorted[0].type).toBe('board');
+    expect(sorted[1].type).toBe('subgroup');
+  });
+
+  describe.each([
+    { sortAsc: true, label: 'recent ascending (oldest first)' },
+    { sortAsc: false, label: 'recent descending (newest first)' },
+  ])('$label', ({ sortAsc }) => {
+    it('sorts boards by updatedAt', () => {
+      const items = [
+        { type: 'board', key: 'old', board: { name: 'Old', updatedAt: { toMillis: () => now - 5000 } } },
+        { type: 'board', key: 'new', board: { name: 'New', updatedAt: { toMillis: () => now - 1000 } } },
+      ];
+      const sorted = makeApplySort('recent', sortAsc, [])(items);
+      if (sortAsc) {
+        expect(sorted[0].key).toBe('old');
+      } else {
+        expect(sorted[0].key).toBe('new');
+      }
+    });
+  });
+
+  it('recent mode: uses the most recent board in a subgroup as timestamp', () => {
+    const items = [
+      { type: 'subgroup', key: 's1', sub: { id: 'g1', name: 'Group 1' } },
+      { type: 'board', key: 'b_old', board: { name: 'Old Board', updatedAt: { toMillis: () => now - 10000 } } },
+    ];
+    const sorted = makeApplySort('recent', false, recentBoards)(items);
     expect(sorted[0].type).toBe('subgroup');
   });
 
-  it('treats items with no updatedAt as timestamp 0 — sorts last descending', () => {
+  it('recent mode: treats items with no updatedAt as timestamp 0', () => {
     const items = [
-      {
-        type: 'board',
-        key: 'no-ts',
-        board: { name: 'No Timestamp' },
-      },
-      {
-        type: 'board',
-        key: 'has-ts',
-        board: { name: 'Has Timestamp', updatedAt: { toMillis: () => now - 1000 } },
-      },
+      { type: 'board', key: 'no-ts', board: { name: 'No Timestamp' } },
+      { type: 'board', key: 'has-ts', board: { name: 'Has Timestamp', updatedAt: { toMillis: () => now - 1000 } } },
     ];
     const sorted = makeApplySort('recent', false, [])(items);
     expect(sorted[0].key).toBe('has-ts');
     expect(sorted[1].key).toBe('no-ts');
   });
 
-  it('supports Firestore seconds-style timestamps on board items', () => {
+  it('recent mode: supports Firestore seconds-style timestamps', () => {
     const nowSeconds = Math.floor(now / 1000);
     const items = [
-      {
-        type: 'board',
-        key: 'seconds-ts',
-        board: { name: 'Seconds Timestamp', updatedAt: { seconds: nowSeconds - 1 } },
-      },
-      {
-        type: 'board',
-        key: 'no-ts',
-        board: { name: 'No Timestamp' },
-      },
+      { type: 'board', key: 'seconds-ts', board: { name: 'Seconds', updatedAt: { seconds: nowSeconds - 1 } } },
+      { type: 'board', key: 'no-ts', board: { name: 'No Timestamp' } },
     ];
     const sorted = makeApplySort('recent', false, [])(items);
     expect(sorted[0].key).toBe('seconds-ts');

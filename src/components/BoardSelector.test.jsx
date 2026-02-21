@@ -238,286 +238,183 @@ describe('BoardSelector — member search Firestore query', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests — open visibility confirmation checkbox in Create New Board modal
+// Tests — open visibility confirmation checkbox (parameterized for board & group)
 // ---------------------------------------------------------------------------
 
-describe('BoardSelector — open visibility confirmation (board)', () => {
+describe.each([
+  {
+    context: 'board',
+    modalClass: '.modal-card--create',
+    createLabel: 'Create Board',
+    openModal: () => openNewBoardModal(),
+    namePlaceholder: 'My Creative Board',
+    getModal: () => {
+      const modals = document.querySelectorAll('.modal-card--create');
+      return modals[modals.length - 1];
+    },
+  },
+  {
+    context: 'group',
+    modalClass: '.modal-card--group',
+    createLabel: 'Create Group',
+    openModal: () => {
+      const buttons = screen.getAllByRole('button');
+      const newGroupBtn = buttons.find(b => b.textContent.includes('New Group'));
+      fireEvent.click(newGroupBtn);
+    },
+    namePlaceholder: 'My Team',
+    getModal: () => {
+      const modals = document.querySelectorAll('.modal-card--group');
+      return modals[modals.length - 1];
+    },
+  },
+])('BoardSelector — open visibility confirmation ($context)', ({ modalClass, createLabel, openModal, namePlaceholder, getModal }) => {
   beforeEach(() => {
     vi.clearAllMocks();
     cleanup();
   });
 
-  function getCreateBoardModal() {
-    const modals = document.querySelectorAll('.modal-card--create');
-    return modals[modals.length - 1]; // Return the last one (most recently opened)
-  }
-
-  it('shows confirmation checkbox when "Open" visibility is selected for board', () => {
+  it('disables create button when "Open" is selected but checkbox is unchecked', () => {
     render(<BoardSelector {...defaultProps()} />);
-    openNewBoardModal();
+    openModal();
 
-    // Type board name to enable the button normally
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Test Board' } });
+    const nameInput = screen.getByPlaceholderText(namePlaceholder);
+    fireEvent.change(nameInput, { target: { value: 'Test' } });
 
-    // Switch to Open visibility
     let allButtons = screen.getAllByRole('button');
     const openBtn = allButtons.find(b =>
       b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
+      b.closest(modalClass)
     );
     fireEvent.click(openBtn);
 
-    // Re-query buttons — Create button should now be disabled until checkbox is checked
     allButtons = screen.getAllByRole('button');
     const createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Board') &&
-      b.closest('.modal-card--create')
-    );
-
-    // The button being disabled proves the checkbox requirement is active
-    expect(createBtn.disabled).toBe(true);
-  });
-
-  it('hides confirmation checkbox when switching away from "Open" visibility for board', () => {
-    render(<BoardSelector {...defaultProps()} />);
-    openNewBoardModal();
-
-    // Type board name
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Test Board' } });
-
-    // Switch to Open — button becomes disabled
-    let allButtons = screen.getAllByRole('button');
-    let openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(openBtn);
-
-    allButtons = screen.getAllByRole('button');
-    let createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Board') &&
-      b.closest('.modal-card--create')
+      b.textContent.includes(createLabel) &&
+      b.closest(modalClass)
     );
     expect(createBtn.disabled).toBe(true);
-
-    // Switch to Private — button should be enabled again
-    allButtons = screen.getAllByRole('button');
-    const privateBtn = allButtons.find(b =>
-      b.textContent.includes('Private') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(privateBtn);
-
-    allButtons = screen.getAllByRole('button');
-    createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Board') &&
-      b.closest('.modal-card--create')
-    );
-    expect(createBtn.disabled).toBe(false);
   });
 
-  it('disables Create Board button when "Open" is selected but checkbox is unchecked', () => {
+  it('enables create button when "Open" is selected and checkbox is checked', async () => {
     render(<BoardSelector {...defaultProps()} />);
-    openNewBoardModal();
+    openModal();
 
-    // Type board name
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Test Board' } });
-
-    // Switch to Open
-    let allButtons = screen.getAllByRole('button');
-    const openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(openBtn);
-
-    // Re-query buttons after visibility change
-    allButtons = screen.getAllByRole('button');
-    const createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Board') &&
-      b.closest('.modal-card--create')
-    );
-
-    // Create button should be disabled (checkbox unchecked)
-    expect(createBtn.disabled).toBe(true);
-  });
-
-  it('enables Create Board button when "Open" is selected and checkbox is checked', () => {
-    render(<BoardSelector {...defaultProps()} />);
-    openNewBoardModal();
-
-    // Type board name
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Test Board' } });
-
-    // Switch to Open
-    let allButtons = screen.getAllByRole('button');
-    const openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(openBtn);
-
-    // Check the confirmation checkbox
-    let checkboxes = screen.getAllByRole('checkbox');
-    const checkbox = checkboxes.find(cb => {
-      const label = cb.closest('label');
-      return label && label.textContent.includes('I understand that anyone can edit this board');
-    });
-
-    if (checkbox) {
-      fireEvent.change(checkbox, { target: { checked: true } });
-
-      // Create button should now be enabled
-      allButtons = screen.getAllByRole('button');
-      const createBtn = allButtons.find(b =>
-        b.textContent.includes('Create Board') &&
-        b.closest('.modal-card--create')
-      );
-      expect(createBtn.disabled).toBe(false);
-    }
-  });
-
-  it('resets checkbox when switching from "Open" to another visibility', () => {
-    render(<BoardSelector {...defaultProps()} />);
-    openNewBoardModal();
-
-    // Type board name
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Test Board' } });
-
-    // Switch to Open
-    let allButtons = screen.getAllByRole('button');
-    let openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(openBtn);
-
-    // Check the confirmation checkbox
-    let checkboxes = screen.getAllByRole('checkbox');
-    let checkbox = checkboxes.find(cb => {
-      const label = cb.closest('label');
-      return label && label.textContent.includes('I understand that anyone can edit this board');
-    });
-
-    if (checkbox) {
-      fireEvent.change(checkbox, { target: { checked: true } });
-      expect(checkbox.checked).toBe(true);
-
-      // Switch to Public visibility
-      allButtons = screen.getAllByRole('button');
-      const publicBtn = allButtons.find(b =>
-        b.textContent.includes('Public') &&
-        b.closest('.modal-card--create')
-      );
-      fireEvent.click(publicBtn);
-
-      // Switch back to Open — checkbox should be unchecked (reset)
-      allButtons = screen.getAllByRole('button');
-      openBtn = allButtons.find(b =>
-        b.textContent.includes('Open') &&
-        b.closest('.modal-card--create')
-      );
-      fireEvent.click(openBtn);
-
-      checkboxes = screen.getAllByRole('checkbox');
-      checkbox = checkboxes.find(cb => {
-        const label = cb.closest('label');
-        return label && label.textContent.includes('I understand that anyone can edit this board');
-      });
-      expect(checkbox.checked).toBe(false);
-    }
-  });
-
-  it('prevents form submission when "Open" is selected but checkbox is unchecked', () => {
-    const mockCreateBoard = vi.fn(() => ({ id: 'new-board-id' }));
-
-    render(<BoardSelector {...defaultProps({
-      createBoard: mockCreateBoard,
-    })} />);
-
-    openNewBoardModal();
-
-    // Type board name and switch to Open without checking
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Open Board' } });
+    const nameInput = screen.getByPlaceholderText(namePlaceholder);
+    fireEvent.change(nameInput, { target: { value: 'Test' } });
 
     let allButtons = screen.getAllByRole('button');
     const openBtn = allButtons.find(b =>
       b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
+      b.closest(modalClass)
     );
     fireEvent.click(openBtn);
 
-    // Re-query buttons after visibility change
-    allButtons = screen.getAllByRole('button');
-    const createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Board') &&
-      b.closest('.modal-card--create')
-    );
-
-    // Create button should be disabled when checkbox is unchecked
-    expect(createBtn.disabled).toBe(true);
-  });
-
-  it('allows form submission when "Open" is selected and checkbox is checked', async () => {
-    const mockCreateBoard = vi.fn(() => ({ id: 'new-board-id' }));
-    const mockOnSelectBoard = vi.fn();
-
-    render(<BoardSelector {...defaultProps({
-      createBoard: mockCreateBoard,
-      onSelectBoard: mockOnSelectBoard,
-    })} />);
-
-    openNewBoardModal();
-
-    // Type board name
-    const nameInput = screen.getByPlaceholderText('My Creative Board');
-    fireEvent.change(nameInput, { target: { value: 'Open Board' } });
-
-    // Switch to Open
-    let allButtons = screen.getAllByRole('button');
-    const openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--create')
-    );
-    fireEvent.click(openBtn);
-
-    // Check the confirmation checkbox — wait for DOM update
     await act(async () => {});
-    let modal = getCreateBoardModal();
+    let modal = getModal();
     let checkbox = modal.querySelector('input[type="checkbox"]');
 
     if (checkbox) {
       fireEvent.click(checkbox);
-      // Wait for the state update to propagate
       await act(async () => {});
 
-      // Get updated button state
-      modal = getCreateBoardModal();
+      modal = getModal();
       const createBtn = modal.querySelector('button[type="submit"]');
       expect(createBtn.disabled).toBe(false);
     }
   });
 
+  it('re-enables create button when switching away from "Open"', () => {
+    render(<BoardSelector {...defaultProps()} />);
+    openModal();
+
+    const nameInput = screen.getByPlaceholderText(namePlaceholder);
+    fireEvent.change(nameInput, { target: { value: 'Test' } });
+
+    let allButtons = screen.getAllByRole('button');
+    let openBtn = allButtons.find(b =>
+      b.textContent.includes('Open') &&
+      b.closest(modalClass)
+    );
+    fireEvent.click(openBtn);
+
+    allButtons = screen.getAllByRole('button');
+    let createBtn = allButtons.find(b =>
+      b.textContent.includes(createLabel) &&
+      b.closest(modalClass)
+    );
+    expect(createBtn.disabled).toBe(true);
+
+    allButtons = screen.getAllByRole('button');
+    const privateBtn = allButtons.find(b =>
+      b.textContent.includes('Private') &&
+      b.closest(modalClass)
+    );
+    fireEvent.click(privateBtn);
+
+    allButtons = screen.getAllByRole('button');
+    createBtn = allButtons.find(b =>
+      b.textContent.includes(createLabel) &&
+      b.closest(modalClass)
+    );
+    expect(createBtn.disabled).toBe(false);
+  });
+
+  it('resets checkbox when switching from "Open" to another visibility and back', () => {
+    render(<BoardSelector {...defaultProps()} />);
+    openModal();
+
+    let allButtons = screen.getAllByRole('button');
+    let openBtn = allButtons.find(b =>
+      b.textContent.includes('Open') &&
+      b.closest(modalClass)
+    );
+    fireEvent.click(openBtn);
+
+    let modal = getModal();
+    let checkbox = modal.querySelector('input[type="checkbox"]');
+
+    if (checkbox) {
+      fireEvent.change(checkbox, { target: { checked: true } });
+      expect(checkbox.checked).toBe(true);
+
+      allButtons = screen.getAllByRole('button');
+      const publicBtn = allButtons.find(b =>
+        b.textContent.includes('Public') &&
+        b.closest(modalClass)
+      );
+      fireEvent.click(publicBtn);
+
+      allButtons = screen.getAllByRole('button');
+      openBtn = allButtons.find(b =>
+        b.textContent.includes('Open') &&
+        b.closest(modalClass)
+      );
+      fireEvent.click(openBtn);
+
+      modal = getModal();
+      checkbox = modal.querySelector('input[type="checkbox"]');
+      expect(checkbox.checked).toBe(false);
+    }
+  });
+});
+
+// Board-specific open visibility tests that don't apply to groups
+
+describe('BoardSelector — open visibility board-specific', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
   it('prevents Enter key submission when "Open" is selected but checkbox is unchecked', () => {
     const mockCreateBoard = vi.fn(() => ({ id: 'new-board-id' }));
-
-    render(<BoardSelector {...defaultProps({
-      createBoard: mockCreateBoard,
-    })} />);
-
+    render(<BoardSelector {...defaultProps({ createBoard: mockCreateBoard })} />);
     openNewBoardModal();
 
-    // Type board name
     const nameInput = screen.getByPlaceholderText('My Creative Board');
     fireEvent.change(nameInput, { target: { value: 'Open Board' } });
 
-    // Switch to Open
     const allButtons = screen.getAllByRole('button');
     const openBtn = allButtons.find(b =>
       b.textContent.includes('Open') &&
@@ -525,169 +422,7 @@ describe('BoardSelector — open visibility confirmation (board)', () => {
     );
     fireEvent.click(openBtn);
 
-    // Try Enter key without checking checkbox
     fireEvent.keyDown(nameInput, { key: 'Enter' });
-
-    // createBoard should not have been called
     expect(mockCreateBoard).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — open visibility confirmation checkbox in Create New Group modal
-// ---------------------------------------------------------------------------
-
-describe('BoardSelector — open visibility confirmation (group)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    cleanup();
-  });
-
-  function getGroupModal() {
-    const modals = document.querySelectorAll('.modal-card--group');
-    return modals[modals.length - 1]; // Return the last one (most recently opened)
-  }
-
-  it('shows confirmation checkbox when "Open" visibility is selected for group', () => {
-    render(<BoardSelector {...defaultProps()} />);
-
-    // Open new group modal
-    const buttons = screen.getAllByRole('button');
-    const newGroupBtn = buttons.find(b => b.textContent.includes('New Group'));
-    fireEvent.click(newGroupBtn);
-
-    // Type group name
-    const nameInput = screen.getByPlaceholderText('My Team');
-    fireEvent.change(nameInput, { target: { value: 'Test Group' } });
-
-    // Switch to Open visibility
-    let allButtons = screen.getAllByRole('button');
-    const openBtn = allButtons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--group')
-    );
-    fireEvent.click(openBtn);
-
-    // Re-query buttons — Create button should now be disabled until checkbox is checked
-    allButtons = screen.getAllByRole('button');
-    const createBtn = allButtons.find(b =>
-      b.textContent.includes('Create Group') &&
-      b.closest('.modal-card--group')
-    );
-
-    // The button being disabled proves the checkbox requirement is active
-    expect(createBtn.disabled).toBe(true);
-  });
-
-  it('disables Create Group button when "Open" is selected but checkbox is unchecked', () => {
-    render(<BoardSelector {...defaultProps()} />);
-
-    // Open new group modal
-    let buttons = screen.getAllByRole('button');
-    const newGroupBtn = buttons.find(b => b.textContent.includes('New Group'));
-    fireEvent.click(newGroupBtn);
-
-    // Type group name
-    const nameInput = screen.getByPlaceholderText('My Team');
-    fireEvent.change(nameInput, { target: { value: 'Test Group' } });
-
-    // Switch to Open
-    buttons = screen.getAllByRole('button');
-    const openBtn = buttons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--group')
-    );
-    fireEvent.click(openBtn);
-
-    // Re-query buttons after visibility change
-    buttons = screen.getAllByRole('button');
-    const createBtn = buttons.find(b =>
-      b.textContent.includes('Create Group') &&
-      b.closest('.modal-card--group')
-    );
-
-    // Create button should be disabled (checkbox unchecked)
-    expect(createBtn.disabled).toBe(true);
-  });
-
-  it('enables Create Group button when "Open" is selected and checkbox is checked', async () => {
-    render(<BoardSelector {...defaultProps()} />);
-
-    // Open new group modal
-    let buttons = screen.getAllByRole('button');
-    const newGroupBtn = buttons.find(b => b.textContent.includes('New Group'));
-    fireEvent.click(newGroupBtn);
-
-    // Type group name
-    const nameInput = screen.getByPlaceholderText('My Team');
-    fireEvent.change(nameInput, { target: { value: 'Test Group' } });
-
-    // Switch to Open
-    buttons = screen.getAllByRole('button');
-    const openBtn = buttons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--group')
-    );
-    fireEvent.click(openBtn);
-
-    // Wait for modal to update
-    await act(async () => {});
-    let modal = getGroupModal();
-    let checkbox = modal.querySelector('input[type="checkbox"]');
-
-    if (checkbox) {
-      fireEvent.click(checkbox);
-      // Wait for the state update to propagate
-      await act(async () => {});
-
-      modal = getGroupModal();
-      const createBtn = modal.querySelector('button[type="submit"]');
-      expect(createBtn.disabled).toBe(false);
-    }
-  });
-
-  it('resets checkbox when switching from "Open" to another visibility for group', () => {
-    render(<BoardSelector {...defaultProps()} />);
-
-    // Open new group modal
-    let buttons = screen.getAllByRole('button');
-    const newGroupBtn = buttons.find(b => b.textContent.includes('New Group'));
-    fireEvent.click(newGroupBtn);
-
-    // Switch to Open and check the checkbox
-    buttons = screen.getAllByRole('button');
-    let openBtn = buttons.find(b =>
-      b.textContent.includes('Open') &&
-      b.closest('.modal-card--group')
-    );
-    fireEvent.click(openBtn);
-
-    let modal = getGroupModal();
-    let checkbox = modal.querySelector('input[type="checkbox"]');
-
-    if (checkbox) {
-      fireEvent.change(checkbox, { target: { checked: true } });
-      expect(checkbox.checked).toBe(true);
-
-      // Switch to Private
-      buttons = screen.getAllByRole('button');
-      const privateBtn = buttons.find(b =>
-        b.textContent.includes('Private') &&
-        b.closest('.modal-card--group')
-      );
-      fireEvent.click(privateBtn);
-
-      // Switch back to Open — checkbox should be unchecked
-      buttons = screen.getAllByRole('button');
-      openBtn = buttons.find(b =>
-        b.textContent.includes('Open') &&
-        b.closest('.modal-card--group')
-      );
-      fireEvent.click(openBtn);
-
-      modal = getGroupModal();
-      checkbox = modal.querySelector('input[type="checkbox"]');
-      expect(checkbox.checked).toBe(false);
-    }
   });
 });

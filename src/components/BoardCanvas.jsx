@@ -10,7 +10,6 @@ import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 import { PORTS, getPortCoords } from '../utils/connectorUtils.js';
 
 const PORT_DISPLAY_RADIUS = 8;
-const NEARBY_PORT_DISTANCE = 200;
 
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
@@ -481,21 +480,10 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
               portTargets.push(obj);
             }
           } else if (isLineSelected) {
-            const pts = selectedObj.points || [0, 0, 200, 0];
-            const ep1x = selectedObj.x + pts[0];
-            const ep1y = selectedObj.y + pts[1];
-            const ep2x = selectedObj.x + pts[pts.length - 2];
-            const ep2y = selectedObj.y + pts[pts.length - 1];
             for (const obj of Object.values(objects)) {
               if (obj.id === selectedId) continue;
               if (obj.type === 'line' || obj.type === 'arrow') continue;
-              const cx = (obj.x ?? 0) + (obj.width ?? 150) / 2;
-              const cy = (obj.y ?? 0) + (obj.height ?? 150) / 2;
-              const d1 = Math.sqrt((cx - ep1x) ** 2 + (cy - ep1y) ** 2);
-              const d2 = Math.sqrt((cx - ep2x) ** 2 + (cy - ep2y) ** 2);
-              if (d1 < NEARBY_PORT_DISTANCE || d2 < NEARBY_PORT_DISTANCE) {
-                portTargets.push(obj);
-              }
+              portTargets.push(obj);
             }
           }
 

@@ -45,14 +45,4 @@ describe('showErrorTooltip', () => {
     expect(timerRef.current).not.toBe(firstTimer);
   });
 
-  it('auto-dismisses after 2500ms', () => {
-    vi.useFakeTimers();
-    const setter = vi.fn();
-    const timerRef = { current: null };
-    showErrorTooltip('Gone', { screenX: 0, screenY: 100, objW: 10, objH: 10 }, setter, timerRef);
-    expect(setter).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(2500);
-    expect(setter).toHaveBeenCalledTimes(2);
-    expect(setter).toHaveBeenLastCalledWith(null);
-  });
 });

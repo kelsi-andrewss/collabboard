@@ -70,6 +70,15 @@
   transform: scale(1.05);
 }
 
+.ai-fab:focus {
+  outline: none;
+  background: var(--accent-primary);
+}
+
+.ai-fab:active {
+  background: var(--accent-primary);
+}
+
 .ai-fab.active {
   background: var(--accent-primary);
   transform: rotate(90deg);
