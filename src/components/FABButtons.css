@@ -81,13 +81,8 @@
 
 .ai-fab:focus-visible {
   background: var(--accent-primary);
-  outline: none;
-}
-
-.ai-fab:focus-visible::before,
-.ai-fab:focus::before,
-.ai-fab:active::before {
-  opacity: 0;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
 }
 
 .ai-fab.active {
