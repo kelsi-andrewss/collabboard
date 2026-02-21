@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Line, Arrow, Group, Transformer, Rect, Circle } from 'react-konva';
+import { Line, Arrow, Group, Rect, Circle } from 'react-konva';
 import { findSnapTarget, getPortCoords, SNAP_DISTANCE, PORTS } from '../utils/connectorUtils.js';
 
 const PORT_RADIUS = 5;
@@ -7,20 +7,12 @@ const PORT_RADIUS = 5;
 function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort }) {
   const lineRef = useRef();
   const groupRef = useRef();
-  const trRef = useRef();
   const [draggingEndpoint, setDraggingEndpoint] = useState(null);
   const pointsRef = useRef(points);
 
   useEffect(() => {
     pointsRef.current = points;
   }, [points]);
-
-  useEffect(() => {
-    if (isSelected && trRef.current && lineRef.current) {
-      trRef.current.nodes([lineRef.current]);
-      trRef.current.getLayer().batchDraw();
-    }
-  }, [isSelected]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -31,8 +23,6 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, onDelete, id]);
-
-  const snap = (v) => snapToGrid ? Math.round(v / gridSize) * gridSize : v;
 
   const isArrow = type === 'arrow';
   const ShapeComponent = isArrow ? Arrow : Line;
@@ -59,16 +49,35 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
     }
   }
 
+  function recalcBounds(pts, groupX, groupY) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      if (pts[i] < minX) minX = pts[i];
+      if (pts[i] > maxX) maxX = pts[i];
+      if (pts[i + 1] < minY) minY = pts[i + 1];
+      if (pts[i + 1] > maxY) maxY = pts[i + 1];
+    }
+    const newX = groupX + minX;
+    const newY = groupY + minY;
+    const newWidth = maxX - minX;
+    const newHeight = maxY - minY;
+    const relativePts = [];
+    for (let i = 0; i < pts.length; i += 2) {
+      relativePts.push(pts[i] - minX);
+      relativePts.push(pts[i + 1] - minY);
+    }
+    return { x: newX, y: newY, width: newWidth, height: newHeight, points: relativePts };
+  }
+
   return (
     <>
       <Group
         ref={groupRef}
         name={id}
-        x={dragPos?.id === id ? dragPos.x : x}
-        y={dragPos?.id === id ? dragPos.y : y}
+        x={x}
+        y={y}
         rotation={rotation}
-        draggable={canEdit}
-        dragDistance={3}
+        draggable={false}
         onClick={(e) => {
           e.cancelBubble = true;
           onSelect(id);
@@ -76,47 +85,6 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
         onTap={(e) => {
           e.cancelBubble = true;
           onSelect(id);
-        }}
-        onDragStart={() => {
-          if (dragLayerRef?.current && groupRef.current) {
-            groupRef.current.moveTo(dragLayerRef.current);
-          }
-        }}
-        onDragMove={(e) => {
-          if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
-        }}
-        onDragEnd={(e) => {
-          const rawX = e.target.x();
-          const rawY = e.target.y();
-          const pos = { x: snap(rawX), y: snap(rawY) };
-          if (mainLayerRef?.current && groupRef.current) {
-            groupRef.current.moveTo(mainLayerRef.current);
-            mainLayerRef.current.batchDraw();
-          }
-          onDragEnd(id, pos);
-        }}
-        onTransformEnd={(e) => {
-          const node = lineRef.current;
-          const group = e.target;
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
-
-          const scaledPoints = [];
-          const pts = node.points();
-          for (let i = 0; i < pts.length; i += 2) {
-            scaledPoints.push(pts[i] * scaleX);
-            scaledPoints.push(pts[i + 1] * scaleY);
-          }
-
-          node.scaleX(1);
-          node.scaleY(1);
-
-          onTransformEnd(id, {
-            x: group.x(),
-            y: group.y(),
-            rotation: group.rotation(),
-            points: scaledPoints,
-          });
         }}
       >
         <ShapeComponent
@@ -181,7 +149,10 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                   node.y(newY);
                   setDraggingEndpoint(null);
                   if (onUpdate) {
-                    onUpdate(id, { points: newPts, startConnectedId: connId, startConnectedPort: connPort });
+                    const groupX = groupNode ? groupNode.x() : x;
+                    const groupY = groupNode ? groupNode.y() : y;
+                    const bounds = recalcBounds(newPts, groupX, groupY);
+                    onUpdate(id, { ...bounds, startConnectedId: connId, startConnectedPort: connPort });
                   }
                 }}
               />
@@ -228,7 +199,10 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                   node.y(newY);
                   setDraggingEndpoint(null);
                   if (onUpdate) {
-                    onUpdate(id, { points: newPts, endConnectedId: connId, endConnectedPort: connPort });
+                    const groupX = groupNode ? groupNode.x() : x;
+                    const groupY = groupNode ? groupNode.y() : y;
+                    const bounds = recalcBounds(newPts, groupX, groupY);
+                    onUpdate(id, { ...bounds, endConnectedId: connId, endConnectedPort: connPort });
                   }
                 }}
               />
@@ -264,24 +238,6 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           perfectDrawEnabled={false}
         />
       ))}
-      {isSelected && canEdit && (
-        <Transformer
-          ref={trRef}
-          rotateEnabled={true}
-          rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
-          enabledAnchors={['middle-left', 'middle-right']}
-          anchorSize={10}
-          anchorStrokeWidth={2}
-          anchorCornerRadius={2}
-          anchorHitStrokeWidth={12}
-          boundBoxFunc={(oldBox, newBox) => {
-            if (Math.abs(newBox.width) < 5 && Math.abs(newBox.height) < 5) {
-              return oldBox;
-            }
-            return newBox;
-          }}
-        />
-      )}
     </>
   );
 }
