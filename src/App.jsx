@@ -717,7 +717,6 @@ export function App() {
             )}
             {contextMenu && canEdit && (() => {
               const obj = contextMenu.targetId ? board.objects[contextMenu.targetId] : null;
-              const hasClipboard = clipboardRef.current.length > 0;
               const multiSelected = selectedIds.size > 1 && contextMenu.targetId && selectedIds.has(contextMenu.targetId);
               const objItems = obj
                 ? [
@@ -783,34 +782,32 @@ export function App() {
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
                   ]
                 : [
-                    ...(hasClipboard ? [
-                      { label: 'Paste', shortcut: '⌘V', action: async () => {
-                        let items = clipboardRef.current;
-                        if (navigator.clipboard?.readText) {
-                          try {
-                            const text = await navigator.clipboard.readText();
-                            const parsed = JSON.parse(text);
-                            if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
-                              items = parsed.objects;
-                              clipboardRef.current = items;
-                            }
-                          } catch {
-                            // not valid board JSON — fall back to in-memory clipboard
+                    { label: 'Paste', shortcut: '⌘V', action: async () => {
+                      let items = clipboardRef.current;
+                      if (navigator.clipboard?.readText) {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          const parsed = JSON.parse(text);
+                          if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+                            items = parsed.objects;
+                            clipboardRef.current = items;
                           }
+                        } catch {
+                          // not valid board JSON — fall back to in-memory clipboard
                         }
-                        if (items.length === 0) return;
-                        const OFFSET = 20;
-                        const firstX = items[0].x + OFFSET;
-                        const firstY = items[0].y + OFFSET;
-                        const dx = contextMenu.canvasX - firstX;
-                        const dy = contextMenu.canvasY - firstY;
-                        items.forEach((snapshot, i) => {
-                          const x = i === 0 ? contextMenu.canvasX : snapshot.x + OFFSET + dx;
-                          const y = i === 0 ? contextMenu.canvasY : snapshot.y + OFFSET + dy;
-                          board.addObject({ ...snapshot, x, y });
-                        });
-                      }},
-                    ] : []),
+                      }
+                      if (items.length === 0) return;
+                      const OFFSET = 20;
+                      const firstX = items[0].x + OFFSET;
+                      const firstY = items[0].y + OFFSET;
+                      const dx = contextMenu.canvasX - firstX;
+                      const dy = contextMenu.canvasY - firstY;
+                      items.forEach((snapshot, i) => {
+                        const x = i === 0 ? contextMenu.canvasX : snapshot.x + OFFSET + dx;
+                        const y = i === 0 ? contextMenu.canvasY : snapshot.y + OFFSET + dy;
+                        board.addObject({ ...snapshot, x, y });
+                      });
+                    }},
                     { label: 'Select All', shortcut: '⌘A', action: () => {
                       const allIds = new Set(Object.keys(board.objects));
                       setSelectedIds(allIds);
