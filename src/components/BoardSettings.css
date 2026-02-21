@@ -31,6 +31,8 @@
 }
 
 .board-settings-section {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 24px;
 }
 
