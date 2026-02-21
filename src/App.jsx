@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Eye } from 'lucide-react';
+import { Sun, Moon, Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
@@ -53,9 +53,12 @@ export function App() {
     const bgRect = stage.findOne('.bg-rect');
     const originalFill = bgRect ? bgRect.fill() : null;
     try {
+      const captureOpts = { pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 };
       if (bgRect) bgRect.fill('#ffffff');
-      const dataUrl = stage.toDataURL({ pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 });
-      saveThumbnail(bId, dataUrl).catch(() => {});
+      const lightUrl = stage.toDataURL(captureOpts);
+      if (bgRect) bgRect.fill('#111827');
+      const darkUrl = stage.toDataURL(captureOpts);
+      saveThumbnail(bId, lightUrl, darkUrl).catch(() => {});
     } catch {
     } finally {
       if (bgRect) bgRect.fill(originalFill);
@@ -269,6 +272,7 @@ export function App() {
   const boardRef = useRef(board);
   boardRef.current = board;
   const handleDeleteRef = useRef(null);
+  const handleDeleteMultipleRef = useRef(null);
   const handleDuplicateRef = useRef(null);
   const handleDuplicateMultipleRef = useRef(null);
   const clipboardRef = useRef([]);
@@ -294,7 +298,7 @@ export function App() {
         const ids = selectedIdsRef.current;
         if (ids.size > 0) {
           e.preventDefault();
-          for (const id of ids) handleDeleteRef.current?.(id);
+          handleDeleteMultipleRef.current?.(ids);
           setSelectedIds(new Set());
           return;
         }
@@ -373,7 +377,7 @@ export function App() {
             snapshots.push(rest);
           }
           clipboardRef.current = snapshots;
-          for (const id of ids) handleDeleteRef.current?.(id);
+          handleDeleteMultipleRef.current?.(ids);
           setSelectedIds(new Set());
         } else {
           const id = selectedIdRef.current;
@@ -445,9 +449,11 @@ export function App() {
     handleDragMove,
     handleContainedDragEnd,
     handleDeleteWithCleanup,
+    handleDeleteMultiple,
     handleSelectAndRaise,
     handleDuplicate,
     handleDuplicateMultiple,
+    handleFrameAutoFit,
   } = makeObjectHandlers({
     board, stageRef, snap, setDragState: updateDragState, setSelectedId,
     stagePos, stageScale, setShapeColors,
@@ -455,6 +461,7 @@ export function App() {
     setResizeTooltip, resizeTooltipTimer,
   });
   handleDeleteRef.current = handleDeleteWithCleanup;
+  handleDeleteMultipleRef.current = handleDeleteMultiple;
   handleDuplicateRef.current = handleDuplicate;
   handleDuplicateMultipleRef.current = handleDuplicateMultiple;
 
@@ -503,7 +510,7 @@ export function App() {
   };
 
   const { handleMouseMove, handleWheel, handleStageClick: handleStageClickBase, handleRecenter } = makeStageHandlers({
-    setSelectedId, setStagePos, setStageScale, presence, objectsRef,
+    setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
   });
   handleRecenterRef.current = handleRecenter;
@@ -635,6 +642,7 @@ export function App() {
                 moveBoard={moveBoard}
                 moveGroup={moveGroup}
                 createSubgroup={createSubgroup}
+                darkMode={darkMode}
               />
             ) : (
               <BoardSelector
@@ -673,7 +681,25 @@ export function App() {
             />
           </div>
         )}
-        {user && boardId && (
+        {user && boardId && !board.loading && !currentBoard && (
+          <div className="board-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 24px' }}>
+              <button
+                onClick={navigateHome}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '6px 0' }}
+              >
+                <ArrowLeft size={16} />
+                All Boards
+              </button>
+            </div>
+            <div className="empty-state">
+              <Lock size={32} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>You don't have permission to view this board</p>
+              <p>Ask the board owner to invite you</p>
+            </div>
+          </div>
+        )}
+        {user && boardId && (board.loading || currentBoard) && (
           <div className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
             {board.loading && (
               <div className="board-loading">
@@ -683,7 +709,7 @@ export function App() {
             <BoardCanvas
               stageRef={stageRef}
               state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, connectorState, pendingTool }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, onPortClick }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, onPortClick, handleFrameAutoFit }}
             />
             <FABButtons
               state={{ showAI, darkMode, isOffCenter, canEdit }}
@@ -732,7 +758,7 @@ export function App() {
                           snapshots.push(rest);
                         }
                         clipboardRef.current = snapshots;
-                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        handleDeleteMultiple(selectedIds);
                         setSelectedIds(new Set());
                       }},
                       { label: 'Copy Selection', shortcut: '⌘C', action: () => {
@@ -762,7 +788,7 @@ export function App() {
                     ),
                     { label: 'Delete', shortcut: '⌫', danger: true, action: () => {
                       if (multiSelected) {
-                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        handleDeleteMultiple(selectedIds);
                         setSelectedIds(new Set());
                       } else {
                         handleDeleteWithCleanup(obj.id);

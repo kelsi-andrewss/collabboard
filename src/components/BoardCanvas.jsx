@@ -101,7 +101,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
     handleDragMove, handleResizeClamped, setSelectedId, onContextMenu, onTypingChange,
-    setSelectedIds, onPortClick,
+    setSelectedIds, onPortClick, handleFrameAutoFit,
   } = handlers;
 
   const [selRect, setSelRect] = useState(null);
@@ -376,6 +376,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
                   canEdit={canEdit}
+                  onAutoFit={handleFrameAutoFit}
                 />
               );
             }

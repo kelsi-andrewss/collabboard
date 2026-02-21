@@ -3,6 +3,7 @@ import {
   findFrameAtPoint,
   hasDisallowedSiblingOverlap,
   computeAncestorExpansions,
+  computeAutoFitBounds,
   getDescendantIds,
   rectsOverlap,
   getLineBounds,
@@ -237,15 +238,58 @@ export function makeObjectHandlers({
     }
   };
 
+  const handleDeleteMultiple = (ids) => {
+    const idsSet = ids instanceof Set ? ids : new Set(ids);
+    const allUpdates = [];
+    const allDeleteIds = [];
+    for (const id of idsSet) {
+      const obj = board.objects[id];
+      if (!obj) continue;
+      if (obj.type === 'frame') {
+        const children = Object.values(board.objects).filter(o => o.frameId === id);
+        for (const c of children) {
+          if (!idsSet.has(c.id)) {
+            allUpdates.push({ id: c.id, data: { frameId: null } });
+          }
+        }
+      }
+      allDeleteIds.push(id);
+    }
+    board.batchWriteAndDelete(allUpdates, allDeleteIds);
+    setSelectedId(null);
+  };
+
+  const handleFrameAutoFit = (frameId) => {
+    const frame = board.objects[frameId];
+    if (!frame) return;
+    const fitBounds = computeAutoFitBounds(frame, board.objects);
+    if (!fitBounds) return;
+    const allUpdates = [{ id: frameId, data: fitBounds }];
+    if (frame.frameId) {
+      const expansions = computeAncestorExpansions(
+        fitBounds.x, fitBounds.y, fitBounds.width, fitBounds.height,
+        frame.frameId, board.objects, FRAME_MARGIN
+      );
+      for (const exp of expansions) allUpdates.push(exp);
+    }
+    if (allUpdates.length === 1) {
+      board.updateObject(frameId, fitBounds);
+    } else {
+      board.batchUpdateObjects(allUpdates);
+    }
+  };
+
   return {
     updateActiveColor,
     handleDragMove,
     handleContainedDragEnd,
     handleDeleteWithCleanup,
+    handleDeleteMultiple,
     handleBringToFront,
     handleSendToBack,
     handleSelectAndRaise,
     handleDuplicate,
     handleDuplicateMultiple,
+    handleFrameAutoFit,
   };
 }

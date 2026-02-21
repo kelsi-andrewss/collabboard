@@ -146,6 +146,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleGroupDragOver = (e, targetGroupId) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     setDragOverTargetId(targetGroupId);
   };
@@ -656,6 +657,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDropUnbound={handleGroupDrop}
                         onGroupDragLeaveUnbound={handleGroupDragLeave}
                         onAddBoard={handleQuickAddBoard}
+                        darkMode={darkMode}
                       />
                     );
                   }
@@ -666,6 +668,9 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   const isOwner = b.ownerId === user?.uid;
                   const isDragging = draggingBoard?.boardId === b.id;
                   const groupBreadcrumb = getGroupBreadcrumb(b.groupId);
+                  const thumb = darkMode
+                    ? (b.thumbnailDark || b.thumbnailLight || b.thumbnail)
+                    : (b.thumbnailLight || b.thumbnailDark || b.thumbnail);
                   let standaloneCardRef = null;
                   return (
                     <div
@@ -675,8 +680,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                       onClick={() => onNavigateToBoard ? onNavigateToBoard([], b.id, b.name) : onSelectBoard(b.id, b.name)}
                     >
                       <div className="board-card-thumbnail">
-                        {b.thumbnail
-                          ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                        {thumb
+                          ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
                           : <div className="board-card-thumbnail-placeholder" />
                         }
                         {isOwner && (
