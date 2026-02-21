@@ -31,10 +31,10 @@ export function tangentLines(cx, cy, radius, px, py) {
   const dx = px - cx, dy = py - cy;
   const dist = Math.hypot(dx, dy);
   if (dist <= radius) return [];
-  const a = Math.asin(radius / dist);
+  const a = Math.acos(radius / dist);
   const b = Math.atan2(dy, dx);
   return [
-    { x1: px, y1: py, x2: cx + radius * Math.sin(b + a), y2: cy - radius * Math.cos(b + a) },
-    { x1: px, y1: py, x2: cx + radius * Math.sin(b - a), y2: cy - radius * Math.cos(b - a) },
+    { x1: px, y1: py, x2: cx + radius * Math.cos(b + a), y2: cy + radius * Math.sin(b + a) },
+    { x1: px, y1: py, x2: cx + radius * Math.cos(b - a), y2: cy + radius * Math.sin(b - a) },
   ];
 }
