@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Line, Arrow, Group, Transformer, Rect, Circle } from 'react-konva';
 import { findSnapTarget, getPortCoords } from '../utils/connectorUtils.js';
 
@@ -10,8 +10,12 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
   const lineRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
-  const draggingEndpointRef = useRef(null);
-  const snapIndicatorRef = useRef(null);
+  const [draggingEndpoint, setDraggingEndpoint] = useState(null);
+  const pointsRef = useRef(points);
+
+  useEffect(() => {
+    pointsRef.current = points;
+  }, [points]);
 
   useEffect(() => {
     if (isSelected && trRef.current && lineRef.current) {
@@ -37,14 +41,14 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
   const arrowProps = isArrow ? { pointerLength: 12, pointerWidth: 10, fill: isMultiSelected ? '#6366f1' : color } : {};
 
   const nearbyPorts = [];
-  if (draggingEndpointRef.current && objects) {
+  if (draggingEndpoint && objects) {
     const excludeIds = new Set([id]);
     for (const obj of Object.values(objects)) {
       if (excludeIds.has(obj.id)) continue;
       if (obj.type === 'line' || obj.type === 'arrow') continue;
       for (const port of PORTS) {
         const p = getPortCoords(obj, port);
-        const epIdx = draggingEndpointRef.current === 'start' ? 0 : points.length - 2;
+        const epIdx = draggingEndpoint === 'start' ? 0 : points.length - 2;
         const epX = x + points[epIdx];
         const epY = y + points[epIdx + 1];
         const dx = epX - p.x;
@@ -140,14 +144,14 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                 x={startX}
                 y={startY}
                 radius={6}
-                fill="#2563eb"
+                fill="#3b82f6"
                 stroke="#ffffff"
                 strokeWidth={2}
                 draggable
-                onDragStart={() => { draggingEndpointRef.current = 'start'; }}
+                onDragStart={() => { setDraggingEndpoint('start'); }}
                 onDragMove={(e) => {
                   const node = e.target;
-                  const newPts = [...pts];
+                  const newPts = [...pointsRef.current];
                   newPts[0] = node.x();
                   newPts[1] = node.y();
                   if (lineRef.current) lineRef.current.points(newPts);
@@ -172,12 +176,12 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                       connPort = snapTarget.port;
                     }
                   }
-                  const newPts = [...pts];
+                  const newPts = [...pointsRef.current];
                   newPts[0] = newX;
                   newPts[1] = newY;
                   node.x(newX);
                   node.y(newY);
-                  draggingEndpointRef.current = null;
+                  setDraggingEndpoint(null);
                   if (onUpdate) {
                     onUpdate(id, { points: newPts, startConnectedId: connId, startConnectedPort: connPort });
                   }
@@ -187,14 +191,14 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                 x={endX}
                 y={endY}
                 radius={6}
-                fill="#2563eb"
+                fill="#3b82f6"
                 stroke="#ffffff"
                 strokeWidth={2}
                 draggable
-                onDragStart={() => { draggingEndpointRef.current = 'end'; }}
+                onDragStart={() => { setDraggingEndpoint('end'); }}
                 onDragMove={(e) => {
                   const node = e.target;
-                  const newPts = [...pts];
+                  const newPts = [...pointsRef.current];
                   newPts[newPts.length - 2] = node.x();
                   newPts[newPts.length - 1] = node.y();
                   if (lineRef.current) lineRef.current.points(newPts);
@@ -219,12 +223,12 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                       connPort = snapTarget.port;
                     }
                   }
-                  const newPts = [...pts];
+                  const newPts = [...pointsRef.current];
                   newPts[newPts.length - 2] = newX;
                   newPts[newPts.length - 1] = newY;
                   node.x(newX);
                   node.y(newY);
-                  draggingEndpointRef.current = null;
+                  setDraggingEndpoint(null);
                   if (onUpdate) {
                     onUpdate(id, { points: newPts, endConnectedId: connId, endConnectedPort: connPort });
                   }
@@ -255,8 +259,8 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           x={p.x}
           y={p.y}
           radius={PORT_RADIUS}
-          fill={p.isSnapped ? '#2563eb' : 'transparent'}
-          stroke={p.isSnapped ? '#2563eb' : '#94a3b8'}
+          fill={p.isSnapped ? '#3b82f6' : 'transparent'}
+          stroke={p.isSnapped ? '#3b82f6' : '#64748b'}
           strokeWidth={1.5}
           listening={false}
           perfectDrawEnabled={false}
