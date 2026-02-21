@@ -218,6 +218,37 @@ export function findObjectsToAbsorb(frameId, frameRect, allObjects) {
     .map(o => o.id);
 }
 
+export function computeAutoFitBounds(frame, allObjects) {
+  const children = Object.values(allObjects).filter(o => o.frameId === frame.id);
+  if (children.length === 0) return null;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const child of children) {
+    if (child.type === 'line' || child.type === 'arrow') {
+      const lb = getLineBounds(child);
+      if (lb.x < minX) minX = lb.x;
+      if (lb.y < minY) minY = lb.y;
+      if (lb.x + lb.width > maxX) maxX = lb.x + lb.width;
+      if (lb.y + lb.height > maxY) maxY = lb.y + lb.height;
+    } else {
+      const cx = child.x ?? 0, cy = child.y ?? 0;
+      const cw = child.width ?? 150, ch = child.height ?? 150;
+      if (cx < minX) minX = cx;
+      if (cy < minY) minY = cy;
+      if (cx + cw > maxX) maxX = cx + cw;
+      if (cy + ch > maxY) maxY = cy + ch;
+    }
+  }
+
+  const titleBarHeight = Math.max(32, Math.min(52, frame.height * 0.12));
+  const newX = minX - FRAME_MARGIN;
+  const newY = minY - titleBarHeight - FRAME_MARGIN;
+  const newWidth = Math.max(100, maxX - minX + FRAME_MARGIN * 2);
+  const newHeight = Math.max(80, maxY - minY + titleBarHeight + FRAME_MARGIN * 2);
+
+  return { x: newX, y: newY, width: newWidth, height: newHeight };
+}
+
 export function getDescendantIds(frameId, objects) {
   const ids = new Set();
   const collect = (fid) => {

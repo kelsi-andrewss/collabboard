@@ -435,6 +435,7 @@ export function App() {
     handleSelectAndRaise,
     handleDuplicate,
     handleDuplicateMultiple,
+    handleFrameAutoFit,
   } = makeObjectHandlers({
     board, stageRef, snap, setDragState: updateDragState, setSelectedId,
     stagePos, stageScale, setShapeColors,
@@ -632,7 +633,7 @@ export function App() {
             <BoardCanvas
               stageRef={stageRef}
               state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             <FABButtons
               state={{ showAI, darkMode, isOffCenter, canEdit }}
