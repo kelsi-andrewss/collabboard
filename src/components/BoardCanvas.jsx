@@ -22,18 +22,26 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
   if (pendingTool === 'line') {
     return (
       <Layer ref={layerRef}>
-        <Line
-          ref={nodeRef}
-          x={OFFSCREEN}
-          y={OFFSCREEN}
-          points={[0, 0, 200 / stageScale, 0]}
-          stroke="#6366f1"
-          strokeWidth={strokeW * 2}
-          dash={[dashLen, dashGap]}
-          opacity={ghostOpacity}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Line
+            points={[0, 0, 200 / stageScale, 0]}
+            stroke="#6366f1"
+            strokeWidth={strokeW * 2}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={8 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
       </Layer>
     );
   }
@@ -41,21 +49,29 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
   if (pendingTool === 'arrow') {
     return (
       <Layer ref={layerRef}>
-        <Arrow
-          ref={nodeRef}
-          x={OFFSCREEN}
-          y={OFFSCREEN}
-          points={[0, 0, 200 / stageScale, 0]}
-          stroke="#6366f1"
-          strokeWidth={strokeW * 2}
-          fill="#6366f1"
-          pointerLength={10 / stageScale}
-          pointerWidth={8 / stageScale}
-          dash={[dashLen, dashGap]}
-          opacity={ghostOpacity}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Arrow
+            points={[0, 0, 200 / stageScale, 0]}
+            stroke="#6366f1"
+            strokeWidth={strokeW * 2}
+            fill="#6366f1"
+            pointerLength={10 / stageScale}
+            pointerWidth={8 / stageScale}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={8 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
       </Layer>
     );
   }
@@ -65,20 +81,28 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
     const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
     return (
       <Layer ref={layerRef}>
-        <Rect
-          ref={nodeRef}
-          x={OFFSCREEN}
-          y={OFFSCREEN}
-          width={fw}
-          height={fh}
-          fill="rgba(99,102,241,0.06)"
-          stroke="#6366f1"
-          strokeWidth={strokeW}
-          dash={[dashLen, dashGap]}
-          opacity={ghostOpacity}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Rect
+            width={fw}
+            height={fh}
+            fill="rgba(99,102,241,0.06)"
+            stroke="#6366f1"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={fh + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
       </Layer>
     );
   }
@@ -87,21 +111,29 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
     const sw = 200 / stageScale;
     return (
       <Layer ref={layerRef}>
-        <Rect
-          ref={nodeRef}
-          x={OFFSCREEN}
-          y={OFFSCREEN}
-          width={sw}
-          height={sw}
-          fill="rgba(250,204,21,0.25)"
-          stroke="rgba(250,204,21,0.8)"
-          strokeWidth={strokeW}
-          dash={[dashLen, dashGap]}
-          cornerRadius={4 / stageScale}
-          opacity={ghostOpacity}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Rect
+            width={sw}
+            height={sw}
+            fill="rgba(250,204,21,0.25)"
+            stroke="rgba(250,204,21,0.8)"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            cornerRadius={4 / stageScale}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={sw + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
       </Layer>
     );
   }
@@ -132,6 +164,17 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
             opacity={0.8}
             perfectDrawEnabled={false}
           />
+          <Text
+            x={0}
+            y={th + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
         </Group>
       </Layer>
     );
@@ -139,20 +182,28 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
 
   return (
     <Layer ref={layerRef}>
-      <Rect
-        ref={nodeRef}
-        x={OFFSCREEN}
-        y={OFFSCREEN}
-        width={100}
-        height={100}
-        fill="rgba(99,102,241,0.08)"
-        stroke="#6366f1"
-        strokeWidth={strokeW}
-        dash={[dashLen, dashGap]}
-        opacity={ghostOpacity}
-        listening={false}
-        perfectDrawEnabled={false}
-      />
+      <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+        <Rect
+          width={100}
+          height={100}
+          fill="rgba(99,102,241,0.08)"
+          stroke="#6366f1"
+          strokeWidth={strokeW}
+          dash={[dashLen, dashGap]}
+          perfectDrawEnabled={false}
+        />
+        <Text
+          x={0}
+          y={100 + 4 / stageScale}
+          text="Press Esc to cancel"
+          fontSize={12 / stageScale}
+          fontFamily="sans-serif"
+          fill="#6366f1"
+          opacity={0.7}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Group>
     </Layer>
   );
 }

@@ -44,10 +44,10 @@ export function makeStageHandlers({
     if (e.target === e.target.getStage() || e.target.name() === 'bg-rect') {
       if (pendingToolRef?.current && onPendingToolPlace) {
         const stage = e.target.getStage();
-        const pointer = stage.getPointerPosition();
-        if (pointer) {
-          const canvasX = (pointer.x - stage.x()) / stage.scaleX();
-          const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+        const pos = stage.getRelativePointerPosition();
+        if (pos) {
+          const canvasX = pos.x;
+          const canvasY = pos.y;
           const count = pendingToolCountRef?.current || 0;
           onPendingToolPlace(pendingToolRef.current, canvasX + count * 20, canvasY + count * 20);
         }

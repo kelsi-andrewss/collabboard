@@ -130,6 +130,7 @@ describe('handleStageClick', () => {
 
     const fakeStage = {
       getPointerPosition: () => ({ x: 100, y: 200 }),
+      getRelativePointerPosition: () => ({ x: 100, y: 200 }),
       x: () => 0,
       y: () => 0,
       scaleX: () => 1,
