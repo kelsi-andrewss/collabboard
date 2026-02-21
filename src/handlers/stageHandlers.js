@@ -52,7 +52,7 @@ export function makeStageHandlers({
           const canvasX = pos.x;
           const canvasY = pos.y;
           const count = pendingToolCountRef?.current || 0;
-          onPendingToolPlace(pendingToolRef.current, canvasX + count * 20, canvasY + count * 20);
+          onPendingToolPlace(pendingToolRef.current, canvasX, canvasY);
         }
         return;
       }

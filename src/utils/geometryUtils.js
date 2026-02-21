@@ -38,3 +38,8 @@ export function tangentLines(cx, cy, radius, px, py) {
     { x1: px, y1: py, x2: cx + radius * Math.cos(b - a), y2: cy + radius * Math.sin(b - a) },
   ];
 }
+
+export function centeredPlacementOffset(canvasX, canvasY, nominalSize, scale) {
+  const sz = Math.round(nominalSize / scale);
+  return { x: canvasX - sz / 2, y: canvasY - sz / 2, sz };
+}
