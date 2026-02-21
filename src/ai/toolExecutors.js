@@ -1,3 +1,5 @@
+import { regularPolygonVertices, perpendicularBisector, angleBisector, tangentLines } from '../utils/geometryUtils.js';
+
 // context shape:
 // {
 //   act,                   () => boardActionsRef.current
@@ -372,5 +374,95 @@ export async function executeToolCall(toolName, toolArgs, context) {
       }
       await act().createBoard(finalName, group || null);
     }
+  } else if (toolName === "drawCircle") {
+    const { cx, cy, radius, color = '#3b82f6' } = toolArgs;
+    await act().addObject({
+      type: 'circle',
+      x: cx - radius,
+      y: cy - radius,
+      width: radius * 2,
+      height: radius * 2,
+      color,
+      strokeWidth: 2,
+    });
+  } else if (toolName === "drawRegularPolygon") {
+    const { cx, cy, radius, sides, color = '#333333' } = toolArgs;
+    const pts = regularPolygonVertices(cx, cy, radius, sides);
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      const ox = Math.min(a.x, b.x);
+      const oy = Math.min(a.y, b.y);
+      await act().addObject({
+        type: 'line',
+        x: ox,
+        y: oy,
+        width: Math.abs(b.x - a.x) || 1,
+        height: Math.abs(b.y - a.y) || 1,
+        points: [a.x - ox, a.y - oy, b.x - ox, b.y - oy],
+        color,
+        strokeWidth: 2,
+      });
+    }
+  } else if (toolName === "drawPerpendicularBisector") {
+    const { x1, y1, x2, y2, length, color = '#333333' } = toolArgs;
+    const seg = perpendicularBisector(x1, y1, x2, y2, length);
+    const ox = Math.min(seg.x1, seg.x2);
+    const oy = Math.min(seg.y1, seg.y2);
+    await act().addObject({
+      type: 'line',
+      x: ox,
+      y: oy,
+      width: Math.abs(seg.x2 - seg.x1) || 1,
+      height: Math.abs(seg.y2 - seg.y1) || 1,
+      points: [seg.x1 - ox, seg.y1 - oy, seg.x2 - ox, seg.y2 - oy],
+      color,
+      strokeWidth: 2,
+    });
+  } else if (toolName === "drawAngleBisector") {
+    const { vx, vy, ax, ay, bx, by, length, color = '#333333' } = toolArgs;
+    const seg = angleBisector(vx, vy, ax, ay, bx, by, length);
+    const ox = Math.min(seg.x1, seg.x2);
+    const oy = Math.min(seg.y1, seg.y2);
+    await act().addObject({
+      type: 'line',
+      x: ox,
+      y: oy,
+      width: Math.abs(seg.x2 - seg.x1) || 1,
+      height: Math.abs(seg.y2 - seg.y1) || 1,
+      points: [seg.x1 - ox, seg.y1 - oy, seg.x2 - ox, seg.y2 - oy],
+      color,
+      strokeWidth: 2,
+    });
+  } else if (toolName === "drawTangentLine") {
+    const { cx, cy, radius, px, py, color = '#333333' } = toolArgs;
+    const lines = tangentLines(cx, cy, radius, px, py);
+    for (const seg of lines) {
+      const ox = Math.min(seg.x1, seg.x2);
+      const oy = Math.min(seg.y1, seg.y2);
+      await act().addObject({
+        type: 'line',
+        x: ox,
+        y: oy,
+        width: Math.abs(seg.x2 - seg.x1) || 1,
+        height: Math.abs(seg.y2 - seg.y1) || 1,
+        points: [seg.x1 - ox, seg.y1 - oy, seg.x2 - ox, seg.y2 - oy],
+        color,
+        strokeWidth: 2,
+      });
+    }
+  } else if (toolName === "drawDistanceLabel") {
+    const { x1, y1, x2, y2, label } = toolArgs;
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const text = label !== undefined ? label : String(Math.round(Math.hypot(x2 - x1, y2 - y1)));
+    await act().addObject({
+      type: 'text',
+      x: mx,
+      y: my,
+      text,
+      width: 200,
+      fontSize: 16,
+      color: '#1a1a1a',
+    });
   }
 }

@@ -225,6 +225,100 @@ export const toolDeclarations = [
       },
       required: ["x", "y", "text"]
     }
+  },
+  {
+    name: "drawCircle",
+    description: "Draws a circle on the board centered at (cx, cy) with the given radius. Use for Euclidean geometry constructions.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        cx: { type: "NUMBER", description: "X coordinate of the center" },
+        cy: { type: "NUMBER", description: "Y coordinate of the center" },
+        radius: { type: "NUMBER", description: "Radius of the circle" },
+        color: { type: "STRING", description: "Hex color code (default '#3b82f6')" }
+      },
+      required: ["cx", "cy", "radius"]
+    }
+  },
+  {
+    name: "drawRegularPolygon",
+    description: "Draws a regular polygon (equilateral triangle, square, pentagon, hexagon, etc.) as a series of connected line segments. Use for Euclidean geometry constructions.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        cx: { type: "NUMBER", description: "X coordinate of the center" },
+        cy: { type: "NUMBER", description: "Y coordinate of the center" },
+        radius: { type: "NUMBER", description: "Circumradius — distance from center to each vertex" },
+        sides: { type: "NUMBER", description: "Number of sides (integer between 3 and 12)" },
+        color: { type: "STRING", description: "Hex color code (default '#333333')" }
+      },
+      required: ["cx", "cy", "radius", "sides"]
+    }
+  },
+  {
+    name: "drawPerpendicularBisector",
+    description: "Draws the perpendicular bisector of a line segment defined by two endpoints. The bisector passes through the midpoint and is perpendicular to the segment.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        x1: { type: "NUMBER", description: "X coordinate of the first endpoint" },
+        y1: { type: "NUMBER", description: "Y coordinate of the first endpoint" },
+        x2: { type: "NUMBER", description: "X coordinate of the second endpoint" },
+        y2: { type: "NUMBER", description: "Y coordinate of the second endpoint" },
+        length: { type: "NUMBER", description: "Total length of the bisector line to draw" },
+        color: { type: "STRING", description: "Hex color code (default '#333333')" }
+      },
+      required: ["x1", "y1", "x2", "y2", "length"]
+    }
+  },
+  {
+    name: "drawAngleBisector",
+    description: "Draws the bisector of the angle formed at a vertex by two rays. The bisector ray starts at the vertex and bisects the angle between the two rays.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        vx: { type: "NUMBER", description: "X coordinate of the vertex (angle point)" },
+        vy: { type: "NUMBER", description: "Y coordinate of the vertex (angle point)" },
+        ax: { type: "NUMBER", description: "X coordinate of a point on ray A" },
+        ay: { type: "NUMBER", description: "Y coordinate of a point on ray A" },
+        bx: { type: "NUMBER", description: "X coordinate of a point on ray B" },
+        by: { type: "NUMBER", description: "Y coordinate of a point on ray B" },
+        length: { type: "NUMBER", description: "Length of the bisector ray to draw from the vertex" },
+        color: { type: "STRING", description: "Hex color code (default '#333333')" }
+      },
+      required: ["vx", "vy", "ax", "ay", "bx", "by", "length"]
+    }
+  },
+  {
+    name: "drawTangentLine",
+    description: "Draws the tangent lines from an external point to a circle. Draws both tangent lines if the point is outside the circle.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        cx: { type: "NUMBER", description: "X coordinate of the circle center" },
+        cy: { type: "NUMBER", description: "Y coordinate of the circle center" },
+        radius: { type: "NUMBER", description: "Radius of the circle" },
+        px: { type: "NUMBER", description: "X coordinate of the external point" },
+        py: { type: "NUMBER", description: "Y coordinate of the external point" },
+        color: { type: "STRING", description: "Hex color code (default '#333333')" }
+      },
+      required: ["cx", "cy", "radius", "px", "py"]
+    }
+  },
+  {
+    name: "drawDistanceLabel",
+    description: "Places a text label at the midpoint of a segment showing the distance between two points. If no label is provided, the computed pixel distance is used.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        x1: { type: "NUMBER", description: "X coordinate of the first point" },
+        y1: { type: "NUMBER", description: "Y coordinate of the first point" },
+        x2: { type: "NUMBER", description: "X coordinate of the second point" },
+        y2: { type: "NUMBER", description: "Y coordinate of the second point" },
+        label: { type: "STRING", description: "Text to display. Defaults to the computed integer distance." }
+      },
+      required: ["x1", "y1", "x2", "y2"]
+    }
   }
 ];
 
@@ -252,6 +346,12 @@ TOOLS AVAILABLE:
 - fitFrameToContents: Resize AND reposition a frame to tightly fit all objects inside it. Use this instead of manual resizeObject+moveObject for frames.
 - createBoard: Create a new board and navigate to it. AI can create boards on behalf of the user.
 - createTextElement: Create a standalone text element (label, heading, annotation) without a sticky-note background.
+- drawCircle: Draw a circle centered at (cx, cy) with given radius. Use for geometry constructions.
+- drawRegularPolygon: Draw a regular polygon (3-12 sides) as connected line segments centered at (cx, cy).
+- drawPerpendicularBisector: Draw the perpendicular bisector of a segment defined by two endpoints.
+- drawAngleBisector: Draw the bisector ray of an angle defined by a vertex and two points on its rays.
+- drawTangentLine: Draw both tangent lines from an external point to a circle.
+- drawDistanceLabel: Place a distance label at the midpoint of a segment (defaults to computed pixel distance).
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 When creating frames with items inside them, use frameIndex to link them by document ID:
