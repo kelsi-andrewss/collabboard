@@ -348,6 +348,9 @@ export function App() {
           }
         }
         clipboardRef.current = snapshots;
+        if (snapshots.length > 0 && navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
+        }
         return;
       }
 
@@ -364,6 +367,9 @@ export function App() {
             snapshots.push(rest);
           }
           clipboardRef.current = snapshots;
+          if (snapshots.length > 0 && navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
+          }
           handleDeleteMultipleRef.current?.(ids);
           setSelectedIds(new Set());
         } else {
@@ -375,6 +381,9 @@ export function App() {
               snapshots.push(rest);
             }
             clipboardRef.current = snapshots;
+            if (snapshots.length > 0 && navigator.clipboard?.writeText) {
+              navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
+            }
             handleDeleteRef.current?.(id);
           }
         }
@@ -384,12 +393,27 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         if (!canEditRef.current) return;
         e.preventDefault();
-        const items = clipboardRef.current;
-        if (items.length === 0) return;
-        const OFFSET = 20;
-        for (const snapshot of items) {
-          boardRef.current.addObject({ ...snapshot, x: snapshot.x + OFFSET, y: snapshot.y + OFFSET });
-        }
+        const doPaste = async () => {
+          let items = clipboardRef.current;
+          if (navigator.clipboard?.readText) {
+            try {
+              const text = await navigator.clipboard.readText();
+              const parsed = JSON.parse(text);
+              if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+                items = parsed.objects;
+                clipboardRef.current = items;
+              }
+            } catch {
+              // not valid board JSON — fall back to in-memory clipboard
+            }
+          }
+          if (items.length === 0) return;
+          const OFFSET = 20;
+          for (const snapshot of items) {
+            boardRef.current.addObject({ ...snapshot, x: snapshot.x + OFFSET, y: snapshot.y + OFFSET });
+          }
+        };
+        doPaste();
         return;
       }
 
@@ -693,7 +717,6 @@ export function App() {
             )}
             {contextMenu && canEdit && (() => {
               const obj = contextMenu.targetId ? board.objects[contextMenu.targetId] : null;
-              const hasClipboard = clipboardRef.current.length > 0;
               const multiSelected = selectedIds.size > 1 && contextMenu.targetId && selectedIds.has(contextMenu.targetId);
               const objItems = obj
                 ? [
@@ -707,6 +730,9 @@ export function App() {
                           snapshots.push(rest);
                         }
                         clipboardRef.current = snapshots;
+                        if (snapshots.length > 0 && navigator.clipboard?.writeText) {
+                          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
+                        }
                         handleDeleteMultiple(selectedIds);
                         setSelectedIds(new Set());
                       }},
@@ -719,16 +745,25 @@ export function App() {
                           snapshots.push(rest);
                         }
                         clipboardRef.current = snapshots;
+                        if (snapshots.length > 0 && navigator.clipboard?.writeText) {
+                          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
+                        }
                       }},
                     ] : [
                       { label: 'Cut', shortcut: '⌘X', action: () => {
                         const { id: _id, createdAt, updatedAt, ...rest } = obj;
                         clipboardRef.current = [rest];
+                        if (navigator.clipboard?.writeText) {
+                          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: [rest] })).catch(() => {});
+                        }
                         handleDeleteWithCleanup(obj.id);
                       }},
                       { label: 'Copy', shortcut: '⌘C', action: () => {
                         const { id: _id, createdAt, updatedAt, ...rest } = obj;
                         clipboardRef.current = [rest];
+                        if (navigator.clipboard?.writeText) {
+                          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: [rest] })).catch(() => {});
+                        }
                       }},
                     ]),
                     ...(multiSelected
@@ -747,22 +782,34 @@ export function App() {
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
                   ]
                 : [
-                    ...(hasClipboard ? [
-                      { label: 'Paste', shortcut: '⌘V', action: () => {
-                        const items = clipboardRef.current;
-                        if (items.length === 0) return;
-                        const OFFSET = 20;
-                        const firstX = items[0].x + OFFSET;
-                        const firstY = items[0].y + OFFSET;
-                        const dx = contextMenu.canvasX - firstX;
-                        const dy = contextMenu.canvasY - firstY;
-                        items.forEach((snapshot, i) => {
-                          const x = i === 0 ? contextMenu.canvasX : snapshot.x + OFFSET + dx;
-                          const y = i === 0 ? contextMenu.canvasY : snapshot.y + OFFSET + dy;
-                          board.addObject({ ...snapshot, x, y });
-                        });
-                      }},
-                    ] : []),
+                    { label: 'Paste', shortcut: '⌘V', action: async () => {
+                      const canvasX = contextMenu.canvasX;
+                      const canvasY = contextMenu.canvasY;
+                      let items = clipboardRef.current;
+                      if (navigator.clipboard?.readText) {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          const parsed = JSON.parse(text);
+                          if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+                            items = parsed.objects;
+                            clipboardRef.current = items;
+                          }
+                        } catch {
+                          // not valid board JSON — fall back to in-memory clipboard
+                        }
+                      }
+                      if (items.length === 0) return;
+                      const OFFSET = 20;
+                      const firstX = items[0].x + OFFSET;
+                      const firstY = items[0].y + OFFSET;
+                      const dx = canvasX - firstX;
+                      const dy = canvasY - firstY;
+                      items.forEach((snapshot, i) => {
+                        const x = i === 0 ? canvasX : snapshot.x + OFFSET + dx;
+                        const y = i === 0 ? canvasY : snapshot.y + OFFSET + dy;
+                        board.addObject({ ...snapshot, x, y });
+                      });
+                    }},
                     { label: 'Select All', shortcut: '⌘A', action: () => {
                       const allIds = new Set(Object.keys(board.objects));
                       setSelectedIds(allIds);
