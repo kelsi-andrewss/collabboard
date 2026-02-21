@@ -51,7 +51,11 @@ export function App() {
     const stage = stageRef.current;
     if (!stage || !bId) return;
     try {
+      const bgRect = stage.findOne('.bg-rect');
+      const originalFill = bgRect ? bgRect.fill() : null;
+      if (bgRect) bgRect.fill('#ffffff');
       const dataUrl = stage.toDataURL({ pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 });
+      if (bgRect && originalFill) bgRect.fill(originalFill);
       saveThumbnail(bId, dataUrl).catch(() => {});
     } catch {}
   };
