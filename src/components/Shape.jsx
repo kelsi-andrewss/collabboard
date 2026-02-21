@@ -181,7 +181,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             width={width}
             height={height}
             padding={10}
-            fontSize={14}
+            fontSize={Math.max(12, Math.min(32, width * 0.14))}
             fill="#ffffff"
             verticalAlign="middle"
             align="center"
@@ -227,7 +227,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
                   outline: 'none',
                   resize: 'none',
                   textAlign: 'center',
-                  fontSize: '14px',
+                  fontSize: `${Math.max(12, Math.min(32, width * 0.14))}px`,
                   fontFamily: 'sans-serif',
                   color: '#ffffff',
                   lineHeight: '1.2',

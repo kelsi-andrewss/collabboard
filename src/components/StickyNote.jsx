@@ -116,7 +116,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             width={width}
             height={height}
             padding={10}
-            fontSize={14}
+            fontSize={Math.max(12, Math.min(32, width * 0.14))}
             verticalAlign="middle"
             align="center"
             fontFamily="sans-serif"
@@ -163,7 +163,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
                   outline: 'none',
                   resize: 'none',
                   textAlign: 'center',
-                  fontSize: '14px',
+                  fontSize: `${Math.max(12, Math.min(32, width * 0.14))}px`,
                   fontFamily: 'sans-serif',
                   lineHeight: '1.2',
                   padding: '0',

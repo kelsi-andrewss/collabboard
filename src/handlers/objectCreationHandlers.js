@@ -13,7 +13,7 @@ export function makeObjectCreationHandlers({
   };
 
   const handleAddSticky = () => {
-    const pos = findOpenSpot(150, 150);
+    const pos = findOpenSpot(200, 200);
     board.addObject({
       type: 'sticky',
       text: 'New Sticky Note',
@@ -25,13 +25,13 @@ export function makeObjectCreationHandlers({
   };
 
   const handleAddShape = (type) => {
-    const pos = findOpenSpot(100, 100);
+    const pos = findOpenSpot(150, 150);
     board.addObject({
       type,
       x: pos.x,
       y: pos.y,
-      width: 100,
-      height: 100,
+      width: 150,
+      height: 150,
       color: shapeColors.shapes.active,
       userId: user.uid,
     });
