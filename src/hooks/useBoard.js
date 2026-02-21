@@ -164,10 +164,11 @@ export function useBoard(boardId, user) {
       batch.update(doc(db, 'boards', boardId, 'objects', pid),
         { childIds: arrayUnion(...ids), updatedAt: serverTimestamp() });
     }
+    const deleteSet = new Set(deleteIds);
     deleteIds.forEach(id => {
       batch.delete(doc(db, 'boards', boardId, 'objects', id));
       const deletedObj = objects[id];
-      if (deletedObj?.frameId) {
+      if (deletedObj?.frameId && !deleteSet.has(deletedObj.frameId)) {
         batch.update(
           doc(db, 'boards', boardId, 'objects', deletedObj.frameId),
           { childIds: arrayRemove(id), updatedAt: serverTimestamp() }
