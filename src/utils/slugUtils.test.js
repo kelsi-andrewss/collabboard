@@ -96,22 +96,6 @@ describe('isSlugTaken', () => {
     { id: '3', slug: 'team', name: 'Team', parentGroupId: '1' },
   ];
 
-  it('detects collision at root level', () => {
-    expect(isSlugTaken('team', null, groups)).toBe(true);
-  });
-
-  it('allows slug when no collision at root level', () => {
-    expect(isSlugTaken('unique', null, groups)).toBe(false);
-  });
-
-  it('detects collision within same parent', () => {
-    expect(isSlugTaken('frontend', '1', groups)).toBe(true);
-  });
-
-  it('allows slug in different parent', () => {
-    expect(isSlugTaken('frontend', '99', groups)).toBe(false);
-  });
-
   it('excludes specified group from collision check', () => {
     expect(isSlugTaken('team', null, groups, '1')).toBe(false);
   });

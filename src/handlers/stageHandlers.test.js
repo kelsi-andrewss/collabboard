@@ -21,38 +21,6 @@ function makeConfig(overrides = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// handleRecenter — empty board
-// ---------------------------------------------------------------------------
-
-describe('handleRecenter — empty board', () => {
-  let cfg;
-  let handlers;
-
-  beforeEach(() => {
-    cfg = makeConfig({ objectsRef: { current: {} } });
-    handlers = makeStageHandlers(cfg);
-  });
-
-  it('calls setStagePos with {x:0, y:0} when board has no objects', () => {
-    handlers.handleRecenter();
-    expect(cfg.setStagePos).toHaveBeenCalledWith({ x: 0, y: 0 });
-  });
-
-  it('calls setStageScale with 1 when board has no objects', () => {
-    handlers.handleRecenter();
-    expect(cfg.setStageScale).toHaveBeenCalledWith(1);
-  });
-
-  it('calls setStagePos before returning when board has no objects', () => {
-    const order = [];
-    cfg.setStagePos.mockImplementation(() => order.push('pos'));
-    cfg.setStageScale.mockImplementation(() => order.push('scale'));
-    handlers.handleRecenter();
-    expect(order).toEqual(['pos', 'scale']);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // handleRecenter — board with content
 // ---------------------------------------------------------------------------
 

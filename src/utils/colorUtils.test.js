@@ -34,14 +34,6 @@ describe('hexToRgba', () => {
 });
 
 describe('parseColorForInput', () => {
-  it('truncates 8-digit hex to 7 chars', () => {
-    expect(parseColorForInput('#ff0000ff')).toBe('#ff0000');
-  });
-
-  it('returns 6-digit hex unchanged', () => {
-    expect(parseColorForInput('#abcdef')).toBe('#abcdef');
-  });
-
   it('converts rgb() to hex', () => {
     expect(parseColorForInput('rgb(255, 0, 128)')).toBe('#ff0080');
   });

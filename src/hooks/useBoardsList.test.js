@@ -2,58 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 // ---------------------------------------------------------------------------
-// useBoardsList — saveThumbnail dual-theme behavior
-//
-// saveThumbnail now accepts (boardId, lightUrl, darkUrl) and writes three
-// fields: thumbnailLight, thumbnailDark, and the legacy thumbnail field.
-// We model the Firestore write payload as a pure function to verify the
-// correct fields are written.
-// ---------------------------------------------------------------------------
-
-function buildThumbnailPayload(lightUrl, darkUrl, serverTimestamp) {
-  return {
-    thumbnailLight: lightUrl,
-    thumbnailDark: darkUrl,
-    thumbnail: lightUrl,
-    updatedAt: serverTimestamp,
-  };
-}
-
-describe('useBoardsList — saveThumbnail payload', () => {
-  const SENTINEL_TIMESTAMP = Symbol('serverTimestamp');
-
-  it('includes thumbnailLight set to the light url', () => {
-    const payload = buildThumbnailPayload('data:light', 'data:dark', SENTINEL_TIMESTAMP);
-    expect(payload.thumbnailLight).toBe('data:light');
-  });
-
-  it('includes thumbnailDark set to the dark url', () => {
-    const payload = buildThumbnailPayload('data:light', 'data:dark', SENTINEL_TIMESTAMP);
-    expect(payload.thumbnailDark).toBe('data:dark');
-  });
-
-  it('sets the legacy thumbnail field to the light url for backward compatibility', () => {
-    const payload = buildThumbnailPayload('data:light', 'data:dark', SENTINEL_TIMESTAMP);
-    expect(payload.thumbnail).toBe('data:light');
-  });
-
-  it('includes updatedAt in the payload', () => {
-    const payload = buildThumbnailPayload('data:light', 'data:dark', SENTINEL_TIMESTAMP);
-    expect(payload.updatedAt).toBe(SENTINEL_TIMESTAMP);
-  });
-
-  it('writes exactly four fields', () => {
-    const payload = buildThumbnailPayload('data:light', 'data:dark', SENTINEL_TIMESTAMP);
-    expect(Object.keys(payload)).toHaveLength(4);
-  });
-
-  it('light and dark urls can differ', () => {
-    const payload = buildThumbnailPayload('url-light', 'url-dark', SENTINEL_TIMESTAMP);
-    expect(payload.thumbnailLight).not.toBe(payload.thumbnailDark);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Thumbnail selection logic — theme-matched variant with fallback
 //
 // The display components select a thumbnail using:
