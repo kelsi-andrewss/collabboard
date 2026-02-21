@@ -20,7 +20,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
   if (!board) return null;
 
   const isOwner = board.ownerId === currentUserId;
-  const canManage = isOwner || isGroupAdminProp;
+  const canManage = isOwner || isGroupAdminProp || (board.members?.[currentUserId] === 'editor');
   const members = board.members || {};
   const savedVisibility = board.visibility || 'public';
   const visibilityDirty = localVisibility !== savedVisibility;
