@@ -53,9 +53,12 @@ export function App() {
     const bgRect = stage.findOne('.bg-rect');
     const originalFill = bgRect ? bgRect.fill() : null;
     try {
+      const captureOpts = { pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 };
       if (bgRect) bgRect.fill('#ffffff');
-      const dataUrl = stage.toDataURL({ pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 });
-      saveThumbnail(bId, dataUrl).catch(() => {});
+      const lightUrl = stage.toDataURL(captureOpts);
+      if (bgRect) bgRect.fill('#111827');
+      const darkUrl = stage.toDataURL(captureOpts);
+      saveThumbnail(bId, lightUrl, darkUrl).catch(() => {});
     } catch {
     } finally {
       if (bgRect) bgRect.fill(originalFill);
@@ -584,6 +587,7 @@ export function App() {
                 moveBoard={moveBoard}
                 moveGroup={moveGroup}
                 createSubgroup={createSubgroup}
+                darkMode={darkMode}
               />
             ) : (
               <BoardSelector

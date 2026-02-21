@@ -23,7 +23,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
   onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound,
-  onAddBoard }) {
+  onAddBoard, darkMode = false }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
@@ -117,6 +117,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDragOverUnbound={onGroupDragOverUnbound}
                   onGroupDropUnbound={onGroupDropUnbound}
                   onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
+                  darkMode={darkMode}
                 />
               ))}
               {addingSubgroup && (
@@ -167,6 +168,9 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                 const extraOnline = onlineUsers.length - 3;
                 const isOwner = b.ownerId === user?.uid;
                 const isDragging = draggingBoard?.boardId === b.id;
+                const thumb = darkMode
+                  ? (b.thumbnailDark || b.thumbnailLight || b.thumbnail)
+                  : (b.thumbnailLight || b.thumbnailDark || b.thumbnail);
                 let cardRef = null;
                 return (
                   <div
@@ -176,8 +180,8 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                     onClick={(e) => { e.stopPropagation(); onNavigateToBoard(group ? buildSlugChain(group, allGroups) : [], b.id, b.name); }}
                   >
                     <div className="board-card-thumbnail">
-                      {b.thumbnail
-                        ? <img src={b.thumbnail} alt="" className="board-card-thumbnail-img" />
+                      {thumb
+                        ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
                         : <div className="board-card-thumbnail-placeholder" />
                       }
                       {isOwner && onBoardDragStart && (
@@ -290,9 +294,14 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
               {ghostBoard && (
                 <div className="board-card board-card--ghost">
                   <div className="board-card-thumbnail">
-                    {ghostBoard.thumbnail
-                      ? <img src={ghostBoard.thumbnail} alt="" className="board-card-thumbnail-img" />
-                      : <div className="board-card-thumbnail-placeholder" />}
+                    {(() => {
+                      const ghostThumb = darkMode
+                        ? (ghostBoard.thumbnailDark || ghostBoard.thumbnailLight || ghostBoard.thumbnail)
+                        : (ghostBoard.thumbnailLight || ghostBoard.thumbnailDark || ghostBoard.thumbnail);
+                      return ghostThumb
+                        ? <img src={ghostThumb} alt="" className="board-card-thumbnail-img" />
+                        : <div className="board-card-thumbnail-placeholder" />;
+                    })()}
                   </div>
                   <div className="board-card-info">
                     <div className="board-card-row">

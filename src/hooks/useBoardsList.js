@@ -71,9 +71,14 @@ export function useBoardsList(currentUser, { isAdminView = false, groups = [] } 
     return ref;
   };
 
-  const saveThumbnail = async (boardId, dataUrl) => {
+  const saveThumbnail = async (boardId, lightUrl, darkUrl) => {
     const boardRef = doc(db, 'boards', boardId);
-    await updateDoc(boardRef, { thumbnail: dataUrl, updatedAt: serverTimestamp() });
+    await updateDoc(boardRef, {
+      thumbnailLight: lightUrl,
+      thumbnailDark: darkUrl,
+      thumbnail: lightUrl,
+      updatedAt: serverTimestamp(),
+    });
   };
 
   const deleteBoard = async (boardId) => {
