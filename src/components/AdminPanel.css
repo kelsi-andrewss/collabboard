@@ -149,7 +149,7 @@
 }
 
 .admin-search-item-uid {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;

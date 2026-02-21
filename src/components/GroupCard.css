@@ -89,7 +89,7 @@
 }
 
 .group-card-count {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-tertiary);
   background: var(--bg-tertiary);
@@ -235,7 +235,7 @@
 }
 
 .board-card-name {
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -274,7 +274,7 @@
 }
 
 .board-card-date {
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   color: var(--text-tertiary);
 }
 
@@ -292,7 +292,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.55rem;
+  font-size: 0.625rem;
   font-weight: bold;
   color: white;
   margin-left: -5px;
@@ -309,7 +309,7 @@
 .board-card-avatar-extra {
   background: #374151;
   color: #9ca3af;
-  font-size: 0.5rem;
+  font-size: 0.625rem;
 }
 
 .board-card-move-btn {
@@ -570,7 +570,7 @@
 }
 
 .board-card-preview-label {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--accent-primary);
   text-transform: uppercase;
@@ -589,7 +589,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   margin-bottom: 3px;
   overflow: hidden;

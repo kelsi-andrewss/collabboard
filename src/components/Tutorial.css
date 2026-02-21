@@ -9,7 +9,7 @@
 }
 
 .tutorial-step-indicator {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin-bottom: 6px;
