@@ -261,7 +261,7 @@ function HeaderLeftInner({ state, handlers }) {
             </div>
 
             <div className="tool-split-button no-outline">
-              <button data-toolbar-item="text" onClick={() => { handleAddText(); }} title="Add Text">
+              <button data-toolbar-item="text" onClick={() => { setPendingTool('text'); }} title="Add Text">
                 <Type size={18} />
               </button>
             </div>

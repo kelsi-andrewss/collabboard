@@ -533,6 +533,8 @@ export function App() {
     } else if (toolType === 'arrow') {
       const len = Math.round(200 / stageScale);
       board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+    } else if (toolType === 'text') {
+      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: '#1a1a1a', rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);

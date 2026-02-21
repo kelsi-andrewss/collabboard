@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle, Line, Arrow } from 'react-konva';
+import { Stage, Layer, Rect, Text, Group, Shape as KonvaShape, Circle, Line, Arrow } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
@@ -107,22 +107,32 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
   }
 
   if (pendingTool === 'text') {
+    const tw = 200 / stageScale;
+    const th = 40 / stageScale;
+    const fontSize = 16 / stageScale;
     return (
       <Layer ref={layerRef}>
-        <Rect
-          ref={nodeRef}
-          x={OFFSCREEN}
-          y={OFFSCREEN}
-          width={100}
-          height={100}
-          fill="transparent"
-          stroke="#6366f1"
-          strokeWidth={strokeW}
-          dash={[dashLen, dashGap]}
-          opacity={ghostOpacity}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Rect
+            width={tw}
+            height={th}
+            fill="transparent"
+            stroke="#6366f1"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            y={th * 0.15}
+            width={tw}
+            text="Type something..."
+            fontSize={fontSize}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.8}
+            perfectDrawEnabled={false}
+          />
+        </Group>
       </Layer>
     );
   }
@@ -276,6 +286,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         node.x(canvasX - 100 / stageScale);
         node.y(canvasY - 100 / stageScale);
       } else if (tool === 'line' || tool === 'arrow') {
+        node.x(canvasX);
+        node.y(canvasY);
+      } else if (tool === 'text') {
         node.x(canvasX);
         node.y(canvasY);
       } else if (tool === 'frame') {
