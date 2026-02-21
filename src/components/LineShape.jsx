@@ -144,9 +144,24 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                 onDragStart={() => { setDraggingEndpoint('start'); }}
                 onDragMove={(e) => {
                   const node = e.target;
+                  const groupNode = groupRef.current;
+                  let relX = node.x();
+                  let relY = node.y();
+                  if (objects) {
+                    const absX = (groupNode ? groupNode.x() : x) + relX;
+                    const absY = (groupNode ? groupNode.y() : y) + relY;
+                    const snapTarget = findSnapTarget(absX, absY, objects, new Set([id]));
+                    if (snapTarget) {
+                      relX = snapTarget.x - (groupNode ? groupNode.x() : x);
+                      relY = snapTarget.y - (groupNode ? groupNode.y() : y);
+                      node.x(relX);
+                      node.y(relY);
+                    }
+                  }
                   const newPts = [...pointsRef.current];
-                  newPts[0] = node.x();
-                  newPts[1] = node.y();
+                  newPts[0] = relX;
+                  newPts[1] = relY;
+                  pointsRef.current = newPts;
                   if (lineRef.current) lineRef.current.points(newPts);
                   const layer = node.getLayer();
                   if (layer) layer.batchDraw();
@@ -194,9 +209,24 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                 onDragStart={() => { setDraggingEndpoint('end'); }}
                 onDragMove={(e) => {
                   const node = e.target;
+                  const groupNode = groupRef.current;
+                  let relX = node.x();
+                  let relY = node.y();
+                  if (objects) {
+                    const absX = (groupNode ? groupNode.x() : x) + relX;
+                    const absY = (groupNode ? groupNode.y() : y) + relY;
+                    const snapTarget = findSnapTarget(absX, absY, objects, new Set([id]));
+                    if (snapTarget) {
+                      relX = snapTarget.x - (groupNode ? groupNode.x() : x);
+                      relY = snapTarget.y - (groupNode ? groupNode.y() : y);
+                      node.x(relX);
+                      node.y(relY);
+                    }
+                  }
                   const newPts = [...pointsRef.current];
-                  newPts[newPts.length - 2] = node.x();
-                  newPts[newPts.length - 1] = node.y();
+                  newPts[newPts.length - 2] = relX;
+                  newPts[newPts.length - 1] = relY;
+                  pointsRef.current = newPts;
                   if (lineRef.current) lineRef.current.points(newPts);
                   const layer = node.getLayer();
                   if (layer) layer.batchDraw();
