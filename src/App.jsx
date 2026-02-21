@@ -486,7 +486,7 @@ export function App() {
     handleDuplicateMultiple,
     handleFrameAutoFit,
   } = makeObjectHandlers({
-    board, stageRef, snap, setDragState: updateDragState, setSelectedId,
+    board, stageRef, snap, setDragState: updateDragState, setSelectedId, setSelectedIds,
     stagePos, stageScale, setShapeColors,
     setDragPos, updateColorHistory,
     setResizeTooltip, resizeTooltipTimer,
