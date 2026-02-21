@@ -10,7 +10,6 @@ import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 import { PORTS, getPortCoords } from '../utils/connectorUtils.js';
 
 const PORT_DISPLAY_RADIUS = 8;
-const NEARBY_PORT_DISTANCE = 200;
 
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
