@@ -79,6 +79,17 @@
   background: var(--accent-primary);
 }
 
+.ai-fab:focus-visible {
+  background: var(--accent-primary);
+  outline: none;
+}
+
+.ai-fab:focus-visible::before,
+.ai-fab:focus::before,
+.ai-fab:active::before {
+  opacity: 0;
+}
+
 .ai-fab.active {
   background: var(--accent-primary);
   transform: rotate(90deg);
@@ -108,6 +119,7 @@
   inset: 0;
   border-radius: inherit;
   background: currentColor;
+  opacity: 0;
   pointer-events: none;
 }
 
