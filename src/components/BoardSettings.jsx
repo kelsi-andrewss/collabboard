@@ -146,6 +146,24 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
         </div>
 
         <div className="board-settings-section">
+          <h3>Template</h3>
+          {canManage ? (
+            <label className="template-toggle-row">
+              <input
+                type="checkbox"
+                checked={!!board.template}
+                onChange={() => onUpdateSettings({ template: !board.template })}
+              />
+              <span>Show in Browse gallery</span>
+            </label>
+          ) : (
+            <p className="visibility-description">
+              {board.template ? 'This board is a template.' : 'This board is not a template.'}
+            </p>
+          )}
+        </div>
+
+        <div className="board-settings-section">
           <h3>Members</h3>
           <div className="member-list">
             {board.ownerId && (

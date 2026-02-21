@@ -33,17 +33,19 @@ vi.mock('./Avatar.jsx', () => ({
   Avatar: () => null,
 }));
 
+const mockUseBoardsListReturn = {
+  boards: [],
+  loading: false,
+  createBoard: vi.fn(),
+  deleteBoard: vi.fn(),
+  deleteGroup: vi.fn(),
+  inviteMember: vi.fn(),
+  moveBoard: vi.fn(),
+  setBoardProtected: vi.fn(),
+};
+
 vi.mock('../hooks/useBoardsList', () => ({
-  useBoardsList: () => ({
-    boards: [],
-    loading: false,
-    createBoard: vi.fn(),
-    deleteBoard: vi.fn(),
-    deleteGroup: vi.fn(),
-    inviteMember: vi.fn(),
-    moveBoard: vi.fn(),
-    setBoardProtected: vi.fn(),
-  }),
+  useBoardsList: () => mockUseBoardsListReturn,
 }));
 
 vi.mock('../hooks/useGlobalPresence', () => ({
@@ -396,6 +398,72 @@ describe.each([
       checkbox = modal.querySelector('input[type="checkbox"]');
       expect(checkbox.checked).toBe(false);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — Browse tab shows only template boards
+// ---------------------------------------------------------------------------
+
+describe('BoardSelector — Browse tab template filter', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockUseBoardsListReturn.boards = [];
+  });
+
+  afterEach(() => {
+    mockUseBoardsListReturn.boards = [];
+    cleanup();
+  });
+
+  it('renders the Browse filter pill', () => {
+    render(<BoardSelector {...defaultProps()} />);
+    const buttons = screen.getAllByRole('button');
+    const browseBtn = buttons.find(b => b.textContent === 'Browse');
+    expect(browseBtn).toBeTruthy();
+  });
+
+  it('shows only template boards when Browse tab is active', () => {
+    mockUseBoardsListReturn.boards = [
+      { id: 'b1', name: 'Template Board', template: true, ownerId: 'other', updatedAt: null, groupId: null },
+      { id: 'b2', name: 'Regular Board', template: false, ownerId: 'other', updatedAt: null, groupId: null },
+    ];
+
+    render(<BoardSelector {...defaultProps()} />);
+
+    const buttons = screen.getAllByRole('button');
+    const browseBtn = buttons.find(b => b.textContent === 'Browse');
+    fireEvent.click(browseBtn);
+
+    expect(screen.getByText('Template Board')).toBeTruthy();
+    expect(screen.queryByText('Regular Board')).toBeNull();
+  });
+
+  it('shows owned boards on My Boards tab regardless of template flag', () => {
+    mockUseBoardsListReturn.boards = [
+      { id: 'b1', name: 'My Template', template: true, ownerId: 'current-user', updatedAt: null, groupId: null },
+      { id: 'b2', name: 'My Regular', template: false, ownerId: 'current-user', updatedAt: null, groupId: null },
+    ];
+
+    render(<BoardSelector {...defaultProps()} />);
+    // My Boards tab is active by default; ownership determines visibility, not template flag
+    expect(screen.getByText('My Template')).toBeTruthy();
+    expect(screen.getByText('My Regular')).toBeTruthy();
+  });
+
+  it('shows empty state on Browse tab when no boards are marked as templates', () => {
+    mockUseBoardsListReturn.boards = [
+      { id: 'b1', name: 'Not A Template', template: false, ownerId: 'other', updatedAt: null, groupId: null },
+    ];
+
+    render(<BoardSelector {...defaultProps()} />);
+
+    const buttons = screen.getAllByRole('button');
+    const browseBtn = buttons.find(b => b.textContent === 'Browse');
+    fireEvent.click(browseBtn);
+
+    expect(screen.queryByText('Not A Template')).toBeNull();
+    expect(screen.getByText('No boards yet')).toBeTruthy();
   });
 });
 

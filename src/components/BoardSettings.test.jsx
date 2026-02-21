@@ -306,3 +306,80 @@ describe('BoardSettings — member list', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// BoardSettings — template toggle
+// ---------------------------------------------------------------------------
+
+describe('BoardSettings — template toggle', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders the Template section heading', () => {
+    render(<BoardSettings {...defaultProps()} />);
+    expect(screen.getByText('Template')).toBeTruthy();
+  });
+
+  it('renders a checkbox for managers when board.template is false', () => {
+    const board = makeBoard({ template: false });
+    render(<BoardSettings {...defaultProps({ board })} />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('renders a checked checkbox for managers when board.template is true', () => {
+    const board = makeBoard({ template: true });
+    render(<BoardSettings {...defaultProps({ board })} />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('calls onUpdateSettings with { template: true } when checkbox is toggled from off', () => {
+    const onUpdateSettings = vi.fn();
+    const board = makeBoard({ template: false });
+    render(<BoardSettings {...defaultProps({ board, onUpdateSettings })} />);
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+    expect(onUpdateSettings).toHaveBeenCalledWith({ template: true });
+  });
+
+  it('calls onUpdateSettings with { template: false } when checkbox is toggled from on', () => {
+    const onUpdateSettings = vi.fn();
+    const board = makeBoard({ template: true });
+    render(<BoardSettings {...defaultProps({ board, onUpdateSettings })} />);
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+    expect(onUpdateSettings).toHaveBeenCalledWith({ template: false });
+  });
+
+  it('does not render a checkbox for non-managers; shows read-only text instead', () => {
+    const board = makeBoard({ ownerId: 'someone-else', template: false });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'viewer-uid' })}
+      />
+    );
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.getByText('This board is not a template.')).toBeTruthy();
+  });
+
+  it('shows "This board is a template." for non-managers when board.template is true', () => {
+    const board = makeBoard({ ownerId: 'someone-else', template: true });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'viewer-uid' })}
+      />
+    );
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.getByText('This board is a template.')).toBeTruthy();
+  });
+
+  it('treats a missing template field as falsy for the checkbox', () => {
+    const board = makeBoard();
+    render(<BoardSettings {...defaultProps({ board })} />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox.checked).toBe(false);
+  });
+});

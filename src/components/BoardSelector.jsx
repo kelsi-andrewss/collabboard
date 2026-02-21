@@ -372,7 +372,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
       return b.ownerId === user.uid || (b.members && b.members[user.uid]);
     }
     if (boardView === 'public') {
-      return b.visibility === 'public' || b.visibility === 'open';
+      return b.template === true;
     }
     return true;
   });
