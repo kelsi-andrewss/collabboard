@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Line, Arrow, Group, Transformer, Rect, Circle } from 'react-konva';
-import { findSnapTarget, getPortCoords } from '../utils/connectorUtils.js';
+import { findSnapTarget, getPortCoords, SNAP_DISTANCE, PORTS } from '../utils/connectorUtils.js';
 
-const PORTS = ['top', 'right', 'bottom', 'left'];
-const SNAP_DISTANCE = 20;
 const PORT_RADIUS = 5;
 
 function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort }) {
@@ -48,9 +46,9 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
       if (obj.type === 'line' || obj.type === 'arrow') continue;
       for (const port of PORTS) {
         const p = getPortCoords(obj, port);
-        const epIdx = draggingEndpoint === 'start' ? 0 : points.length - 2;
-        const epX = x + points[epIdx];
-        const epY = y + points[epIdx + 1];
+        const epIdx = draggingEndpoint === 'start' ? 0 : pointsRef.current.length - 2;
+        const epX = x + pointsRef.current[epIdx];
+        const epY = y + pointsRef.current[epIdx + 1];
         const dx = epX - p.x;
         const dy = epY - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);

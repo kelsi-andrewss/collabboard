@@ -1,4 +1,4 @@
-const SNAP_DISTANCE = 20;
+export const SNAP_DISTANCE = 20;
 
 export function getPortCoords(obj, port) {
   const x = obj.x ?? 0;
@@ -16,7 +16,7 @@ export function getPortCoords(obj, port) {
   }
 }
 
-const PORTS = ['top', 'right', 'bottom', 'left'];
+export const PORTS = ['top', 'right', 'bottom', 'left'];
 
 export function findSnapTarget(canvasX, canvasY, objects, excludeIds) {
   let best = null;
