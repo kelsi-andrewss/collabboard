@@ -44,6 +44,8 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete]);
 
+  const TEXT_SCALE_FACTOR = 0.14;
+
   const handleTextChange = (e) => {
     onUpdate(id, { text: e.target.value });
   };
@@ -116,7 +118,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             width={width}
             height={height}
             padding={10}
-            fontSize={Math.max(12, Math.min(32, width * 0.14))}
+            fontSize={Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}
             verticalAlign="middle"
             align="center"
             fontFamily="sans-serif"
@@ -163,7 +165,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
                   outline: 'none',
                   resize: 'none',
                   textAlign: 'center',
-                  fontSize: `${Math.max(12, Math.min(32, width * 0.14))}px`,
+                  fontSize: `${Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}px`,
                   fontFamily: 'sans-serif',
                   lineHeight: '1.2',
                   padding: '0',
@@ -231,6 +233,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             if (textRef.current) {
               textRef.current.width(finalW);
               textRef.current.height(finalH);
+              textRef.current.fontSize(Math.max(12, Math.min(32, finalW * TEXT_SCALE_FACTOR)));
             }
             trRef.current?.nodes([group]);
             group.getLayer()?.batchDraw();
