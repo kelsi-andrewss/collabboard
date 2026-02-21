@@ -117,12 +117,16 @@ export function makeTransformHandlers({
     const obj = board.objects[id];
     if (!obj) return;
     if (stageRef.current) {
+      const node = stageRef.current.findOne('.' + id);
+      const liveX = node ? node.x() : obj.x;
+      const liveY = node ? node.y() : obj.y;
+      const liveW = node ? node.width() * node.scaleX() : (obj.width || 400);
       showErrorTooltip(
         'Parent cannot be smaller than child. Remove child first.',
         {
-          screenX: obj.x * stageScale + stagePos.x,
-          screenY: (obj.y * stageScale + stagePos.y) - 12,
-          objW: (obj.width || 400) * stageScale,
+          screenX: liveX * stageScale + stagePos.x,
+          screenY: (liveY * stageScale + stagePos.y) - 12,
+          objW: liveW * stageScale,
           objH: 0,
         },
         setResizeTooltip,
