@@ -221,6 +221,16 @@ export function makeObjectHandlers({
     board.addObject({ ...rest, x: obj.x + OFFSET, y: obj.y + OFFSET });
   };
 
+  const handleDuplicateMultiple = (selectedIds) => {
+    const OFFSET = 20;
+    for (const id of selectedIds) {
+      const obj = board.objects[id];
+      if (!obj) continue;
+      const { id: _id, createdAt, updatedAt, ...rest } = obj;
+      board.addObject({ ...rest, x: obj.x + OFFSET, y: obj.y + OFFSET });
+    }
+  };
+
   return {
     updateActiveColor,
     handleDragMove,
@@ -230,5 +240,6 @@ export function makeObjectHandlers({
     handleSendToBack,
     handleSelectAndRaise,
     handleDuplicate,
+    handleDuplicateMultiple,
   };
 }
