@@ -117,19 +117,19 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
     let lx, ly, ax1, ay1, ax2, ay2;
 
     if (key === 'ai') {
-      lx = target.x - 150;
-      ly = target.y - 55;
-      ax1 = lx + 70;
-      ay1 = ly + 16;
-      ax2 = target.x;
+      lx = target.x - 180;
+      ly = target.y - 50;
+      ax1 = lx + 90;
+      ay1 = ly + 20;
+      ax2 = target.x - 16;
       ay2 = target.y - 16;
     } else if (key === 'theme') {
-      lx = target.x + 16;
-      ly = target.y - 30;
-      ax1 = lx + 50;
-      ay1 = ly + 16;
+      lx = target.x + 20;
+      ly = target.y - 12;
+      ax1 = lx + 120;
+      ay1 = ly + 8;
       ax2 = target.x;
-      ay2 = target.y - 16;
+      ay2 = target.y;
     } else if (key === 'recenter') {
       lx = target.x + 16;
       ly = target.y - 30;
@@ -139,12 +139,24 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
       ay2 = target.y;
     } else {
       // toolbar items — label below, arrow from label center up to button bottom edge
-      lx = target.x - 60;
       if (key === 'addContent') {
-        lx = target.x - 80;
+        lx = target.x - 100;
+        ly = target.y + 40;
+        ax1 = lx + 100;
+      } else if (key === 'select') {
+        lx = target.x - 70;
+        ly = target.y + 40;
+        ax1 = lx + 70;
+      } else if (key === 'snap') {
+        lx = target.x - 45;
+        ly = target.y + 68;
+        ax1 = lx + 45;
+      } else {
+        // undo
+        lx = target.x - 55;
+        ly = target.y + 40;
+        ax1 = lx + 55;
       }
-      ly = target.y + 45;
-      ax1 = lx + 50;
       ay1 = ly + 8;
       ax2 = target.x;
       ay2 = target.y + 16;
