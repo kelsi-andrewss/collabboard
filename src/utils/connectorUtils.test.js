@@ -49,6 +49,22 @@ describe('getPortCoords', () => {
     expect(getPortCoords(obj, 'left')).toEqual({ x: 100, y: 230 });
   });
 
+  it('returns top-left port', () => {
+    expect(getPortCoords(obj, 'top-left')).toEqual({ x: 100, y: 200 });
+  });
+
+  it('returns top-right port', () => {
+    expect(getPortCoords(obj, 'top-right')).toEqual({ x: 180, y: 200 });
+  });
+
+  it('returns bottom-left port', () => {
+    expect(getPortCoords(obj, 'bottom-left')).toEqual({ x: 100, y: 260 });
+  });
+
+  it('returns bottom-right port', () => {
+    expect(getPortCoords(obj, 'bottom-right')).toEqual({ x: 180, y: 260 });
+  });
+
   it('returns center for unknown port', () => {
     expect(getPortCoords(obj, 'center')).toEqual({ x: 140, y: 230 });
   });
@@ -89,6 +105,23 @@ describe('findSnapTarget', () => {
     };
     const result = findSnapTarget(5, 50, objs, new Set());
     expect(result).toBeNull();
+  });
+
+  it('includes frame type objects as snap targets', () => {
+    const objs = {
+      f: { id: 'f', type: 'frame', x: 0, y: 0, width: 100, height: 100 },
+    };
+    const result = findSnapTarget(5, 50, objs, new Set());
+    expect(result).not.toBeNull();
+    expect(result.objectId).toBe('f');
+  });
+
+  it('snaps to corner port (top-left)', () => {
+    // top-left of obj a is at (0, 0). Querying from (5, 5) — dist ~7, within SNAP_DISTANCE
+    const result = findSnapTarget(5, 5, objects, new Set());
+    expect(result).not.toBeNull();
+    expect(result.port).toBe('top-left');
+    expect(result.objectId).toBe('a');
   });
 });
 

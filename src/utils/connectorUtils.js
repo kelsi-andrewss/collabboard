@@ -8,15 +8,19 @@ export function getPortCoords(obj, port) {
   const cx = x + w / 2;
   const cy = y + h / 2;
   switch (port) {
-    case 'top':    return { x: cx, y };
-    case 'right':  return { x: x + w, y: cy };
-    case 'bottom': return { x: cx, y: y + h };
-    case 'left':   return { x, y: cy };
-    default:       return { x: cx, y: cy };
+    case 'top':          return { x: cx, y };
+    case 'right':        return { x: x + w, y: cy };
+    case 'bottom':       return { x: cx, y: y + h };
+    case 'left':         return { x, y: cy };
+    case 'top-left':     return { x, y };
+    case 'top-right':    return { x: x + w, y };
+    case 'bottom-left':  return { x, y: y + h };
+    case 'bottom-right': return { x: x + w, y: y + h };
+    default:             return { x: cx, y: cy };
   }
 }
 
-export const PORTS = ['top', 'right', 'bottom', 'left'];
+export const PORTS = ['top', 'right', 'bottom', 'left', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 export function findSnapTarget(canvasX, canvasY, objects, excludeIds) {
   let best = null;

@@ -477,7 +477,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
           if (isConnectorTool) {
             for (const obj of Object.values(objects)) {
-              if (obj.type === 'line' || obj.type === 'arrow' || obj.type === 'frame') continue;
+              if (obj.type === 'line' || obj.type === 'arrow') continue;
               portTargets.push(obj);
             }
           } else if (isLineSelected) {
@@ -488,7 +488,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             const ep2y = selectedObj.y + pts[pts.length - 1];
             for (const obj of Object.values(objects)) {
               if (obj.id === selectedId) continue;
-              if (obj.type === 'line' || obj.type === 'arrow' || obj.type === 'frame') continue;
+              if (obj.type === 'line' || obj.type === 'arrow') continue;
               const cx = (obj.x ?? 0) + (obj.width ?? 150) / 2;
               const cy = (obj.y ?? 0) + (obj.height ?? 150) / 2;
               const d1 = Math.sqrt((cx - ep1x) ** 2 + (cy - ep1y) ** 2);
