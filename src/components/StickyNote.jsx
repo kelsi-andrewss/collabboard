@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { darkenHex } from '../utils/colorUtils.js';
 
-function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
+function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -43,6 +43,8 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete]);
+
+  const TEXT_SCALE_FACTOR = 0.14;
 
   const handleTextChange = (e) => {
     onUpdate(id, { text: e.target.value });
@@ -116,7 +118,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             width={width}
             height={height}
             padding={10}
-            fontSize={14}
+            fontSize={Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}
             verticalAlign="middle"
             align="center"
             fontFamily="sans-serif"
@@ -163,7 +165,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
                   outline: 'none',
                   resize: 'none',
                   textAlign: 'center',
-                  fontSize: '14px',
+                  fontSize: `${Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}px`,
                   fontFamily: 'sans-serif',
                   lineHeight: '1.2',
                   padding: '0',
@@ -231,6 +233,7 @@ function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#
             if (textRef.current) {
               textRef.current.width(finalW);
               textRef.current.height(finalH);
+              textRef.current.fontSize(Math.max(12, Math.min(32, finalW * TEXT_SCALE_FACTOR)));
             }
             trRef.current?.nodes([group]);
             group.getLayer()?.batchDraw();

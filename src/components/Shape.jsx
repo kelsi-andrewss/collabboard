@@ -40,6 +40,8 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   };
 
 
+  const TEXT_SCALE_FACTOR = 0.14;
+
   const updateShapeSize = (w, h) => {
     const shape = shapeRef.current;
     if (shape) {
@@ -59,6 +61,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
     if (textRef.current) {
       textRef.current.width(w);
       textRef.current.height(h);
+      textRef.current.fontSize(Math.max(12, Math.min(32, w * TEXT_SCALE_FACTOR)));
     }
   };
 
@@ -181,7 +184,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             width={width}
             height={height}
             padding={10}
-            fontSize={14}
+            fontSize={Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}
             fill="#ffffff"
             verticalAlign="middle"
             align="center"
@@ -227,7 +230,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
                   outline: 'none',
                   resize: 'none',
                   textAlign: 'center',
-                  fontSize: '14px',
+                  fontSize: `${Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}px`,
                   fontFamily: 'sans-serif',
                   color: '#ffffff',
                   lineHeight: '1.2',
