@@ -308,6 +308,139 @@ describe('BoardSettings — member list', () => {
 });
 
 // ---------------------------------------------------------------------------
+// BoardSettings — editor role canManage access (story-034)
+// ---------------------------------------------------------------------------
+
+describe('BoardSettings — editor role gets canManage access', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders interactive visibility pills for a member with editor role', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor' },
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid' })}
+      />
+    );
+    const buttons = screen.getAllByRole('button');
+    const publicBtn = buttons.find(b => b.textContent.includes('Public'));
+    expect(publicBtn).toBeTruthy();
+  });
+
+  it('calls onUpdateSettings when an editor saves a visibility change', () => {
+    const onUpdateSettings = vi.fn();
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor' },
+      visibility: 'private',
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid', onUpdateSettings })}
+      />
+    );
+
+    const buttons = screen.getAllByRole('button');
+    const publicBtn = buttons.find(b => b.textContent.includes('Public'));
+    fireEvent.click(publicBtn);
+
+    const saveBtn = buttons.find(b => b.textContent === 'Save');
+    fireEvent.click(saveBtn);
+
+    expect(onUpdateSettings).toHaveBeenCalledWith({ visibility: 'public' });
+  });
+
+  it('does not render a member search input for a member with editor role', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor' },
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid' })}
+      />
+    );
+    expect(screen.queryByPlaceholderText('Add member...')).toBeNull();
+  });
+
+  it('does not render interactive visibility pills for a member with viewer role', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'viewer-uid': 'viewer' },
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'viewer-uid' })}
+      />
+    );
+    const buttons = screen.queryAllByRole('button');
+    const publicBtn = buttons.find(b => b.textContent.includes('Public'));
+    expect(publicBtn).toBeUndefined();
+  });
+
+  it('does not render a member search input for a member with viewer role', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'viewer-uid': 'viewer' },
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'viewer-uid' })}
+      />
+    );
+    expect(screen.queryByPlaceholderText('Add member...')).toBeNull();
+  });
+
+  it('does not render remove buttons for other members when the current user is an editor', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor', 'other-uid': 'viewer' },
+    });
+    const { container } = render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid' })}
+      />
+    );
+    const removeBtns = container.querySelectorAll('.member-remove-btn');
+    expect(removeBtns.length).toBe(0);
+  });
+
+  it('does not call onRemoveMember when the current user is an editor (no remove button rendered)', () => {
+    const onRemoveMember = vi.fn();
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor', 'other-uid': 'viewer' },
+    });
+    const { container } = render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid', onRemoveMember })}
+      />
+    );
+    const removeBtn = container.querySelector('.member-remove-btn');
+    expect(removeBtn).toBeNull();
+    expect(onRemoveMember).not.toHaveBeenCalled();
+  });
+
+  it('renders a template checkbox for a member with editor role', () => {
+    const board = makeBoard({
+      ownerId: 'owner-uid',
+      members: { 'editor-uid': 'editor' },
+      template: false,
+    });
+    render(
+      <BoardSettings
+        {...defaultProps({ board, currentUserId: 'editor-uid' })}
+      />
+    );
+    expect(screen.getByRole('checkbox')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BoardSettings — template toggle
 // ---------------------------------------------------------------------------
 
