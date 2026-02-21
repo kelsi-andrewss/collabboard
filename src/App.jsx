@@ -320,8 +320,11 @@ export function App() {
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        // TODO: multi-select not yet supported; prevent browser default (text selection)
         e.preventDefault();
+        if (!isEditing) {
+          const allIds = new Set(Object.keys(objectsRef.current));
+          setSelectedIds(allIds);
+        }
         return;
       }
     };
