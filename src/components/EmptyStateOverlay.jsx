@@ -126,9 +126,9 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
     } else if (key === 'theme') {
       lx = target.x + 20;
       ly = target.y - 12;
-      ax1 = lx;
+      ax1 = lx + 120;
       ay1 = ly + 8;
-      ax2 = target.x + 16;
+      ax2 = target.x;
       ay2 = target.y;
     } else if (key === 'recenter') {
       lx = target.x + 16;
