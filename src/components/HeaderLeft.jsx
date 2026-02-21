@@ -17,7 +17,6 @@ function HeaderLeftInner({ state, handlers }) {
   const [boardSearch, setBoardSearch] = useState('');
   const switcherRef = useRef(null);
   const [activeConnectorType, setActiveConnectorType] = useState('line');
-  const [showConnectorDropdown, setShowConnectorDropdown] = useState(false);
   const connectorRef = useRef(null);
 
   useEffect(() => {
@@ -31,25 +30,6 @@ function HeaderLeftInner({ state, handlers }) {
     const timer = setTimeout(() => document.addEventListener('click', handleClick), 0);
     return () => { clearTimeout(timer); document.removeEventListener('click', handleClick); };
   }, [showBoardSwitcher]);
-
-  useEffect(() => {
-    if (!showConnectorDropdown) return;
-    const handleClick = (e) => {
-      if (!connectorRef.current?.contains(e.target)) {
-        setShowConnectorDropdown(false);
-      }
-    };
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setShowConnectorDropdown(false);
-    };
-    const timer = setTimeout(() => document.addEventListener('click', handleClick), 0);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', handleClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showConnectorDropdown]);
 
   useEffect(() => {
     if (showColorPicker !== 'connector') return;
@@ -250,17 +230,7 @@ function HeaderLeftInner({ state, handlers }) {
                   : <Minus size={18} stroke={shapeColors.line.active} strokeWidth={2} />
                 }
               </button>
-              <button
-                className="dropdown-arrow color-swatch-btn"
-                style={{ background: shapeColors.line.active }}
-                onClick={() => { setShowConnectorDropdown(false); setShowColorPicker(showColorPicker === 'connector' ? null : 'connector'); }}
-                title="Connector color"
-              />
-              <button
-                className="dropdown-arrow"
-                onClick={() => { setShowColorPicker(null); setShowConnectorDropdown(v => !v); }}
-                title="Switch connector type"
-              >
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'connector' ? null : 'connector')}>
                 <ChevronDown size={14} />
               </button>
               {showColorPicker === 'connector' && (
@@ -269,33 +239,18 @@ function HeaderLeftInner({ state, handlers }) {
                   data={shapeColors.line}
                   history={colorHistory}
                   onSelect={updateActiveColor}
+                  shapeSelector={{
+                    types: ['line', 'arrow'],
+                    activeType: activeConnectorType,
+                    onSelect: (type) => {
+                      setActiveConnectorType(type);
+                      setShowColorPicker(null);
+                      if (pendingTool === 'line' || pendingTool === 'arrow') {
+                        if (setPendingTool) setPendingTool(type);
+                      }
+                    },
+                  }}
                 />
-              )}
-              {showConnectorDropdown && (
-                <div className="connector-type-dropdown">
-                  <button
-                    className={`connector-type-option${activeConnectorType === 'line' ? ' active' : ''}`}
-                    onClick={() => {
-                      setActiveConnectorType('line');
-                      setShowConnectorDropdown(false);
-                      if (pendingTool === 'arrow' && setPendingTool) setPendingTool('line');
-                    }}
-                  >
-                    <Minus size={16} strokeWidth={2} />
-                    Line
-                  </button>
-                  <button
-                    className={`connector-type-option${activeConnectorType === 'arrow' ? ' active' : ''}`}
-                    onClick={() => {
-                      setActiveConnectorType('arrow');
-                      setShowConnectorDropdown(false);
-                      if (pendingTool === 'line' && setPendingTool) setPendingTool('arrow');
-                    }}
-                  >
-                    <MoveRight size={16} strokeWidth={2} />
-                    Arrow
-                  </button>
-                </div>
               )}
             </div>
 
