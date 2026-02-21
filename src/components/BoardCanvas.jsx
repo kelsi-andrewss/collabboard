@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Shape as KonvaShape } from 'react-konva';
+import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle, Line as KonvaLine } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
@@ -7,6 +7,10 @@ import { LineShape } from './LineShape';
 import { TextShape } from './TextShape';
 import { Cursors } from './Cursors';
 import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
+import { PORTS, getPortCoords } from '../utils/connectorUtils.js';
+
+const PORT_DISPLAY_RADIUS = 8;
+const NEARBY_PORT_DISTANCE = 200;
 
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
@@ -86,17 +90,18 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
   const dragLayerRef = useRef();
+  const inProgressLineRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
-    activeTool, selectedIds, canEdit,
+    activeTool, selectedIds, canEdit, connectorState, pendingTool,
   } = state;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
     handleDragMove, handleResizeClamped, setSelectedId, onContextMenu, onTypingChange,
-    setSelectedIds,
+    setSelectedIds, onPortClick,
   } = handlers;
 
   const [selRect, setSelRect] = useState(null);
@@ -120,14 +125,25 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     setSelRect({ x: canvasX, y: canvasY, width: 0, height: 0 });
   };
 
+  const connectorStateRef = useRef(connectorState);
+  connectorStateRef.current = connectorState;
+
   const handleMouseMoveWrapped = (e) => {
     handleMouseMove(e);
-    if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
     const canvasX = (pointer.x - stage.x()) / stage.scaleX();
     const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+
+    if (inProgressLineRef.current && connectorStateRef.current?.active) {
+      const cs = connectorStateRef.current;
+      inProgressLineRef.current.points([cs.x, cs.y, canvasX, canvasY]);
+      const layer = inProgressLineRef.current.getLayer();
+      if (layer) layer.batchDraw();
+    }
+
+    if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const start = selStartRef.current;
     setSelRect({
       x: Math.min(start.x, canvasX),
@@ -460,6 +476,83 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             }
             return null;
           })}
+        {(() => {
+          const isConnectorTool = pendingTool === 'line' || pendingTool === 'arrow';
+          const selectedObj = selectedId ? objects[selectedId] : null;
+          const isLineSelected = selectedObj && (selectedObj.type === 'line' || selectedObj.type === 'arrow');
+
+          if (!isConnectorTool && !isLineSelected) return null;
+
+          const portTargets = [];
+
+          if (isConnectorTool) {
+            for (const obj of Object.values(objects)) {
+              if (obj.type === 'line' || obj.type === 'arrow' || obj.type === 'frame') continue;
+              portTargets.push(obj);
+            }
+          } else if (isLineSelected) {
+            const pts = selectedObj.points || [0, 0, 200, 0];
+            const ep1x = selectedObj.x + pts[0];
+            const ep1y = selectedObj.y + pts[1];
+            const ep2x = selectedObj.x + pts[pts.length - 2];
+            const ep2y = selectedObj.y + pts[pts.length - 1];
+            for (const obj of Object.values(objects)) {
+              if (obj.id === selectedId) continue;
+              if (obj.type === 'line' || obj.type === 'arrow' || obj.type === 'frame') continue;
+              const cx = (obj.x ?? 0) + (obj.width ?? 150) / 2;
+              const cy = (obj.y ?? 0) + (obj.height ?? 150) / 2;
+              const d1 = Math.sqrt((cx - ep1x) ** 2 + (cy - ep1y) ** 2);
+              const d2 = Math.sqrt((cx - ep2x) ** 2 + (cy - ep2y) ** 2);
+              if (d1 < NEARBY_PORT_DISTANCE || d2 < NEARBY_PORT_DISTANCE) {
+                portTargets.push(obj);
+              }
+            }
+          }
+
+          const portRadius = PORT_DISPLAY_RADIUS / stageScale;
+          const strokeW = 1.5 / stageScale;
+          const circles = [];
+          for (const obj of portTargets) {
+            for (const port of PORTS) {
+              const p = getPortCoords(obj, port);
+              const key = `${obj.id}-${port}`;
+              circles.push(
+                <Circle
+                  key={key}
+                  x={p.x}
+                  y={p.y}
+                  radius={portRadius}
+                  fill="rgba(99,102,241,0.15)"
+                  stroke="#6366f1"
+                  strokeWidth={strokeW}
+                  listening={isConnectorTool && !!onPortClick}
+                  perfectDrawEnabled={false}
+                  onClick={isConnectorTool && onPortClick ? (e) => {
+                    e.cancelBubble = true;
+                    onPortClick({ objectId: obj.id, port, x: p.x, y: p.y });
+                  } : undefined}
+                  onTap={isConnectorTool && onPortClick ? (e) => {
+                    e.cancelBubble = true;
+                    onPortClick({ objectId: obj.id, port, x: p.x, y: p.y });
+                  } : undefined}
+                />
+              );
+            }
+          }
+          return circles;
+        })()}
+        {connectorState?.active && (
+          <KonvaLine
+            ref={inProgressLineRef}
+            points={[connectorState.x, connectorState.y, connectorState.x, connectorState.y]}
+            stroke="#6366f1"
+            strokeWidth={2 / stageScale}
+            dash={[8 / stageScale, 4 / stageScale]}
+            lineCap="round"
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        )}
         {selRect && (
           <Rect
             x={selRect.x}
@@ -500,7 +593,9 @@ export function areEqual(prev, next) {
     ps.dragPos?.y === ns.dragPos?.y &&
     ps.activeTool === ns.activeTool &&
     ps.selectedIds === ns.selectedIds &&
-    ps.canEdit === ns.canEdit
+    ps.canEdit === ns.canEdit &&
+    ps.connectorState === ns.connectorState &&
+    ps.pendingTool === ns.pendingTool
   );
 }
 
