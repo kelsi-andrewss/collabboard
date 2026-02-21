@@ -19,6 +19,8 @@ export function makeObjectCreationHandlers({
       text: 'New Sticky Note',
       x: pos.x,
       y: pos.y,
+      width: 200,
+      height: 200,
       color: shapeColors.sticky.active,
       userId: user.uid,
     });

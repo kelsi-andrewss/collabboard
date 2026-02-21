@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { darkenHex } from '../utils/colorUtils.js';
 
-function StickyNoteInner({ id, x, y, width = 150, height = 150, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
+function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
