@@ -4,7 +4,7 @@ import { collection, doc, getDocs, setDoc, query, where, orderBy, limit } from '
 import { db } from '../firebase/config';
 import './AdminPanel.css';
 
-export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStrings, currentUser }) {
+export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStrings }) {
   const [allUsers, setAllUsers] = useState([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

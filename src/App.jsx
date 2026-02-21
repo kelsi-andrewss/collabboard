@@ -610,7 +610,6 @@ export function App() {
               allBoards={allBoards}
               groups={groups}
               migrateGroupStrings={migrateGroupStrings}
-              currentUser={user}
             />
           </div>
         )}
