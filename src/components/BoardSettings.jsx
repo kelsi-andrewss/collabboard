@@ -9,6 +9,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [localVisibility, setLocalVisibility] = useState(board?.visibility || 'public');
   const userSearchTimerRef = useRef(null);
 
@@ -35,6 +36,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
 
   const handleUserSearch = (term) => {
     setUserSearchQuery(term);
+    setSearchError(null);
     clearTimeout(userSearchTimerRef.current);
     if (!term.trim()) {
       setUserSearchResults([]);
@@ -65,6 +67,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
       } catch (err) {
         console.error('[user search]', err);
         setUserSearchResults([]);
+        setSearchError('Search unavailable. Please try again.');
       }
     }, 200);
   };
@@ -217,6 +220,7 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
                   ))}
                 </div>
               )}
+              {searchError && <p className="member-search-error">{searchError}</p>}
             </div>
           )}
         </div>
