@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle } from 'react-konva';
+import { Stage, Layer, Rect, Text, Shape as KonvaShape, Circle, Line, Arrow } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
@@ -10,6 +10,141 @@ import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
 import { PORTS, getPortCoords } from '../utils/connectorUtils.js';
 
 const PORT_DISPLAY_RADIUS = 8;
+
+const OFFSCREEN = -99999;
+
+function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
+  const strokeW = 1.5 / stageScale;
+  const dashLen = 6 / stageScale;
+  const dashGap = 3 / stageScale;
+  const ghostOpacity = 0.45;
+
+  if (pendingTool === 'line') {
+    return (
+      <Layer ref={layerRef}>
+        <Line
+          ref={nodeRef}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          points={[0, 0, 120 / stageScale, 0]}
+          stroke="#6366f1"
+          strokeWidth={strokeW * 2}
+          dash={[dashLen, dashGap]}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'arrow') {
+    return (
+      <Layer ref={layerRef}>
+        <Arrow
+          ref={nodeRef}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          points={[0, 0, 120 / stageScale, 0]}
+          stroke="#6366f1"
+          strokeWidth={strokeW * 2}
+          fill="#6366f1"
+          pointerLength={10 / stageScale}
+          pointerWidth={8 / stageScale}
+          dash={[dashLen, dashGap]}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'frame') {
+    const fw = Math.round(window.innerWidth * 0.55 / stageScale);
+    const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+    return (
+      <Layer ref={layerRef}>
+        <Rect
+          ref={nodeRef}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          width={fw}
+          height={fh}
+          fill="rgba(99,102,241,0.06)"
+          stroke="#6366f1"
+          strokeWidth={strokeW}
+          dash={[dashLen, dashGap]}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'sticky') {
+    return (
+      <Layer ref={layerRef}>
+        <Rect
+          ref={nodeRef}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          width={150}
+          height={150}
+          fill="rgba(250,204,21,0.25)"
+          stroke="rgba(250,204,21,0.8)"
+          strokeWidth={strokeW}
+          dash={[dashLen, dashGap]}
+          cornerRadius={4 / stageScale}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'text') {
+    return (
+      <Layer ref={layerRef}>
+        <Rect
+          ref={nodeRef}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          width={100}
+          height={100}
+          fill="transparent"
+          stroke="#6366f1"
+          strokeWidth={strokeW}
+          dash={[dashLen, dashGap]}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Layer>
+    );
+  }
+
+  return (
+    <Layer ref={layerRef}>
+      <Rect
+        ref={nodeRef}
+        x={OFFSCREEN}
+        y={OFFSCREEN}
+        width={100}
+        height={100}
+        fill="rgba(99,102,241,0.08)"
+        stroke="#6366f1"
+        strokeWidth={strokeW}
+        dash={[dashLen, dashGap]}
+        opacity={ghostOpacity}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+    </Layer>
+  );
+}
 
 const GRID_SIZE = 50;
 const HEADER_HEIGHT = 60;
@@ -89,6 +224,8 @@ export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggin
 function BoardCanvasInner({ stageRef, state, handlers }) {
   const mainLayerRef = useRef();
   const dragLayerRef = useRef();
+  const ghostLayerRef = useRef();
+  const ghostNodeRef = useRef();
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
@@ -130,6 +267,29 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     if (!pointer) return;
     const canvasX = (pointer.x - stage.x()) / stage.scaleX();
     const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+
+    if (ghostNodeRef.current) {
+      const node = ghostNodeRef.current;
+      const tool = pendingTool;
+      if (tool === 'sticky') {
+        node.x(canvasX - 75);
+        node.y(canvasY - 75);
+      } else if (tool === 'line' || tool === 'arrow') {
+        node.x(canvasX);
+        node.y(canvasY);
+      } else if (tool === 'frame') {
+        const fw = Math.round(window.innerWidth * 0.55 / stageScale);
+        const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+        node.x(canvasX - fw / 2);
+        node.y(canvasY - fh / 2);
+        node.width(fw);
+        node.height(fh);
+      } else {
+        node.x(canvasX - 50);
+        node.y(canvasY - 50);
+      }
+      ghostLayerRef.current?.batchDraw();
+    }
 
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const start = selStartRef.current;
@@ -527,6 +687,14 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         <Cursors presentUsers={presentUsers} userId={currentUserId} />
       </Layer>
       <Layer ref={dragLayerRef} />
+      {pendingTool && (
+        <GhostLayer
+          pendingTool={pendingTool}
+          stageScale={stageScale}
+          layerRef={ghostLayerRef}
+          nodeRef={ghostNodeRef}
+        />
+      )}
     </Stage>
   );
 }
