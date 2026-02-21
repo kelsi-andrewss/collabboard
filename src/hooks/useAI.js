@@ -5,15 +5,46 @@ import { toolDeclarations, systemPrompt } from "../ai/toolDeclarations";
 import { executeToolCall } from "../ai/toolExecutors";
 import { findNonOverlappingPosition } from "../utils/frameUtils";
 
-export function useAI(boardId, boardActions, objects) {
+const RATE_LIMIT_MAX = 50;
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const RATE_LIMIT_KEY = 'ai_request_timestamps';
+
+function loadTimestamps() {
+  try {
+    const raw = sessionStorage.getItem(RATE_LIMIT_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveTimestamps(timestamps) {
+  try {
+    sessionStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(timestamps));
+  } catch {
+    // sessionStorage quota exceeded — proceed without persisting
+  }
+}
+
+function getRecentTimestamps(timestamps) {
+  const cutoff = Date.now() - RATE_LIMIT_WINDOW_MS;
+  return timestamps.filter(ts => ts > cutoff);
+}
+
+export function useAI(boardId, boardActions, objects, user) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
+
+  const requestTimestampsRef = useRef(getRecentTimestamps(loadTimestamps()));
 
   // Refs to always access the latest boardActions and objects during async operations
   const boardActionsRef = useRef(boardActions);
   const objectsRef = useRef(objects);
+  const userRef = useRef(user);
   useEffect(() => { boardActionsRef.current = boardActions; }, [boardActions]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // Define tools for the model
   const tools = useMemo(() => ({
@@ -22,10 +53,14 @@ export function useAI(boardId, boardActions, objects) {
 
   const model = useMemo(() => {
     if (!boardId) return null;
+    const currentUser = userRef.current;
+    const userIdentityLine = currentUser
+      ? `\n\nYou are acting as the logged-in user: ${currentUser.displayName || currentUser.email || currentUser.uid} (uid: ${currentUser.uid}). All actions you take are performed on behalf of this user.`
+      : '';
     return getGenerativeModel(ai, {
       model: "gemini-2.0-flash",
       tools: [tools],
-      systemInstruction: systemPrompt,
+      systemInstruction: systemPrompt + userIdentityLine,
     });
   }, [boardId, tools]);
 
@@ -38,7 +73,10 @@ export function useAI(boardId, boardActions, objects) {
     if (!objects || Object.keys(objects).length === 0) return '';
     const summaries = Object.values(objects).map(obj => {
       let desc = `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
-      if (obj.text) desc += `, text:"${obj.text}"`;
+      if (obj.text) {
+        const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
+        desc += `, text:"${truncated}"`;
+      }
       if (obj.title) desc += `, title:"${obj.title}"`;
       if (obj.color) desc += `, color:${obj.color}`;
       if (obj.width) desc += `, size:${Math.round(obj.width)}x${Math.round(obj.height || obj.width)}`;
@@ -69,6 +107,22 @@ export function useAI(boardId, boardActions, objects) {
 
   const sendCommand = async (prompt) => {
     if (!chat) return "AI is not initialized.";
+
+    // Rate limit: max 50 requests per 24-hour window, tracked in sessionStorage
+    const now = Date.now();
+    const recent = getRecentTimestamps(requestTimestampsRef.current);
+    if (recent.length >= RATE_LIMIT_MAX) {
+      const oldestTs = Math.min(...recent);
+      const resetMs = RATE_LIMIT_WINDOW_MS - (now - oldestTs);
+      const resetHours = Math.ceil(resetMs / (60 * 60 * 1000));
+      const msg = `Rate limit reached: ${RATE_LIMIT_MAX} requests per 24 hours. Resets in approximately ${resetHours} hour${resetHours !== 1 ? 's' : ''}.`;
+      setError(msg);
+      return msg;
+    }
+    const updated = [...recent, now];
+    requestTimestampsRef.current = updated;
+    saveTimestamps(updated);
+
     const contextPrompt = buildBoardContext() + prompt;
     setIsTyping(true);
     setError(null);
