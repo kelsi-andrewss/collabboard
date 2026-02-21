@@ -237,11 +237,33 @@ export function makeObjectHandlers({
     }
   };
 
+  const handleDeleteMultiple = (ids) => {
+    const idsSet = ids instanceof Set ? ids : new Set(ids);
+    const allUpdates = [];
+    const allDeleteIds = [];
+    for (const id of idsSet) {
+      const obj = board.objects[id];
+      if (!obj) continue;
+      if (obj.type === 'frame') {
+        const children = Object.values(board.objects).filter(o => o.frameId === id);
+        for (const c of children) {
+          if (!idsSet.has(c.id)) {
+            allUpdates.push({ id: c.id, data: { frameId: null } });
+          }
+        }
+      }
+      allDeleteIds.push(id);
+    }
+    board.batchWriteAndDelete(allUpdates, allDeleteIds);
+    setSelectedId(null);
+  };
+
   return {
     updateActiveColor,
     handleDragMove,
     handleContainedDragEnd,
     handleDeleteWithCleanup,
+    handleDeleteMultiple,
     handleBringToFront,
     handleSendToBack,
     handleSelectAndRaise,
