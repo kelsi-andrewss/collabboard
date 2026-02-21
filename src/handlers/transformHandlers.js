@@ -120,7 +120,7 @@ export function makeTransformHandlers({
       const node = stageRef.current.findOne('.' + id);
       const liveX = node ? node.x() : obj.x;
       const liveY = node ? node.y() : obj.y;
-      const liveW = node ? node.width() * node.scaleX() : (obj.width || 400);
+      const liveW = node ? node.getClientRect({ skipTransform: true }).width : (obj.width || 400);
       showErrorTooltip(
         'Parent cannot be smaller than child. Remove child first.',
         {
