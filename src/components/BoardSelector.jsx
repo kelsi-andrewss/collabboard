@@ -268,17 +268,19 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const backfillDisplayNameLower = async () => {
     const snap = await getDocs(collection(db, 'users'));
-    const batch = writeBatch(db);
-    let count = 0;
-    snap.docs.forEach(d => {
-      if (!d.data().displayNameLower) {
+    const toFix = snap.docs.filter(d => !d.data().displayNameLower);
+    const CHUNK = 500;
+    let totalFixed = 0;
+    for (let i = 0; i < toFix.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      toFix.slice(i, i + CHUNK).forEach(d => {
         const name = d.data().displayName || 'Anonymous';
         batch.update(doc(db, 'users', d.id), { displayNameLower: name.toLowerCase() });
-        count++;
-      }
-    });
-    if (count > 0) await batch.commit();
-    alert(`Backfilled ${count} user(s).`);
+      });
+      await batch.commit();
+      totalFixed += toFix.slice(i, i + CHUNK).length;
+    }
+    alert(`Backfilled ${totalFixed} user(s).`);
   };
 
   const handleUserSelect = (u) => {
