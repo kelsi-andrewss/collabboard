@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 
-function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true }) {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit }) {
   const groupRef = useRef();
   const trRef = useRef();
   const hitRectRef = useRef();
@@ -82,6 +82,16 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           height={height}
           fill="transparent"
           listening={true}
+          onDblClick={(e) => {
+            if (!canEdit || !onAutoFit) return;
+            e.cancelBubble = true;
+            onAutoFit(id);
+          }}
+          onDblTap={(e) => {
+            if (!canEdit || !onAutoFit) return;
+            e.cancelBubble = true;
+            onAutoFit(id);
+          }}
         />
         {/* Translucent background fill derived from frame color */}
         <Rect

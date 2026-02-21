@@ -146,6 +146,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
   const handleGroupDragOver = (e, targetGroupId) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     setDragOverTargetId(targetGroupId);
   };

@@ -203,6 +203,7 @@ export function GroupPage({
 
   const handleGroupDragOver = (e, targetGroupId) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     setDragOverTargetId(targetGroupId);
   };

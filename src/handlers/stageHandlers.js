@@ -3,7 +3,7 @@ import { getContentBounds } from '../utils/frameUtils.js';
 const HEADER_HEIGHT = 60;
 
 export function makeStageHandlers({
-  setSelectedId, setStagePos, setStageScale, presence, objectsRef,
+  setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
   pendingToolRef, pendingToolCountRef, onPendingToolPlace,
 }) {
   const handleMouseMove = (e) => {
@@ -54,6 +54,7 @@ export function makeStageHandlers({
         return;
       }
       setSelectedId(null);
+      setSelectedIds(new Set());
     }
   };
 
