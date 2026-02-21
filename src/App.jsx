@@ -261,6 +261,7 @@ export function App() {
   const boardRef = useRef(board);
   boardRef.current = board;
   const handleDeleteRef = useRef(null);
+  const handleDeleteMultipleRef = useRef(null);
   const handleDuplicateRef = useRef(null);
   const handleDuplicateMultipleRef = useRef(null);
   const clipboardRef = useRef([]);
@@ -286,7 +287,7 @@ export function App() {
         const ids = selectedIdsRef.current;
         if (ids.size > 0) {
           e.preventDefault();
-          for (const id of ids) handleDeleteRef.current?.(id);
+          handleDeleteMultipleRef.current?.(ids);
           setSelectedIds(new Set());
           return;
         }
@@ -360,7 +361,7 @@ export function App() {
             snapshots.push(rest);
           }
           clipboardRef.current = snapshots;
-          for (const id of ids) handleDeleteRef.current?.(id);
+          handleDeleteMultipleRef.current?.(ids);
           setSelectedIds(new Set());
         } else {
           const id = selectedIdRef.current;
@@ -432,6 +433,7 @@ export function App() {
     handleDragMove,
     handleContainedDragEnd,
     handleDeleteWithCleanup,
+    handleDeleteMultiple,
     handleSelectAndRaise,
     handleDuplicate,
     handleDuplicateMultiple,
@@ -443,6 +445,7 @@ export function App() {
     setResizeTooltip, resizeTooltipTimer,
   });
   handleDeleteRef.current = handleDeleteWithCleanup;
+  handleDeleteMultipleRef.current = handleDeleteMultiple;
   handleDuplicateRef.current = handleDuplicate;
   handleDuplicateMultipleRef.current = handleDuplicateMultiple;
 
@@ -700,7 +703,7 @@ export function App() {
                           snapshots.push(rest);
                         }
                         clipboardRef.current = snapshots;
-                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        handleDeleteMultiple(selectedIds);
                         setSelectedIds(new Set());
                       }},
                       { label: 'Copy Selection', shortcut: '⌘C', action: () => {
@@ -730,7 +733,7 @@ export function App() {
                     ),
                     { label: 'Delete', shortcut: '⌫', danger: true, action: () => {
                       if (multiSelected) {
-                        for (const id of selectedIds) handleDeleteWithCleanup(id);
+                        handleDeleteMultiple(selectedIds);
                         setSelectedIds(new Set());
                       } else {
                         handleDeleteWithCleanup(obj.id);
