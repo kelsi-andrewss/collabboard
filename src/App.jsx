@@ -204,6 +204,14 @@ export function App() {
   const selectedIdsRef = useRef(new Set());
   selectedIdsRef.current = selectedIds;
   const [pendingTool, setPendingTool] = useState(null);
+  const [connectorState, setConnectorState] = useState(null);
+  const connectorStateRef = useRef(null);
+  connectorStateRef.current = connectorState;
+  useEffect(() => {
+    if (pendingTool !== 'line' && pendingTool !== 'arrow') {
+      setConnectorState(null);
+    }
+  }, [pendingTool]);
   const [pendingToolCount, setPendingToolCount] = useState(0);
   const pendingToolRef = useRef(null);
   const pendingToolCountRef = useRef(0);
@@ -303,6 +311,11 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (connectorStateRef.current?.active) {
+          e.preventDefault();
+          setConnectorState(null);
+          return;
+        }
         if (pendingToolRef.current) {
           e.preventDefault();
           setPendingTool(null);
@@ -496,11 +509,49 @@ export function App() {
     setPendingToolCount(c => c + 1);
   };
 
-  const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
+  const { handleMouseMove, handleWheel, handleStageClick: handleStageClickBase, handleRecenter } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
   });
   handleRecenterRef.current = handleRecenter;
+
+  const onPortClick = ({ objectId, port, x, y }) => {
+    if (!canEditRef.current) return;
+    const cs = connectorStateRef.current;
+    if (!cs?.active) {
+      setConnectorState({ active: true, objectId, port, x, y });
+    } else {
+      const toolType = pendingToolRef.current;
+      const startX = cs.x;
+      const startY = cs.y;
+      const endX = x;
+      const endY = y;
+      const minX = Math.min(startX, endX);
+      const minY = Math.min(startY, endY);
+      board.addObject({
+        type: toolType === 'arrow' ? 'arrow' : 'line',
+        x: minX,
+        y: minY,
+        points: [startX - minX, startY - minY, endX - minX, endY - minY],
+        color: shapeColors.shapes.active,
+        strokeWidth: 3,
+        startConnectedId: cs.objectId,
+        startConnectedPort: cs.port,
+        endConnectedId: objectId,
+        endConnectedPort: port,
+        userId: user.uid,
+      });
+      setConnectorState(null);
+    }
+  };
+
+  const handleStageClick = (e) => {
+    if (connectorStateRef.current?.active) {
+      setConnectorState(null);
+      return;
+    }
+    handleStageClickBase(e);
+  };
 
   const isOffCenter = (() => {
     if (stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1) return true;
@@ -657,8 +708,8 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
+              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, connectorState, pendingTool }}
+              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, onPortClick, handleFrameAutoFit }}
             />
             <FABButtons
               state={{ showAI, darkMode, isOffCenter, canEdit }}
