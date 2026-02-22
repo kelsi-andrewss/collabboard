@@ -5,14 +5,20 @@ const STEPS = [
   {
     target: '.toolbar',
     title: 'Create Objects',
-    description: 'Use these tools to add sticky notes, shapes, lines, and frames to your board. Click the arrow to change colors.',
+    description: 'Add sticky notes, shapes, frames, text, and connectors to your board. Each tool has a color picker — click the arrow next to it to change colors.',
     position: 'below',
   },
   {
     target: '.board-wrapper',
     title: 'Navigate Your Board',
-    description: 'Drag the canvas to pan around. Scroll to zoom in and out. Click any object to select it.',
+    description: 'Drag the canvas to pan around. Scroll or pinch to zoom. Click any object to select it, then drag to move or use the handles to resize.',
     position: 'center',
+  },
+  {
+    target: '.snap-toggle',
+    title: 'Select & Grid Tools',
+    description: 'Switch between select and pan modes. Toggle snap-to-grid to align objects to a grid as you drag or resize them.',
+    position: 'below',
   },
   {
     target: '.ai-fab',
@@ -20,28 +26,44 @@ const STEPS = [
     description: 'Click here to open the AI panel. Ask it to create boards, arrange objects, or generate layouts for you.',
     position: 'left',
   },
+];
+
+const HOME_STEPS = [
   {
-    target: '.snap-toggle',
-    title: 'Snap to Grid',
-    description: 'Toggle this to enable grid snapping. Objects will align to a grid when you drag or resize them.',
+    target: '.controls-bar',
+    title: 'Your Boards',
+    description: 'This is your home page. All your boards appear here. Click any board to open it, or use the filters to sort and search.',
+    position: 'below',
+  },
+  {
+    target: '.new-board-btn',
+    title: 'Create a Board',
+    description: 'Click here to create a new board. Give it a name and start collaborating.',
+    position: 'below',
+  },
+  {
+    target: '.new-group-btn',
+    title: 'Organize with Groups',
+    description: 'Groups let you organize boards together. Drag boards into groups, create subgroups, and share access with teammates.',
     position: 'below',
   },
 ];
 
 const STORAGE_KEY = 'collaboard_tutorial_done';
+const HOME_STORAGE_KEY = 'collaboard_home_tutorial_done';
 
-export function Tutorial({ onComplete }) {
+export function Tutorial({ onComplete, steps = STEPS, storageKey = STORAGE_KEY }) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState(null);
 
   const measure = useCallback(() => {
-    const el = document.querySelector(STEPS[step].target);
+    const el = document.querySelector(steps[step].target);
     if (el) {
       setRect(el.getBoundingClientRect());
     } else {
       setRect(null);
     }
-  }, [step]);
+  }, [step, steps]);
 
   useEffect(() => {
     measure();
@@ -50,21 +72,21 @@ export function Tutorial({ onComplete }) {
   }, [measure]);
 
   const handleNext = () => {
-    if (step < STEPS.length - 1) {
+    if (step < steps.length - 1) {
       setRect(null);
       setStep(step + 1);
     } else {
-      localStorage.setItem(STORAGE_KEY, 'true');
+      localStorage.setItem(storageKey, 'true');
       onComplete();
     }
   };
 
   const handleSkip = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    localStorage.setItem(storageKey, 'true');
     onComplete();
   };
 
-  const current = STEPS[step];
+  const current = steps[step];
   const isCenter = current.position === 'center';
   const pad = 8;
 
@@ -117,14 +139,14 @@ export function Tutorial({ onComplete }) {
       {/* Tooltip */}
       <div className="tutorial-tooltip" style={tooltipStyle}>
         <div className="tutorial-step-indicator">
-          {step + 1} / {STEPS.length}
+          {step + 1} / {steps.length}
         </div>
         <h3 className="tutorial-title">{current.title}</h3>
         <p className="tutorial-desc">{current.description}</p>
         <div className="tutorial-actions">
           <button className="tutorial-skip" onClick={handleSkip}>Skip</button>
           <button className="tutorial-next" onClick={handleNext}>
-            {step < STEPS.length - 1 ? 'Next' : 'Get Started'}
+            {step < steps.length - 1 ? 'Next' : 'Get Started'}
           </button>
         </div>
       </div>
@@ -133,3 +155,6 @@ export function Tutorial({ onComplete }) {
 }
 
 Tutorial.shouldShow = () => !localStorage.getItem(STORAGE_KEY);
+Tutorial.shouldShowHome = () => !localStorage.getItem(HOME_STORAGE_KEY);
+
+export { HOME_STEPS };

@@ -14,7 +14,7 @@ import { useCanvasViewport } from './hooks/useCanvasViewport';
 import { useShapeColors } from './hooks/useShapeColors';
 import { GroupPage } from './components/GroupPage.jsx';
 import { buildSlugChain } from './utils/slugUtils.js';
-import { Tutorial } from './components/Tutorial';
+import { Tutorial, HOME_STEPS } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
 import { makeObjectHandlers } from './handlers/objectHandlers.js';
 import { makeObjectCreationHandlers } from './handlers/objectCreationHandlers.js';
@@ -222,6 +222,7 @@ export function App() {
   const updateDragState = (next) => { dragStateRef.current = next; setDragState(next); };
   const [snapToGrid, setSnapToGrid] = useState(() => localStorage.getItem('snapToGrid') === 'true');
   const [showTutorial, setShowTutorial] = useState(() => Tutorial.shouldShow());
+  const [showHomeTutorial, setShowHomeTutorial] = useState(() => Tutorial.shouldShowHome());
   const [resizeTooltip, setResizeTooltip] = useState(null); // { x, y, msg }
   const [dragPos, setDragPos] = useState(null); // { id, x, y } while dragging, null otherwise
   const resizeTooltipTimer = useRef(null);
@@ -762,6 +763,13 @@ export function App() {
               groups={groups}
               migrateGroupStrings={migrateGroupStrings}
             />
+            {showHomeTutorial && (
+              <Tutorial
+                steps={HOME_STEPS}
+                storageKey="collaboard_home_tutorial_done"
+                onComplete={() => setShowHomeTutorial(false)}
+              />
+            )}
           </div>
         )}
         {user && boardId && !board.loading && !currentBoard && (
