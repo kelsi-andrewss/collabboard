@@ -6,7 +6,7 @@ import './SelectedActionBar.css';
 
 function SelectedActionBarInner({ state, handlers }) {
   const { selectedId, objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit } = state;
-  const { setShowSelectedColorPicker, updateObject, handleDeleteWithCleanup, updateActiveColor } = handlers;
+  const { setShowSelectedColorPicker, updateObject, updateObjectDirect, handleDeleteWithCleanup, updateActiveColor } = handlers;
 
   const toolbarRef = useRef();
 
@@ -58,6 +58,10 @@ function SelectedActionBarInner({ state, handlers }) {
               data={shapeColors[obj.type] ?? { active: obj.color || '#3b82f6' }}
               history={colorHistory}
               onSelect={(type, color) => {
+                updateObjectDirect(selectedId, { color });
+                updateActiveColor(type, color);
+              }}
+              onCommit={(type, color) => {
                 updateObject(selectedId, { color });
                 updateActiveColor(type, color);
               }}

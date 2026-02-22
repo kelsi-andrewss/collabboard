@@ -851,7 +851,7 @@ export function App() {
             <ResizeTooltip state={{ resizeTooltip }} />
             <SelectedActionBar
               state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit }}
-              handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, handleDeleteWithCleanup, updateActiveColor }}
+              handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, updateObjectDirect: rawBoard.updateObject, handleDeleteWithCleanup, updateActiveColor }}
             />
             {canEdit && (
               <AIPanel
