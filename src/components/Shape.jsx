@@ -77,6 +77,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
         draggable={canEdit && !isEditing}
         dragDistance={3}
         onClick={(e) => {
+          if (pendingTool) return;
           e.cancelBubble = true;
           onSelect(id);
         }}
@@ -86,6 +87,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
           setIsEditing(true);
         }}
         onTap={(e) => {
+          if (pendingTool) return;
           e.cancelBubble = true;
           onSelect(id);
         }}
@@ -192,6 +194,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             fontFamily="sans-serif"
             lineHeight={1.2}
             onClick={(e) => {
+              if (pendingTool) return;
               e.cancelBubble = true;
               onSelect(id);
             }}
@@ -201,6 +204,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
               setIsEditing(true);
             }}
             onTap={(e) => {
+              if (pendingTool) return;
               e.cancelBubble = true;
               onSelect(id);
             }}

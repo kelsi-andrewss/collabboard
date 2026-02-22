@@ -74,10 +74,12 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           fill="transparent"
           listening={true}
           onClick={(e) => {
+            if (pendingTool) return;
             e.cancelBubble = true;
             onSelect(id);
           }}
           onTap={(e) => {
+            if (pendingTool) return;
             e.cancelBubble = true;
             onSelect(id);
           }}

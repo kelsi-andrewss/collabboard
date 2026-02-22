@@ -61,6 +61,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
         draggable={canEdit && !isEditing}
         dragDistance={3}
         onClick={(e) => {
+          if (pendingTool) return;
           e.cancelBubble = true;
           onSelect(id);
         }}
@@ -71,6 +72,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
           onTypingChange?.(true);
         }}
         onTap={(e) => {
+          if (pendingTool) return;
           e.cancelBubble = true;
           onSelect(id);
         }}
@@ -125,6 +127,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
             lineHeight={1.2}
             fill={getContrastColor(color)}
             onClick={(e) => {
+              if (pendingTool) return;
               e.cancelBubble = true;
               onSelect(id);
             }}
@@ -135,6 +138,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
               onTypingChange?.(true);
             }}
             onTap={(e) => {
+              if (pendingTool) return;
               e.cancelBubble = true;
               onSelect(id);
             }}
