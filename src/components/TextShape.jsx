@@ -116,7 +116,8 @@ function TextShapeInner({
         {!isEditing ? (
           <Text
             ref={textRef}
-            text={text || ''}
+            text={text || 'Type something...'}
+            opacity={text ? 1 : 0.35}
             width={width}
             fontSize={fontSize}
             fontFamily="sans-serif"
