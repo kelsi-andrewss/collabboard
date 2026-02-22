@@ -6,7 +6,9 @@ const DEFAULTS = {
   rectangle: { active: '#bfdbfe' },
   circle: { active: '#fbcfe8' },
   triangle: { active: '#e9d5ff' },
-  line: { active: '#3b82f6' }
+  line: { active: '#3b82f6' },
+  text: { active: '#1a1a1a' },
+  frame: { active: '#6366f1' },
 };
 
 export function useShapeColors(boardId) {

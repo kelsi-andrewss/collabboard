@@ -587,11 +587,11 @@ export function App() {
       const len = Math.round(200 / stageScale);
       board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'text') {
-      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: '#1a1a1a', rotation: 0, frameId: null, childIds: [], ...defaults });
+      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
-      board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: '#6366f1', ...defaults });
+      board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
       board.addObject({ type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults });
     }
@@ -914,7 +914,7 @@ export function App() {
                     { label: 'Add Frame here', action: () => {
                       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
                       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
-                      board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: '#6366f1', userId: user.uid });
+                      board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
                     }},
                     { separator: true },
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },

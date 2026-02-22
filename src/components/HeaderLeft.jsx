@@ -284,15 +284,47 @@ function HeaderLeftInner({ state, handlers }) {
             </div>
 
             <div className="tool-split-button no-outline">
-              <button data-toolbar-item="frame" className={pendingTool === 'frame' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'frame' ? null : 'frame') : handleAddFrame()} title="Add Frame (click to place)">
-                <AppWindow size={18} />
+              <button
+                data-toolbar-item="frame"
+                className={pendingTool === 'frame' ? 'tool-active' : ''}
+                onClick={() => setPendingTool(pendingTool === 'frame' ? null : 'frame')}
+                title="Add Frame (click to place)"
+              >
+                <AppWindow size={18} stroke={shapeColors.frame?.active} />
               </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'frame' ? null : 'frame')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'frame' && (
+                <ColorPickerMenu
+                  type="frame"
+                  data={shapeColors.frame}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                />
+              )}
             </div>
 
             <div className="tool-split-button no-outline">
-              <button data-toolbar-item="text" onClick={() => { setPendingTool('text'); }} title="Add Text">
-                <Type size={18} />
+              <button
+                data-toolbar-item="text"
+                className={pendingTool === 'text' ? 'tool-active' : ''}
+                onClick={() => setPendingTool(pendingTool === 'text' ? null : 'text')}
+                title="Add Text (click to place)"
+              >
+                <Type size={18} stroke={shapeColors.text?.active} />
               </button>
+              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'text' ? null : 'text')}>
+                <ChevronDown size={14} />
+              </button>
+              {showColorPicker === 'text' && (
+                <ColorPickerMenu
+                  type="text"
+                  data={shapeColors.text}
+                  history={colorHistory}
+                  onSelect={updateActiveColor}
+                />
+              )}
             </div>
 
             <span className="header-divider" />
