@@ -4,7 +4,6 @@ import {
   computeAncestorExpansions,
   rectsOverlap,
   getDescendantIds,
-  findObjectsToAbsorb,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
 import { showErrorTooltip } from '../utils/tooltipUtils.js';
@@ -133,10 +132,6 @@ export function makeFrameDragHandlers({
       );
     }
 
-    // Find top-level stickies/shapes whose center falls inside the dropped frame — they will be absorbed
-    const droppedRect = { x: snapped.x, y: snapped.y, width: ow, height: oh };
-    const absorbIds = new Set(findObjectsToAbsorb(id, droppedRect, board.objects));
-
     const dx = snapped.x - frame.x;
     const dy = snapped.y - frame.y;
     // Recursively move all descendants
@@ -149,10 +144,6 @@ export function makeFrameDragHandlers({
       if (child) {
         allUpdates.push({ id: childId, data: { x: child.x + dx, y: child.y + dy } });
       }
-    }
-    // Adopt absorbed objects as children of this frame (positions unchanged)
-    for (const absorbId of absorbIds) {
-      allUpdates.push({ id: absorbId, data: { frameId: id } });
     }
     for (const exp of ancestorExpansions) allUpdates.push(exp);
 
