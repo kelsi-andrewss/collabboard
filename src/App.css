@@ -815,3 +815,34 @@
 .floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .zoom-dropdown-btn {
   transform: scaleY(-1);
 }
+
+@keyframes konami-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.konami-spin {
+  animation: konami-spin 600ms ease-in-out forwards;
+}
+
+@keyframes reaction-float-up {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -120%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -200%) scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes reaction-float-up {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}

@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import { usePresence } from './hooks/usePresence';
+import { useReactions } from './hooks/useReactions';
+import { useFollowMode } from './hooks/useFollowMode';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
@@ -13,6 +15,7 @@ import { useRouting } from './hooks/useRouting';
 import { useCanvasViewport } from './hooks/useCanvasViewport';
 import { useShapeColors } from './hooks/useShapeColors';
 import { GroupPage } from './components/GroupPage.jsx';
+import { FollowModeIndicator } from './components/FollowModeIndicator.jsx';
 import { buildSlugChain } from './utils/slugUtils.js';
 import { Tutorial, HOME_STEPS } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
@@ -22,6 +25,7 @@ import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
 import { makeStageHandlers, MIN_SCALE, MAX_SCALE } from './handlers/stageHandlers.js';
 import { getContentBounds, findOverlappingFrame, computeAncestorExpansions, FRAME_MARGIN } from './utils/frameUtils.js';
+import { Confetti } from './components/Confetti.jsx';
 import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
 import { ResizeTooltip } from './components/ResizeTooltip.jsx';
@@ -30,6 +34,8 @@ import { SelectedActionBar } from './components/SelectedActionBar.jsx';
 import { HeaderLeft } from './components/HeaderLeft.jsx';
 import { BoardCanvas } from './components/BoardCanvas.jsx';
 import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
+import { ReactionPicker } from './components/ReactionPicker.jsx';
+import { ReactionOverlay } from './components/ReactionOverlay.jsx';
 import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
 import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
@@ -47,6 +53,8 @@ export function App() {
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
   const handleRecenterRef = useRef(null);
+  const konamiSequenceRef = useRef([]);
+  const canvasWrapperRef = useRef(null);
 
   const captureThumbnail = (bId) => {
     if (document.visibilityState !== 'visible') return;
@@ -105,6 +113,10 @@ export function App() {
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
   const { cursorSyncLatencyRef } = presence;
+  const { reactions, sendReaction } = useReactions(boardId, user);
+  const { followUserId, setFollowUserId, followedUserPresence, isFollowing } = useFollowMode(presence.presentUsers);
+  const isFollowingRef = useRef(false);
+  isFollowingRef.current = isFollowing;
   const rawBoard = useBoard(boardId, user);
   const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
@@ -123,6 +135,49 @@ export function App() {
 
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
+
+  // Broadcast viewport to RTDB so others can follow this user
+  useEffect(() => {
+    if (!boardId) return;
+    presence.updateViewport(stagePos.x, stagePos.y, stageScale);
+  }, [stagePos.x, stagePos.y, stageScale, boardId]);
+
+  // Sync viewport to followed user's presence
+  const preSyncViewportRef = useRef(null);
+  useEffect(() => {
+    if (!isFollowing || !followedUserPresence) return;
+    const { stageX, stageY, stageScale: fScale } = followedUserPresence;
+    if (stageX == null || stageY == null || fScale == null) return;
+    setStagePos({ x: stageX, y: stageY });
+    setStageScale(fScale);
+  }, [followedUserPresence?.stageX, followedUserPresence?.stageY, followedUserPresence?.stageScale, isFollowing]);
+
+  // Save viewport before entering follow mode; restore on exit
+  useEffect(() => {
+    if (isFollowing) {
+      preSyncViewportRef.current = { pos: stagePos, scale: stageScale };
+    }
+  }, [isFollowing]);
+
+  // Auto-exit follow mode when followed user leaves presence
+  useEffect(() => {
+    if (followUserId && !presence.presentUsers[followUserId]) {
+      setFollowUserId(null);
+    }
+  }, [presence.presentUsers, followUserId]);
+
+  const handleFollowUser = useCallback((uid) => {
+    setFollowUserId(uid);
+  }, [setFollowUserId]);
+
+  const handleExitFollow = useCallback(() => {
+    setFollowUserId(null);
+    if (preSyncViewportRef.current) {
+      setStagePos(preSyncViewportRef.current.pos);
+      setStageScale(preSyncViewportRef.current.scale);
+      preSyncViewportRef.current = null;
+    }
+  }, [setFollowUserId, setStagePos, setStageScale]);
 
   // Thumbnail: 5-minute interval capture while on a board
   const boardIdRef = useRef(boardId);
@@ -177,10 +232,11 @@ export function App() {
     updateObject: rawBoard?.updateObject,
     deleteObject: rawBoard?.deleteObject,
     pushCompoundEntry: board.pushCompoundEntry,
+    onAIToolSuccess: () => onAIToolSuccessRef.current?.(),
     createBoard: aiCreateBoard,
     getBoards: () => allBoards,
     createGroup,
-  }, board?.objects, user, isAdmin);
+  }, board?.objects, user, isAdmin, stagePos, stageScale, setStagePos, setStageScale, preferences.aiResponseMode);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
   const [showHomeAI, setShowHomeAI] = useState(false);
@@ -225,6 +281,9 @@ export function App() {
     }
   }, [boardId]);
 
+  const [confettiPos, setConfettiPos] = useState(null);
+  const objectCountRef = useRef(0);
+  const onAIToolSuccessRef = useRef(null);
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(null);
@@ -240,6 +299,7 @@ export function App() {
   const [dragPos, setDragPos] = useState(null); // { id, x, y } while dragging, null otherwise
   const resizeTooltipTimer = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
+  const [reactionPicker, setReactionPicker] = useState(null); // { screenX, screenY, canvasX, canvasY }
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
@@ -316,11 +376,27 @@ export function App() {
   const handleDuplicateMultipleRef = useRef(null);
   const clipboardRef = useRef([]);
 
+  const handleExitFollowRef = useRef(handleExitFollow);
+  handleExitFollowRef.current = handleExitFollow;
+
   // Keyboard shortcuts — registered once; reads via refs
   useEffect(() => {
     const handleKeyDown = (e) => {
       const tag = document.activeElement?.tagName;
       const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
+      const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+      const seq = konamiSequenceRef.current;
+      seq.push(e.key);
+      if (seq.length > 10) seq.splice(0, seq.length - 10);
+      if (seq.length === 10 && seq.every((k, i) => k === KONAMI[i])) {
+        konamiSequenceRef.current = [];
+        const wrapper = canvasWrapperRef.current;
+        if (wrapper) {
+          wrapper.classList.add('konami-spin');
+          setTimeout(() => wrapper.classList.remove('konami-spin'), 700);
+        }
+      }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         if (!canEditRef.current) return;
@@ -350,6 +426,11 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (isFollowingRef.current) {
+          e.preventDefault();
+          handleExitFollowRef.current();
+          return;
+        }
         if (connectorFirstPointRef.current !== null) {
           e.preventDefault();
           setConnectorFirstPoint(null);
@@ -461,10 +542,9 @@ export function App() {
           }
           if (items.length === 0) return;
           const OFFSET = 20;
-          const board = boardRef.current;
           const refs = await Promise.all(
             items.map((snapshot, i) =>
-              board.addObject({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
+              trackedAddObjectRef.current({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
             )
           );
           const newIds = refs.map(r => r.id);
@@ -603,23 +683,42 @@ export function App() {
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
 
+  const triggerConfettiAtCenter = () => {
+    setConfettiPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  };
+  onAIToolSuccessRef.current = triggerConfettiAtCenter;
+
+  const trackedAddObjectRef = useRef(null);
+  const trackedAddObject = async (...args) => {
+    const ref = await board.addObject(...args);
+    if (ref) {
+      const next = objectCountRef.current + 1;
+      objectCountRef.current = next;
+      if (next > 0 && next % 10 === 0) {
+        triggerConfettiAtCenter();
+      }
+    }
+    return ref;
+  };
+  trackedAddObjectRef.current = trackedAddObject;
+
   const onPendingToolPlace = async (toolType, canvasX, canvasY) => {
     if (!canEditRef.current) return;
     const defaults = { userId: user.uid };
     if (toolType === 'line') {
       const len = Math.round(200 / stageScale);
-      board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      trackedAddObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'arrow') {
       const len = Math.round(200 / stageScale);
-      board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      trackedAddObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'text') {
       const textFontSize = Math.round(16 / stageScale);
       const textWidth = Math.round(200 / stageScale);
-      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
+      trackedAddObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round(window.innerHeight * 0.55 / stageScale);
-      board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
+      trackedAddObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
       let objData;
       if (toolType === 'sticky') {
@@ -630,7 +729,7 @@ export function App() {
       } else {
         objData = { type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults };
       }
-      const ref = await board.addObject(objData);
+      const ref = await trackedAddObject(objData);
       const objId = ref.id;
       const overFrame = findOverlappingFrame(
         { id: objId, x: objData.x, y: objData.y, width: objData.width || 100, height: objData.height || 100 },
@@ -661,12 +760,40 @@ export function App() {
 
   const dragDrawStateRef = useRef({ start: null, justSetFirst: false, suppressClick: false });
 
+  const isScribblingRef = useRef(false);
+  const scribblePointsRef = useRef([]);
+  const [scribblePreview, setScribblePreview] = useState([]);
+
+  const onScribbleUpdate = (points) => {
+    setScribblePreview([...points]);
+  };
+
+  const onScribbleCommit = (points) => {
+    setScribblePreview([]);
+    if (points.length < 4) return;
+    const color = currentColorRef.current || '#333333';
+    board.addObject({
+      type: 'line',
+      points,
+      strokeWidth: 2,
+      color,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      userId: user?.uid || null,
+    });
+    setPendingTool(null);
+    setPendingToolCount(0);
+  };
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter, handleStageMouseDown, handleStageMouseUp } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
     connectorFirstPointRef, setConnectorFirstPoint,
     addObject: board.addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
     dragDrawStateRef,
+    isScribblingRef, scribblePointsRef, onScribbleUpdate, onScribbleCommit,
   });
   handleRecenterRef.current = handleRecenter;
 
@@ -686,6 +813,25 @@ export function App() {
     return () => {
       stage.off('mousedown.dragdraw');
       stage.off('mouseup.dragdraw');
+    };
+  }, [boardId]);
+
+  useEffect(() => {
+    if (!boardId) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const onDblClick = (e) => {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const screenX = pointer.x;
+      const screenY = pointer.y + 60;
+      const canvasX = (pointer.x - stage.x()) / stage.scaleX();
+      const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+      setReactionPicker({ screenX, screenY, canvasX, canvasY });
+    };
+    stage.on('dblclick.reactions', onDblClick);
+    return () => {
+      stage.off('dblclick.reactions');
     };
   }, [boardId]);
 
@@ -722,7 +868,7 @@ export function App() {
           <div className="header-right">
             {user && boardId && (
               <HeaderRight
-                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
+                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user, objects: board.objects }}
                 handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
               />
             )}
@@ -837,7 +983,7 @@ export function App() {
           </div>
         )}
         {user && boardId && (board.loading || currentBoard) && (
-          <div className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
+          <div ref={canvasWrapperRef} className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
             {board.loading && (
               <div className="board-loading">
                 <div className="board-loading-spinner" />
@@ -845,14 +991,45 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
+              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: handleFollowUser }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
+            {scribblePreview.length >= 4 && (() => {
+              const pts = scribblePreview;
+              const pairs = [];
+              for (let i = 0; i + 3 < pts.length; i += 2) {
+                const sx = pts[i] * stageScale + stagePos.x;
+                const sy = pts[i + 1] * stageScale + stagePos.y;
+                const ex = pts[i + 2] * stageScale + stagePos.x;
+                const ey = pts[i + 3] * stageScale + stagePos.y;
+                pairs.push(`M${sx},${sy} L${ex},${ey}`);
+              }
+              return (
+                <svg
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }}
+                >
+                  <path
+                    d={pairs.join(' ')}
+                    stroke={currentColorRef.current || '#333333'}
+                    strokeWidth={2}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              );
+            })()}
             <FABButtons
               state={{ showAI, darkMode: preferences.darkMode, isOffCenter, canEdit }}
               handlers={{ setShowAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter }}
             />
             <ResizeTooltip state={{ resizeTooltip }} />
+            {isFollowing && followedUserPresence && (
+              <FollowModeIndicator
+                name={followedUserPresence.name}
+                onExit={handleExitFollow}
+              />
+            )}
             <SelectedActionBar
               state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit }}
               handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, updateObjectDirect: rawBoard.updateObject, handleDeleteWithCleanup, updateActiveColor }}
@@ -864,6 +1041,23 @@ export function App() {
               />
             )}
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
+            {confettiPos && (
+              <Confetti x={confettiPos.x} y={confettiPos.y} onDone={() => setConfettiPos(null)} />
+            )}
+            <ReactionOverlay reactions={reactions} />
+            {reactionPicker && (
+              <ReactionPicker
+                x={reactionPicker.screenX}
+                y={reactionPicker.screenY}
+                onSelect={(emoji) => {
+                  const screenX = reactionPicker.canvasX * stageScale + stagePos.x;
+                  const screenY = reactionPicker.canvasY * stageScale + stagePos.y + 60;
+                  sendReaction(emoji, screenX, screenY);
+                  setReactionPicker(null);
+                }}
+                onClose={() => setReactionPicker(null)}
+              />
+            )}
             {!canEdit && (
               <div className="view-only-banner"><Eye size={14} /> View only</div>
             )}
@@ -985,7 +1179,7 @@ export function App() {
                         items.map((snapshot, i) => {
                           const x = (i === 0 ? canvasX : snapshot.x + OFFSET + dx) + i * OFFSET;
                           const y = (i === 0 ? canvasY : snapshot.y + OFFSET + dy) + i * OFFSET;
-                          return board.addObject({ ...snapshot, x, y });
+                          return trackedAddObject({ ...snapshot, x, y });
                         })
                       );
                       const pasteIds = pasteRefs.map(r => r.id);
@@ -996,15 +1190,15 @@ export function App() {
                       setSelectedIds(allIds);
                     }},
                     { label: 'Add Sticky here', action: () => {
-                      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
+                      trackedAddObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
                     }},
                     { label: 'Add Shape here', action: () => {
-                      board.addObject({ type: 'rectangle', x: contextMenu.canvasX - 50, y: contextMenu.canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, userId: user.uid });
+                      trackedAddObject({ type: 'rectangle', x: contextMenu.canvasX - 50, y: contextMenu.canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, userId: user.uid });
                     }},
                     { label: 'Add Frame here', action: () => {
                       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
                       const fh = Math.round(window.innerHeight * 0.55 / stageScale);
-                      board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
+                      trackedAddObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
                     }},
                     { separator: true },
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },

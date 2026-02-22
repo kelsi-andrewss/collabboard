@@ -362,6 +362,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
     activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint,
+    onFollowUser,
   } = state;
 
   objectsRef.current = objects;
@@ -905,7 +906,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             listening={false}
           />
         )}
-        <Cursors presentUsers={presentUsers} userId={currentUserId} />
+        <Cursors presentUsers={presentUsers} userId={currentUserId} onFollowUser={onFollowUser} />
       </Layer>
       <Layer ref={dragLayerRef} />
       {pendingTool && (pendingTool === 'line' || pendingTool === 'arrow') && (
@@ -951,7 +952,8 @@ export function areEqual(prev, next) {
     ps.selectedIds === ns.selectedIds &&
     ps.canEdit === ns.canEdit &&
     ps.connectorFirstPoint === ns.connectorFirstPoint &&
-    ps.pendingTool === ns.pendingTool
+    ps.pendingTool === ns.pendingTool &&
+    ps.onFollowUser === ns.onFollowUser
   );
 }
 

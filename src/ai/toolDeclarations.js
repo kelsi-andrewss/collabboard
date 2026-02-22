@@ -369,6 +369,44 @@ export const toolDeclarations = [
     }
   },
   {
+    name: "moodboardLayout",
+    description: "Rearranges all board objects (or selected objects) into an aesthetic masonry-style grid grouped by color.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        targetIds: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Optional list of object IDs to rearrange. If empty or omitted, all objects are rearranged."
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'controlViewport',
+    description: 'Controls the canvas viewport — zoom in/out, fit all objects on screen, or pan to a specific object.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        action: {
+          type: 'STRING',
+          enum: ['zoomIn', 'zoomOut', 'zoomToFit', 'panToObject'],
+          description: 'The viewport action to perform.'
+        },
+        objectId: {
+          type: 'STRING',
+          description: 'Required for panToObject: the ID of the object to pan to.'
+        },
+        zoomLevel: {
+          type: 'NUMBER',
+          description: 'Optional target zoom scale (0.1-5). Used by zoomIn/zoomOut as the target level instead of the default step.'
+        }
+      },
+      required: ['action']
+    }
+  },
+  {
     name: "createConnector",
     description: "Creates a connector (line or arrow) anchored between two existing objects at specific ports. Use this instead of createShape when the user asks to connect, link, or draw an arrow between two objects.",
     parameters: {
@@ -384,6 +422,20 @@ export const toolDeclarations = [
         arrowhead: { type: "BOOLEAN", description: "Whether to show an arrowhead (default true)" }
       },
       required: ["startPort", "endPort"]
+    }
+  },
+  {
+    name: 'narrateBoard',
+    description: 'Reads all board objects and writes an absurd 3-5 sentence story incorporating the board content as a new sticky note.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        story: {
+          type: 'STRING',
+          description: 'A short, absurd 3-5 sentence story incorporating the types, colors, and text content of objects on the board. Be creative and whimsical.'
+        }
+      },
+      required: ['story']
     }
   }
 ];
@@ -412,6 +464,7 @@ TOOL SELECTION:
 - "arrange in a grid" → arrangeInGrid (moves existing objects; does NOT create new ones)
 - "space evenly" / "distribute" → spaceEvenly
 - "fit frame to contents" / "resize frame to fit" → fitFrameToContents (not resizeObject + moveObject)
+- "moodboard" / "arrange by color" / "group by color" / "aesthetic layout" → moodboardLayout (rearranges into masonry grid sorted by color)
 - "create a board" / "make a new board" → createBoard
 - "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
@@ -420,12 +473,16 @@ TOOL SELECTION:
 DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
 
 KEYWORD INTENTS:
+- "zoom in" / "zoom out" → controlViewport with action zoomIn or zoomOut
+- "zoom to fit" / "fit to screen" / "fit all" / "show everything" → controlViewport with action zoomToFit
+- "pan to [object]" / "show me [object]" / "focus on [object]" / "go to [object]" → controlViewport with action panToObject and the matching objectId
 - "connect X to Y" / "link X and Y" → createConnector between those two objects using anchor ports
 - "connect two frames" → createFrame (x2) then createConnector between them
 - "group X" → createFrame around those objects and add them as children via frameIndex
 - "arrange" / "organize" → arrangeInGrid on the relevant objects (default: all non-frame objects)
 - "clean up" → spaceEvenly or resolveOverlaps to space objects evenly and align to grid
 - "summarize" / "label" → createTextElement near each relevant item
+- "narrate the board" / "tell a story about the board" / "write a story" → narrateBoard: generate 3-5 absurd, whimsical sentences referencing the board objects' types, colors, and text content, and pass the full story as the \`story\` argument
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createFrame a unique frameIndex (0, 1, 2, ...)

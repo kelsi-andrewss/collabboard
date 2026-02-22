@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { HelpCircle, Link, Check, Settings, ArrowLeftRight } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { HelpCircle, Link, Check, Settings, ArrowLeftRight, Sparkles } from 'lucide-react';
 import { PresenceAvatars } from './PresenceAvatars.jsx';
 import { UserAvatarMenu } from './UserAvatarMenu.jsx';
 import { useDraggableFloat } from '../hooks/useDraggableFloat';
+import { useVibeCheck } from '../hooks/useVibeCheck';
+import { VibeToast } from './VibeToast.jsx';
 
 function HeaderRightInner({ state, handlers }) {
-  const { presentUsers, currentUserId, user } = state;
+  const { presentUsers, currentUserId, user, objects } = state;
   const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
+  const { checkVibe, vibeResult, isChecking } = useVibeCheck();
+  const objectsRef = useRef(objects);
+  objectsRef.current = objects;
   const [copied, setCopied] = useState(false);
   const { dragHandleProps, orientation } = useDraggableFloat('toolbar-right', null);
   const toggleOrientation = dragHandleProps?.onDoubleClick;
@@ -39,6 +44,15 @@ function HeaderRightInner({ state, handlers }) {
       )}
       <button
         className="help-btn"
+        onClick={() => checkVibe(objectsRef.current)}
+        title="Vibe check"
+        disabled={isChecking}
+        style={{ opacity: isChecking ? 0.5 : 1 }}
+      >
+        <Sparkles size={18} />
+      </button>
+      <button
+        className="help-btn"
         onClick={() => setShowTutorial(true)}
         title="Show Tutorial"
       >
@@ -56,6 +70,8 @@ function HeaderRightInner({ state, handlers }) {
   );
 
   return (
+    <>
+    {vibeResult && <VibeToast vibe={vibeResult} onDone={() => {}} />}
     <div
       className="floating-toolbar-chip"
       ref={dragHandleProps.ref}
@@ -81,6 +97,7 @@ function HeaderRightInner({ state, handlers }) {
         </>
       )}
     </div>
+    </>
   );
 }
 

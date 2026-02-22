@@ -75,7 +75,7 @@ function createMutationTracker(rawActions, currentObjects) {
   return { addObject, updateObject, deleteObject, getMutations };
 }
 
-export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseMode) {
+export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, stageScale, setStagePos, setStageScale, aiResponseMode) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
@@ -91,6 +91,9 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
   useEffect(() => { boardActionsRef.current = boardActions; }, [boardActions]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
   useEffect(() => { userRef.current = user; }, [user]);
+
+  const viewportRef = useRef({ stagePos, stageScale, setStagePos, setStageScale });
+  useEffect(() => { viewportRef.current = { stagePos, stageScale, setStagePos, setStageScale }; }, [stagePos, stageScale, setStagePos, setStageScale]);
 
   // Load persisted history on board switch; clear immediately so stale history is never shown
   useEffect(() => {
@@ -288,6 +291,11 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           createBoard: currentActions.createBoard,
           getBoards: currentActions.getBoards,
           createGroup: currentActions.createGroup,
+          setViewport: ({ stagePos: newPos, stageScale: newScale }) => {
+            const { setStagePos: ssp, setStageScale: sss } = viewportRef.current;
+            if (newScale !== undefined) sss(newScale);
+            if (newPos !== undefined) ssp(newPos);
+          },
         });
 
         const localFrames = [];
@@ -412,6 +420,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           findNonOverlappingPos, findContainingFrame,
           localFrames,
           ITEM_W, ITEM_H, ITEM_GAP, FRAME_PAD, TITLE_H,
+          getViewport: () => viewportRef.current,
         };
         for (const call of otherCalls) {
           if (call.name === 'deleteObject') {
@@ -429,6 +438,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
         const mutations = tracker.getMutations();
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
+          boardActionsRef.current.onAIToolSuccess?.();
         }
 
         if (collectedDeletions.length > 0) {

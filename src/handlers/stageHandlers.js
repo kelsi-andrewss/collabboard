@@ -13,6 +13,7 @@ export function makeStageHandlers({
   connectorFirstPointRef, setConnectorFirstPoint,
   addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
   dragDrawStateRef,
+  isScribblingRef, scribblePointsRef, onScribbleUpdate, onScribbleCommit,
 }) {
   const handleMouseMove = (e) => {
     if (!presence.updateCursor) return;
@@ -24,6 +25,18 @@ export function makeStageHandlers({
         y: (pointer.y - stage.y()) / stage.scaleY(),
       };
       presence.updateCursor(pos.x, pos.y);
+
+      if (isScribblingRef?.current) {
+        const pts = scribblePointsRef.current;
+        const lastX = pts[pts.length - 2];
+        const lastY = pts[pts.length - 1];
+        const dx = pos.x - lastX;
+        const dy = pos.y - lastY;
+        if (Math.hypot(dx, dy) >= 5) {
+          scribblePointsRef.current = [...pts, pos.x, pos.y];
+          onScribbleUpdate?.(scribblePointsRef.current);
+        }
+      }
     }
   };
 
@@ -52,6 +65,10 @@ export function makeStageHandlers({
     const tool = pendingToolRef?.current;
     const isBackground = e.target === e.target.getStage() || e.target.name() === 'bg-rect';
     if (isBackground || tool) {
+
+      if (tool === 'scribble') {
+        return;
+      }
 
       if (tool === 'line' || tool === 'arrow') {
         const drawState = dragDrawStateRef?.current;
@@ -126,6 +143,18 @@ export function makeStageHandlers({
 
   const handleStageMouseDown = (e) => {
     const tool = pendingToolRef?.current;
+
+    if (tool === 'scribble') {
+      const target = e.target;
+      const stage = target.getStage ? target.getStage() : null;
+      if (!stage) return;
+      const pos = stage.getRelativePointerPosition();
+      if (!pos) return;
+      if (isScribblingRef) isScribblingRef.current = true;
+      if (scribblePointsRef) scribblePointsRef.current = [pos.x, pos.y];
+      return;
+    }
+
     if (tool !== 'line' && tool !== 'arrow') return;
     const target = e.target;
     const stage = target.getStage ? target.getStage() : null;
@@ -155,6 +184,15 @@ export function makeStageHandlers({
 
   const handleStageMouseUp = (e) => {
     const tool = pendingToolRef?.current;
+
+    if (tool === 'scribble' && isScribblingRef?.current) {
+      isScribblingRef.current = false;
+      const pts = scribblePointsRef?.current || [];
+      onScribbleCommit?.(pts);
+      if (scribblePointsRef) scribblePointsRef.current = [];
+      return;
+    }
+
     if (tool !== 'line' && tool !== 'arrow') return;
     if (!dragDrawStateRef?.current?.start) return;
 
