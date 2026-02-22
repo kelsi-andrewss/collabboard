@@ -387,7 +387,7 @@
   font-size: 0.82rem;
   cursor: pointer;
   text-align: left;
-  padding: 6px 4px;
+  padding: 6px 8px;
   border-radius: var(--md-sys-shape-corner-small);
   transition: background var(--md-sys-motion-duration-short2);
   display: flex;

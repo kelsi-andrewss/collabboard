@@ -11,6 +11,10 @@ import { PORTS, getPortCoords, findSnapTarget } from '../utils/connectorUtils.js
 
 const PORT_DISPLAY_RADIUS = 8;
 
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 const OFFSCREEN = -99999;
 
 function ConnectorGhostLayer({ stageScale, layerRef, connectorFirstPoint, ghostLineRef, tooltipGroupRef }) {
@@ -285,16 +289,16 @@ export function buildRenderOrder(objects) {
   const result = [];
 
   function visitFrame(frame) {
-    for (const child of (nonFramesByParent[frame.id] || [])) {
-      result.push(child);
-    }
+    result.push(frame);
     const nested = (childFrames[frame.id] || [])
       .slice()
       .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     for (const nf of nested) {
       visitFrame(nf);
     }
-    result.push(frame);
+    for (const child of (nonFramesByParent[frame.id] || [])) {
+      result.push(child);
+    }
   }
 
   for (const frame of rootFrames) {
@@ -565,7 +569,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           y={-stagePos.y / stageScale}
           width={window.innerWidth / stageScale}
           height={(window.innerHeight - HEADER_HEIGHT) / stageScale}
-          fill={darkMode ? '#111827' : '#ffffff'}
+          fill={getCSSVar('--md-sys-color-surface') || (darkMode ? '#111827' : '#ffffff')}
         />
         {snapToGrid && (() => {
           const left = -stagePos.x / stageScale;
@@ -573,7 +577,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const startX = Math.floor(left / GRID_SIZE) * GRID_SIZE;
           const startY = Math.floor(top / GRID_SIZE) * GRID_SIZE;
           const { cols, rows } = computeGridDimensions(stagePos, stageScale, window.innerWidth, window.innerHeight);
-          const fill = darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+          const fill = getCSSVar('--md-sys-color-outline-variant') || (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)');
           const dotSize = 2 / stageScale;
           return (
             <KonvaShape
