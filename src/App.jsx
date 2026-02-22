@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
+import { useUserPreferences } from './hooks/useUserPreferences';
 import { usePresence } from './hooks/usePresence';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
@@ -37,11 +38,10 @@ import './App.css';
 
 export function App() {
   const { user, loading, login, logout, isAdmin } = useAuth();
+  const { preferences, updatePreference } = useUserPreferences(user);
   const [adminViewActive, setAdminViewActive] = useState(true);
   const { groupSlugs, setGroupSlugs, boardId, setBoardId, boardName, setBoardName,
           navigateHome, navigateToGroup, navigateToBoard } = useRouting();
-
-  const [darkMode, setDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
   const handleRecenterRef = useRef(null);
@@ -64,17 +64,6 @@ export function App() {
       if (bgRect) bgRect.fill(originalFill);
     }
   };
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => setDarkMode(e.matches);
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   const prevUserRef = useRef(null);
   useEffect(() => {
@@ -675,8 +664,8 @@ export function App() {
           )}
           {(!boardId) && (
             <>
-              <button className="help-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'}>
-                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              <button className="help-btn" onClick={() => updatePreference('darkMode', !preferences.darkMode)} title={preferences.darkMode ? 'Light mode' : 'Dark mode'}>
+                {preferences.darkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               {user && (
                 <>
@@ -725,15 +714,15 @@ export function App() {
                 moveBoard={moveBoard}
                 moveGroup={moveGroup}
                 createSubgroup={createSubgroup}
-                darkMode={darkMode}
+                darkMode={preferences.darkMode}
               />
             ) : (
               <BoardSelector
                 onSelectBoard={(id, name) => navigateToBoard([], id, name)}
                 onNavigateToGroup={navigateToGroup}
                 onNavigateToBoard={navigateToBoard}
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
+                darkMode={preferences.darkMode}
+                setDarkMode={(val) => updatePreference('darkMode', val)}
                 user={user}
                 logout={logout}
                 groups={groups}
@@ -749,8 +738,8 @@ export function App() {
               />
             )}
             <FABButtons
-              state={{ showAI: showHomeAI, darkMode, isOffCenter: false }}
-              handlers={{ setShowAI: setShowHomeAI, setDarkMode, handleRecenter: () => {} }}
+              state={{ showAI: showHomeAI, darkMode: preferences.darkMode, isOffCenter: false }}
+              handlers={{ setShowAI: setShowHomeAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter: () => {} }}
             />
             <AIPanel
               state={{ showAI: showHomeAI, aiPrompt: homeAiPrompt, isTyping: homeAI.isTyping, error: homeAI.error }}
@@ -792,12 +781,12 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
+              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             <FABButtons
-              state={{ showAI, darkMode, isOffCenter, canEdit }}
-              handlers={{ setShowAI, setDarkMode, handleRecenter }}
+              state={{ showAI, darkMode: preferences.darkMode, isOffCenter, canEdit }}
+              handlers={{ setShowAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter }}
             />
             <ResizeTooltip state={{ resizeTooltip }} />
             <SelectedActionBar
@@ -810,7 +799,7 @@ export function App() {
                 handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
               />
             )}
-            <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={darkMode} canEdit={canEdit} />
+            <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
             {!canEdit && (
               <div className="view-only-banner"><Eye size={14} /> View only</div>
             )}
