@@ -3,6 +3,7 @@ import { Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import { usePresence } from './hooks/usePresence';
+import { useReactions } from './hooks/useReactions';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
@@ -31,6 +32,8 @@ import { SelectedActionBar } from './components/SelectedActionBar.jsx';
 import { HeaderLeft } from './components/HeaderLeft.jsx';
 import { BoardCanvas } from './components/BoardCanvas.jsx';
 import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
+import { ReactionPicker } from './components/ReactionPicker.jsx';
+import { ReactionOverlay } from './components/ReactionOverlay.jsx';
 import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
 import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
@@ -108,6 +111,7 @@ export function App() {
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
   const { cursorSyncLatencyRef } = presence;
+  const { reactions, sendReaction } = useReactions(boardId, user);
   const rawBoard = useBoard(boardId, user);
   const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
@@ -247,6 +251,7 @@ export function App() {
   const [dragPos, setDragPos] = useState(null); // { id, x, y } while dragging, null otherwise
   const resizeTooltipTimer = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
+  const [reactionPicker, setReactionPicker] = useState(null); // { screenX, screenY, canvasX, canvasY }
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
@@ -727,6 +732,25 @@ export function App() {
     };
   }, [boardId]);
 
+  useEffect(() => {
+    if (!boardId) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const onDblClick = (e) => {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const screenX = pointer.x;
+      const screenY = pointer.y + 60;
+      const canvasX = (pointer.x - stage.x()) / stage.scaleX();
+      const canvasY = (pointer.y - stage.y()) / stage.scaleY();
+      setReactionPicker({ screenX, screenY, canvasX, canvasY });
+    };
+    stage.on('dblclick.reactions', onDblClick);
+    return () => {
+      stage.off('dblclick.reactions');
+    };
+  }, [boardId]);
+
   const isOffCenter = (() => {
     if (stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1) return true;
     const bounds = getContentBounds(board.objects);
@@ -904,6 +928,20 @@ export function App() {
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
             {confettiPos && (
               <Confetti x={confettiPos.x} y={confettiPos.y} onDone={() => setConfettiPos(null)} />
+            )}
+            <ReactionOverlay reactions={reactions} />
+            {reactionPicker && (
+              <ReactionPicker
+                x={reactionPicker.screenX}
+                y={reactionPicker.screenY}
+                onSelect={(emoji) => {
+                  const screenX = reactionPicker.canvasX * stageScale + stagePos.x;
+                  const screenY = reactionPicker.canvasY * stageScale + stagePos.y + 60;
+                  sendReaction(emoji, screenX, screenY);
+                  setReactionPicker(null);
+                }}
+                onClose={() => setReactionPicker(null)}
+              />
             )}
             {!canEdit && (
               <div className="view-only-banner"><Eye size={14} /> View only</div>
