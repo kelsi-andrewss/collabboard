@@ -6,7 +6,7 @@ import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
 import './GroupSettings.css';
 
-export function GroupSettings({ group, currentUserId, currentUser, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
+export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
   const [inviteRole, setInviteRole] = useState('member');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
@@ -169,7 +169,7 @@ export function GroupSettings({ group, currentUserId, currentUser, onUpdateGroup
                     value={role}
                     onChange={(e) => onInviteMember(uid, e.target.value)}
                   >
-                    <option value="admin">admin</option>
+                    {isGlobalAdmin && <option value="admin">admin</option>}
                     <option value="member">member</option>
                   </select>
                 ) : (
@@ -201,7 +201,7 @@ export function GroupSettings({ group, currentUserId, currentUser, onUpdateGroup
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
                 >
-                  <option value="admin">admin</option>
+                  {isGlobalAdmin && <option value="admin">admin</option>}
                   <option value="member">member</option>
                 </select>
               </div>
