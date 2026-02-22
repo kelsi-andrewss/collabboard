@@ -285,16 +285,16 @@ export function buildRenderOrder(objects) {
   const result = [];
 
   function visitFrame(frame) {
-    for (const child of (nonFramesByParent[frame.id] || [])) {
-      result.push(child);
-    }
+    result.push(frame);
     const nested = (childFrames[frame.id] || [])
       .slice()
       .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     for (const nf of nested) {
       visitFrame(nf);
     }
-    result.push(frame);
+    for (const child of (nonFramesByParent[frame.id] || [])) {
+      result.push(child);
+    }
   }
 
   for (const frame of rootFrames) {
