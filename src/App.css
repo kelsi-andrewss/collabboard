@@ -815,3 +815,12 @@
 .floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .zoom-dropdown-btn {
   transform: scaleY(-1);
 }
+
+@keyframes konami-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.konami-spin {
+  animation: konami-spin 600ms ease-in-out forwards;
+}

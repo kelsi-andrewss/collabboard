@@ -48,6 +48,8 @@ export function App() {
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
   const handleRecenterRef = useRef(null);
+  const konamiSequenceRef = useRef([]);
+  const canvasWrapperRef = useRef(null);
 
   const captureThumbnail = (bId) => {
     if (document.visibilityState !== 'visible') return;
@@ -326,6 +328,19 @@ export function App() {
     const handleKeyDown = (e) => {
       const tag = document.activeElement?.tagName;
       const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
+      const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+      const seq = konamiSequenceRef.current;
+      seq.push(e.key);
+      if (seq.length > 10) seq.splice(0, seq.length - 10);
+      if (seq.length === 10 && seq.every((k, i) => k === KONAMI[i])) {
+        konamiSequenceRef.current = [];
+        const wrapper = canvasWrapperRef.current;
+        if (wrapper) {
+          wrapper.classList.add('konami-spin');
+          setTimeout(() => wrapper.classList.remove('konami-spin'), 700);
+        }
+      }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         if (!canEditRef.current) return;
@@ -860,7 +875,7 @@ export function App() {
           </div>
         )}
         {user && boardId && (board.loading || currentBoard) && (
-          <div className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
+          <div ref={canvasWrapperRef} className={`board-wrapper${pendingTool ? ' cursor-crosshair' : ''}`}>
             {board.loading && (
               <div className="board-loading">
                 <div className="board-loading-spinner" />
