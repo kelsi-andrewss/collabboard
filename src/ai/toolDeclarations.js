@@ -319,6 +319,43 @@ export const toolDeclarations = [
       },
       required: ["x1", "y1", "x2", "y2"]
     }
+  },
+  {
+    name: "editText",
+    description: "Edit the text content of a sticky note or the title of a frame",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "ID of the object to edit" },
+        text: { type: "STRING", description: "New text content" }
+      },
+      required: ["objectId", "text"]
+    }
+  },
+  {
+    name: "duplicateObject",
+    description: "Duplicate an existing object with an optional position offset",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectId: { type: "STRING", description: "ID of the object to duplicate" },
+        offsetX: { type: "NUMBER", description: "X offset for the clone (default 20)" },
+        offsetY: { type: "NUMBER", description: "Y offset for the clone (default 20)" }
+      },
+      required: ["objectId"]
+    }
+  },
+  {
+    name: "changeMultipleColors",
+    description: "Change the color of multiple objects at once",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        objectIds: { type: "ARRAY", items: { type: "STRING" }, description: "IDs of objects to recolor" },
+        color: { type: "STRING", description: "New hex color value" }
+      },
+      required: ["objectIds", "color"]
+    }
   }
 ];
 
@@ -352,6 +389,9 @@ TOOLS AVAILABLE:
 - drawAngleBisector: Draw the bisector ray of an angle defined by a vertex and two points on its rays.
 - drawTangentLine: Draw both tangent lines from an external point to a circle.
 - drawDistanceLabel: Place a distance label at the midpoint of a segment (defaults to computed pixel distance).
+- editText: Change the text content of a sticky note or the title of a frame.
+- duplicateObject: Clone an existing object with a position offset (default 20, 20). The clone is always placed at the top level (no frame).
+- changeMultipleColors: Batch-update the color of multiple objects at once.
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 When creating frames with items inside them, use frameIndex to link them by document ID:
