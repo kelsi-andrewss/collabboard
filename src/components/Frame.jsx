@@ -70,7 +70,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
         <Rect
           ref={hitRectRef}
           width={width}
-          height={titleBarHeight}
+          height={height}
           fill="transparent"
           listening={true}
           onClick={(e) => {
@@ -319,7 +319,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             // snap to the new size immediately, before React re-renders
             if (hitRectRef.current) {
               hitRectRef.current.width(finalW);
-              hitRectRef.current.height(titleBarHeight);
+              hitRectRef.current.height(finalH);
             }
             if (bgRectRef.current) {
               bgRectRef.current.width(finalW);
@@ -355,7 +355,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
               if (clamped && (clamped.width !== finalW || clamped.height !== finalH || clamped.x !== finalX || clamped.y !== finalY)) {
                 groupRef.current.x(clamped.x);
                 groupRef.current.y(clamped.y);
-                if (hitRectRef.current) { hitRectRef.current.width(clamped.width); hitRectRef.current.height(titleBarHeight); }
+                if (hitRectRef.current) { hitRectRef.current.width(clamped.width); hitRectRef.current.height(clamped.height); }
                 bgRectRef.current.width(clamped.width);
                 bgRectRef.current.height(clamped.height);
                 borderRectRef.current.width(clamped.width);
