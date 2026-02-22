@@ -693,6 +693,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                         onGroupDragLeaveUnbound={handleGroupDragLeave}
                         onAddBoard={handleQuickAddBoard}
                         darkMode={darkMode}
+                        rootDropActive={rootDropActive}
                       />
                     );
                   }
