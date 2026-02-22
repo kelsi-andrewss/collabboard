@@ -149,9 +149,13 @@
 }
 
 .header-left {
+  position: fixed;
+  top: 12px;
+  left: 16px;
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-lg);
+  z-index: 100;
 }
 
 .logo-text {
