@@ -784,6 +784,8 @@ export function App() {
               allBoards={allBoards}
               groups={groups}
               migrateGroupStrings={migrateGroupStrings}
+              createBoard={createNewBoard}
+              deleteBoard={deleteBoard}
             />
             {showHomeTutorial && (
               <Tutorial

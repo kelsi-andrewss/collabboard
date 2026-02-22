@@ -271,3 +271,183 @@
   object-fit: cover;
   flex-shrink: 0;
 }
+
+/* Create read-only board */
+
+.admin-create-board-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-2);
+}
+
+.admin-group-select {
+  width: 100%;
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-3);
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.admin-group-select:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+}
+
+.admin-group-select:disabled {
+  opacity: var(--md-sys-state-disabled-opacity);
+  cursor: default;
+}
+
+.admin-create-board-btn {
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-4);
+  background: var(--md-sys-color-primary);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-on-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-start;
+  position: relative;
+}
+
+.admin-create-board-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--md-sys-color-on-primary);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.admin-create-board-btn:hover:not(:disabled)::before {
+  opacity: 0.08;
+}
+
+.admin-create-board-btn:focus-visible::before {
+  opacity: 0.12;
+}
+
+.admin-create-board-btn:active:not(:disabled)::before {
+  opacity: 0.12;
+}
+
+.admin-create-board-btn:disabled {
+  opacity: var(--md-sys-state-disabled-opacity);
+  cursor: default;
+}
+
+/* Delete board */
+
+.admin-delete-board-item {
+  cursor: default;
+}
+
+.admin-delete-select-btn {
+  padding: 5px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.admin-delete-select-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--md-sys-color-on-surface);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.admin-delete-select-btn:hover::before {
+  opacity: 0.08;
+}
+
+.admin-delete-select-btn:focus-visible::before {
+  opacity: 0.12;
+}
+
+.admin-delete-select-btn:active::before {
+  opacity: 0.12;
+}
+
+.admin-delete-confirm-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-3);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+  background: var(--md-sys-color-error-container);
+  border: 1px solid var(--md-sys-color-error);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.admin-delete-confirm-prompt {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-error-container);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.admin-delete-confirm-actions {
+  display: flex;
+  gap: var(--md-sys-spacing-2);
+  align-items: center;
+}
+
+.admin-delete-confirm-btn {
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-4);
+  background: var(--md-sys-color-error);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-on-error);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.admin-delete-confirm-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--md-sys-color-on-error);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.admin-delete-confirm-btn:hover:not(:disabled)::before {
+  opacity: 0.08;
+}
+
+.admin-delete-confirm-btn:focus-visible::before {
+  opacity: 0.12;
+}
+
+.admin-delete-confirm-btn:active:not(:disabled)::before {
+  opacity: 0.12;
+}
+
+.admin-delete-confirm-btn:disabled {
+  opacity: var(--md-sys-state-disabled-opacity);
+  cursor: default;
+}
