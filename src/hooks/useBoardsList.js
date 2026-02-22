@@ -24,12 +24,12 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
       return unsub;
     }
 
-    const snaps = { owned: [], public: [], member: [] };
+    const snaps = { owned: [], public: [], member: [], groupMember: [] };
     let resolved = 0;
 
     const merge = () => {
       const seen = new Set();
-      return [...snaps.owned, ...snaps.public, ...snaps.member].filter(b => {
+      return [...snaps.owned, ...snaps.public, ...snaps.member, ...snaps.groupMember].filter(b => {
         if (seen.has(b.id)) return false;
         seen.add(b.id);
         return true;
@@ -38,21 +38,26 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
 
     const onError = () => {
       resolved++;
-      if (resolved === 3) setLoading(false);
+      if (resolved === 4) setLoading(false);
     };
 
     const handle = (key) => (snap) => {
       snaps[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (resolved < 3) resolved++;
-      if (resolved === 3) setLoading(false);
+      if (resolved < 4) resolved++;
+      if (resolved === 4) setLoading(false);
       setBoards(merge());
     };
 
     const u1 = onSnapshot(query(ref, where('ownerId', '==', uid)), handle('owned'), onError);
     const u2 = onSnapshot(query(ref, where('visibility', 'in', ['public', 'open'])), handle('public'), onError);
     const u3 = onSnapshot(query(ref, where(`members.${uid}`, '!=', null)), handle('member'), onError);
+    const u4 = onSnapshot(
+      query(ref, where(`groupMembers.${uid}`, '!=', null)),
+      handle('groupMember'),
+      onError
+    );
 
-    return () => { u1(); u2(); u3(); };
+    return () => { u1(); u2(); u3(); u4(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, isAdminView]);
 
