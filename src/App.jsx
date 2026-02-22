@@ -840,7 +840,7 @@ export function App() {
           <div className="header-right">
             {user && boardId && (
               <HeaderRight
-                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
+                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user, objects: board.objects }}
                 handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
               />
             )}
