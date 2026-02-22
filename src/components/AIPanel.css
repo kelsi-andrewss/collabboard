@@ -154,3 +154,11 @@
   margin: 4px 0 0;
   word-break: break-word;
 }
+
+.ai-history-loading {
+  padding: 12px 15px;
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-style: italic;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
