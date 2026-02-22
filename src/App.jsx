@@ -35,6 +35,7 @@ import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
 import { AdminPanel } from './components/AdminPanel.jsx';
 import { AppearanceSettings } from './components/AppearanceSettings.jsx';
+import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
 import './App.css';
 
 export function App() {
@@ -103,7 +104,9 @@ export function App() {
 
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
+  const { cursorSyncLatencyRef } = presence;
   const rawBoard = useBoard(boardId, user);
+  const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
   const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup } = useGroupsList(user, effectiveAdminView);
@@ -175,7 +178,8 @@ export function App() {
     deleteObject: rawBoard?.deleteObject,
     pushCompoundEntry: board.pushCompoundEntry,
     createBoard: aiCreateBoard,
-    getBoards: () => allBoards
+    getBoards: () => allBoards,
+    createGroup,
   }, board?.objects, user, isAdmin);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
@@ -855,8 +859,8 @@ export function App() {
             />
             {canEdit && (
               <AIPanel
-                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory, isHistoryLoading: ai.isHistoryLoading }}
-                handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
+                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory, isHistoryLoading: ai.isHistoryLoading, pendingDeletions: ai.pendingDeletions }}
+                handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError, confirmDeletions: ai.confirmDeletions, cancelDeletions: ai.cancelDeletions }}
               />
             )}
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
@@ -877,6 +881,15 @@ export function App() {
                 publishTemplate={publishTemplate}
                 updateTemplate={updateTemplate}
                 unpublishTemplate={unpublishTemplate}
+                preferences={preferences}
+                onUpdatePreference={updatePreference}
+              />
+            )}
+            {preferences.showPerfOverlay && boardId && (
+              <PerformanceOverlay
+                objects={Object.values(board.objects)}
+                lastObjectSyncLatencyRef={lastObjectSyncLatencyRef}
+                cursorSyncLatencyRef={cursorSyncLatencyRef}
               />
             )}
             {contextMenu && canEdit && (() => {

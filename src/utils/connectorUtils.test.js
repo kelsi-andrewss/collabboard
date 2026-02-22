@@ -74,6 +74,14 @@ describe('getPortCoords', () => {
     expect(p.y).toBe(0);   // y defaults to 0
     expect(p.x).toBe(75);  // cx = 0 + 150/2
   });
+
+  it('uses fontSize-based height for text objects with no height field', () => {
+    const textObj = { type: 'text', x: 50, y: 100, width: 200, fontSize: 16 };
+    const expectedH = 16 * 1.3;
+    const p = getPortCoords(textObj, 'bottom');
+    expect(p.x).toBe(50 + 200 / 2);
+    expect(p.y).toBe(100 + expectedH);
+  });
 });
 
 describe('findSnapTarget', () => {

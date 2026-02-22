@@ -4,7 +4,7 @@ export function getPortCoords(obj, port) {
   const x = obj.x ?? 0;
   const y = obj.y ?? 0;
   const w = obj.width ?? 150;
-  const h = obj.height ?? 150;
+  const h = obj.height ?? (obj.type === 'text' ? (obj.fontSize ?? 16) * 1.3 : 150);
   const cx = x + w / 2;
   const cy = y + h / 2;
   switch (port) {

@@ -7,6 +7,8 @@ export function usePresence(boardId, currentUser) {
   const [presentUsers, setPresentUsers] = useState({});
   const typingRef = useRef(false);
   const presenceRefDb = useRef(null);
+  const cursorWriteTsRef = useRef(0);
+  const cursorSyncLatencyRef = useRef(null);
 
   useEffect(() => {
     if (!boardId || !currentUser) return;
@@ -29,7 +31,12 @@ export function usePresence(boardId, currentUser) {
 
     const unsubscribe = onValue(boardPresenceRef, (snapshot) => {
       if (snapshot.exists()) {
-        setPresentUsers(snapshot.val());
+        const data = snapshot.val();
+        if (cursorWriteTsRef.current > 0 && data[currentUser.uid]) {
+          cursorSyncLatencyRef.current = Date.now() - cursorWriteTsRef.current;
+          cursorWriteTsRef.current = 0;
+        }
+        setPresentUsers(data);
       } else {
         setPresentUsers({});
       }
@@ -49,6 +56,7 @@ export function usePresence(boardId, currentUser) {
     if (now - lastCursorWrite.current < 50) return;
     lastCursorWrite.current = now;
     const presRef = ref(rtdb, `boards/${boardId}/presence/${currentUser.uid}`);
+    cursorWriteTsRef.current = Date.now();
     set(presRef, {
       name: currentUser.displayName || 'Anonymous',
       color: getUserColor(currentUser.uid),
@@ -67,5 +75,5 @@ export function usePresence(boardId, currentUser) {
     }
   };
 
-  return { presentUsers, updateCursor, setTyping };
+  return { presentUsers, updateCursor, setTyping, cursorSyncLatencyRef };
 }

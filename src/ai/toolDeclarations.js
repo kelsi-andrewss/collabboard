@@ -211,6 +211,17 @@ export const toolDeclarations = [
     }
   },
   {
+    name: "createGroup",
+    description: "Creates a new group (folder) for organizing boards. Use when the user says 'create a group', 'make a new group', 'set up a folder', or 'create a folder for...'.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING", description: "Name of the new group" }
+      },
+      required: ["name"]
+    }
+  },
+  {
     name: "createTextElement",
     description: "Creates a standalone text element on the board. Use for labels, headings, annotations, or any freeform text that does not need a sticky note background.",
     parameters: {
@@ -363,14 +374,16 @@ export const toolDeclarations = [
     parameters: {
       type: "OBJECT",
       properties: {
-        startObjectId: { type: "STRING", description: "ID of the object to connect from" },
+        startObjectId: { type: "STRING", description: "ID of the object to connect from. Omit if using startFrameIndex." },
+        startFrameIndex: { type: "INTEGER", description: "frameIndex of a frame created earlier in this same request. Use instead of startObjectId when connecting to a frame created in the same batch." },
         startPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the start object" },
-        endObjectId: { type: "STRING", description: "ID of the object to connect to" },
+        endObjectId: { type: "STRING", description: "ID of the object to connect to. Omit if using endFrameIndex." },
+        endFrameIndex: { type: "INTEGER", description: "frameIndex of a frame created earlier in this same request. Use instead of endObjectId when connecting to a frame created in the same batch." },
         endPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the end object" },
         color: { type: "STRING", description: "Hex color code (default '#6366f1')" },
         arrowhead: { type: "BOOLEAN", description: "Whether to show an arrowhead (default true)" }
       },
-      required: ["startObjectId", "startPort", "endObjectId", "endPort"]
+      required: ["startPort", "endPort"]
     }
   }
 ];
@@ -383,9 +396,9 @@ export function buildSystemPrompt(aiResponseMode) {
 }
 
 function buildSystemPromptText(responseModeInstruction) {
-  return `You are a whiteboard assistant acting on behalf of the logged-in user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create boards.
+  return `You are a whiteboard assistant acting on behalf of the logged-in user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create boards and groups.
 
-CRITICAL RULE: NEVER ask the user for clarification. ALWAYS use your best judgment and act immediately.
+CRITICAL RULE: NEVER ask the user for clarification. ALWAYS use your best judgment and act immediately. When a request is ambiguous, pick the most reasonable interpretation, act on it, and include one brief sentence in your response explaining what you chose to do and why (e.g. "I interpreted 'organize this' as arranging by creation order — let me know if you meant something else"). NEVER include object IDs in your response text — refer to objects by their label, type, color, or position instead.
 
 RESPONSE RULE: ${responseModeInstruction}
 
@@ -399,8 +412,20 @@ TOOL SELECTION:
 - "arrange in a grid" → arrangeInGrid (moves existing objects; does NOT create new ones)
 - "space evenly" / "distribute" → spaceEvenly
 - "fit frame to contents" / "resize frame to fit" → fitFrameToContents (not resizeObject + moveObject)
+- "create a board" / "make a new board" → createBoard
+- "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
 - For structured boards (kanban, SWOT, retrospective, sprint planning, etc.): create frames for each section and use frameIndex to place items inside them.
+
+DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
+
+KEYWORD INTENTS:
+- "connect X to Y" / "link X and Y" → createConnector between those two objects using anchor ports
+- "connect two frames" → createFrame (x2) then createConnector between them
+- "group X" → createFrame around those objects and add them as children via frameIndex
+- "arrange" / "organize" → arrangeInGrid on the relevant objects (default: all non-frame objects)
+- "clean up" → spaceEvenly or resolveOverlaps to space objects evenly and align to grid
+- "summarize" / "label" → createTextElement near each relevant item
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createFrame a unique frameIndex (0, 1, 2, ...)

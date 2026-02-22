@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 
 const STATIC_DEFAULTS = {
   line: { active: '#3b82f6' },
-  text: { active: '#1a1a1a' },
 };
 
 function readThemeDefaults() {
@@ -11,6 +10,7 @@ function readThemeDefaults() {
   const secondary = style.getPropertyValue('--md-sys-color-secondary-container').trim();
   const tertiary = style.getPropertyValue('--md-sys-color-tertiary-container').trim();
   const primaryBase = style.getPropertyValue('--md-sys-color-primary').trim();
+  const onSurface = style.getPropertyValue('--md-sys-color-on-surface').trim();
   return {
     sticky: { active: secondary || '#fef08a' },
     shapes: { active: primary || '#bfdbfe' },
@@ -18,6 +18,7 @@ function readThemeDefaults() {
     circle: { active: tertiary || '#fbcfe8' },
     triangle: { active: secondary || '#e9d5ff' },
     frame: { active: primaryBase || '#6366f1' },
+    text: { active: onSurface || '#1a1a1a' },
   };
 }
 

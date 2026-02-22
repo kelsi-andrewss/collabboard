@@ -80,6 +80,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [pendingDeletions, setPendingDeletions] = useState(null);
 
   const requestTimestampsRef = useRef(getRecentTimestamps(loadTimestamps()));
 
@@ -210,7 +211,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
   const objs = () => objectsRef.current || {};
 
   const persistHistory = (currentBoardId, messages) => {
-    if (!currentBoardId) return;
+    if (!currentBoardId || !messages || !Array.isArray(messages)) return;
     const capped = messages.length > MAX_PERSISTED_MESSAGES
       ? messages.slice(messages.length - MAX_PERSISTED_MESSAGES)
       : messages;
@@ -286,6 +287,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           deleteObject: tracker.deleteObject,
           createBoard: currentActions.createBoard,
           getBoards: currentActions.getBoards,
+          createGroup: currentActions.createGroup,
         });
 
         const localFrames = [];
@@ -402,7 +404,8 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           }
         }
 
-        // --- Pass 2: Process all other calls ---
+        // --- Pass 2: Process all other calls (intercept deleteObject) ---
+        const collectedDeletions = [];
         const sharedContext = {
           act: trackedAct, objs,
           frameIndexMap, itemsByFrame,
@@ -411,12 +414,25 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           ITEM_W, ITEM_H, ITEM_GAP, FRAME_PAD, TITLE_H,
         };
         for (const call of otherCalls) {
-          await executeToolCall(call.name, call.args, { ...sharedContext, _call: call });
+          if (call.name === 'deleteObject') {
+            const objectId = call.args?.objectId;
+            if (objectId) {
+              const obj = objs()[objectId];
+              const label = obj?.text || obj?.title || obj?.type || objectId;
+              collectedDeletions.push({ objectId, label });
+            }
+          } else {
+            await executeToolCall(call.name, call.args, { ...sharedContext, _call: call });
+          }
         }
 
         const mutations = tracker.getMutations();
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
+        }
+
+        if (collectedDeletions.length > 0) {
+          setPendingDeletions(collectedDeletions);
         }
       }
 
@@ -450,5 +466,17 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
     }
   };
 
-  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory, isHistoryLoading };
+  const confirmDeletions = () => {
+    if (!pendingDeletions) return;
+    for (const { objectId } of pendingDeletions) {
+      boardActionsRef.current.deleteObject(objectId);
+    }
+    setPendingDeletions(null);
+  };
+
+  const cancelDeletions = () => {
+    setPendingDeletions(null);
+  };
+
+  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory, isHistoryLoading, pendingDeletions, confirmDeletions, cancelDeletions };
 }
