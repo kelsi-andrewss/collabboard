@@ -285,7 +285,6 @@ export function buildRenderOrder(objects) {
   const result = [];
 
   function visitFrame(frame) {
-    result.push(frame);
     for (const child of (nonFramesByParent[frame.id] || [])) {
       result.push(child);
     }
@@ -295,6 +294,7 @@ export function buildRenderOrder(objects) {
     for (const nf of nested) {
       visitFrame(nf);
     }
+    result.push(frame);
   }
 
   for (const frame of rootFrames) {
