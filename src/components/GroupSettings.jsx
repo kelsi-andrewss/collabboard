@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
@@ -15,6 +15,7 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
+  const [memberProfiles, setMemberProfiles] = useState({});
   const userSearchTimerRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +25,22 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   useEffect(() => {
     setLocalProtected(group?.protected || false);
   }, [group?.protected]);
+
+  useEffect(() => {
+    const members = group?.members || {};
+    const uids = Object.keys(members);
+    if (!uids.length) {
+      setMemberProfiles({});
+      return;
+    }
+    Promise.all(
+      uids.map(uid => getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? [uid, snap.data()] : [uid, null]))
+    ).then(results => {
+      const profiles = {};
+      results.forEach(([uid, data]) => { if (data) profiles[uid] = data; });
+      setMemberProfiles(profiles);
+    });
+  }, [JSON.stringify(Object.keys(group?.members || {}))]);
 
   if (!group) return null;
 
@@ -150,7 +167,10 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                 {group.ownerId === currentUserId && currentUser && (
                   <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
                 )}
-                <span className="member-uid">{group.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : group.ownerId}</span>
+                {group.ownerId !== currentUserId && memberProfiles[group.ownerId] && (
+                  <Avatar photoURL={memberProfiles[group.ownerId]?.photoURL} name={memberProfiles[group.ownerId]?.displayName || group.ownerId} size="sm" />
+                )}
+                <span className="member-uid">{group.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : memberProfiles[group.ownerId]?.displayName || group.ownerId}</span>
                 <span className="member-role owner">owner</span>
               </div>
             )}
@@ -162,7 +182,13 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
             )}
             {memberEntries.map(([uid, role]) => (
               <div key={uid} className="member-row">
-                <span className="member-uid">{uid === currentUserId ? 'You' : uid}</span>
+                {uid === currentUserId && currentUser && (
+                  <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
+                )}
+                {uid !== currentUserId && memberProfiles[uid] && (
+                  <Avatar photoURL={memberProfiles[uid]?.photoURL} name={memberProfiles[uid]?.displayName || uid} size="sm" />
+                )}
+                <span className="member-uid">{uid === currentUserId ? 'You' : memberProfiles[uid]?.displayName || uid}</span>
                 {canManage ? (
                   <select
                     className="member-role-select"
