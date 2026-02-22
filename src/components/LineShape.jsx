@@ -4,7 +4,7 @@ import { findSnapTarget, getPortCoords, SNAP_DISTANCE, PORTS } from '../utils/co
 
 const PORT_RADIUS = 5;
 
-function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort }) {
+function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort, stageScale = 1 }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const [draggingEndpoint, setDraggingEndpoint] = useState(null);
@@ -118,8 +118,8 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           ref={lineRef}
           points={effectivePts}
           stroke={isMultiSelected ? '#6366f1' : color}
-          strokeWidth={isMultiSelected ? strokeWidth + 2 : strokeWidth}
-          hitStrokeWidth={20}
+          strokeWidth={(isMultiSelected ? strokeWidth + 2 : strokeWidth) / stageScale}
+          hitStrokeWidth={Math.max(strokeWidth, 10) / stageScale}
           lineCap="round"
           lineJoin="round"
           perfectDrawEnabled={false}

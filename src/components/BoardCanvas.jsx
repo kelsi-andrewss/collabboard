@@ -786,6 +786,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   canEdit={canEdit}
                   objects={objects}
+                  stageScale={stageScale}
                 />
               );
             }
