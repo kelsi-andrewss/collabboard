@@ -662,7 +662,7 @@ export function App() {
           {user && boardId && (
             <HeaderRight
               state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
-              handlers={{ setShowTutorial, logout, setShowBoardSettings }}
+              handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
             />
           )}
           {(!boardId) && (

@@ -5,7 +5,7 @@ import { UserAvatarMenu } from './UserAvatarMenu.jsx';
 
 function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user } = state;
-  const { setShowTutorial, logout, setShowBoardSettings } = handlers;
+  const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -44,7 +44,7 @@ function HeaderRightInner({ state, handlers }) {
         </button>
       </div>
       <span className="header-divider" />
-      <UserAvatarMenu user={user} logout={logout} />
+      <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />
     </div>
   );
 }
