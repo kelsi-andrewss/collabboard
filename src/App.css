@@ -725,3 +725,21 @@
   pointer-events: none;
   opacity: 0.85;
 }
+
+.floating-toolbar-chip[data-orient="vertical"] {
+  overflow: visible;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .color-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
+  margin-top: 0;
+  margin-left: 5px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
+}

@@ -543,3 +543,21 @@
 .zoom-dropdown li button:hover::after {
   opacity: var(--md-sys-state-hover-opacity);
 }
+
+.floating-toolbar-chip[data-orient="vertical"] .tool-split-button {
+  overflow: visible;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .color-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
+  margin-top: 0;
+  margin-left: 5px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
+}
