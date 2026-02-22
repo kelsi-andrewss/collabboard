@@ -12,8 +12,8 @@
 .avatar-circle {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--bg-secondary);
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 2px solid var(--md-sys-color-surface-container);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,9 +21,14 @@
   font-weight: bold;
   color: white;
   margin-right: -8px;
-  transition: transform 0.2s;
+  transition: transform var(--md-sys-motion-duration-short4);
   overflow: hidden;
-  animation: presence-pulse 2.5s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .avatar-circle {
+    animation: presence-pulse 2.5s ease-in-out infinite alternate;
+  }
 }
 
 @keyframes presence-pulse {
@@ -38,7 +43,7 @@
 .avatar-you-wrapper {
   position: relative;
   display: inline-flex;
-  transition: transform 0.2s;
+  transition: transform var(--md-sys-motion-duration-short4);
   margin-right: -8px;
 }
 
@@ -54,7 +59,7 @@
 .avatar-circle.large {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: var(--md-sys-shape-corner-full);
   font-size: 1.2rem;
   margin-right: 0;
   overflow: hidden;
@@ -63,15 +68,15 @@
 .avatar-chip {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: var(--bg-tertiary);
-  border: 2px solid var(--bg-secondary);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container);
+  border: 2px solid var(--md-sys-color-surface-container);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: bold;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   z-index: 20;
 }
 
@@ -79,15 +84,15 @@
   position: absolute;
   bottom: -1px;
   right: -4px;
-  background: var(--accent-primary);
-  color: white;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   font-size: 0.5rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   padding: 1px 4px;
-  border-radius: 999px;
-  border: 1.5px solid var(--header-bg);
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 1.5px solid var(--md-sys-color-surface-container-highest);
   line-height: 1.4;
   pointer-events: none;
   z-index: 20;
@@ -104,7 +109,7 @@
 .modal-header p {
   margin: 5px 0 0 0;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .user-list-detailed {
@@ -119,8 +124,8 @@
   align-items: center;
   gap: 15px;
   padding: 10px;
-  border-radius: 12px;
-  background: var(--bg-tertiary);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .user-detail-info {
@@ -130,10 +135,10 @@
 
 .user-detail-name {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .user-detail-status {
   font-size: 0.75rem;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
