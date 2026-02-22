@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
+import { darkenHex } from '../utils/colorUtils';
 
 
 function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit, pendingTool }) {
@@ -38,7 +39,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
 
   const titleBarHeight = 48;
   const titleFontSize = 20;
-  const titleColor = color;
+  const titleColor = darkenHex(color, 0.6);
 
   return (
     <>
@@ -93,21 +94,43 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             onAutoFit(id);
           }}
         />
+        {/* M3 elevation — ambient shadow (wide, soft) */}
+        <Rect
+          width={width}
+          height={height}
+          fill="transparent"
+          cornerRadius={12}
+          listening={false}
+          shadowEnabled={true}
+          shadowBlur={28}
+          shadowOffsetX={0}
+          shadowOffsetY={4}
+          shadowOpacity={0.14}
+          shadowColor="#000000"
+        />
+        {/* M3 elevation — key shadow (tight, directional) */}
+        <Rect
+          width={width}
+          height={height}
+          fill="transparent"
+          cornerRadius={12}
+          listening={false}
+          shadowEnabled={true}
+          shadowBlur={8}
+          shadowOffsetX={0}
+          shadowOffsetY={3}
+          shadowOpacity={0.22}
+          shadowColor="#000000"
+        />
         {/* Translucent background fill derived from frame color */}
         <Rect
           ref={bgRectRef}
           width={width}
           height={height}
           fill={color}
-          opacity={0.06}
-          cornerRadius={4}
+          opacity={0.12}
+          cornerRadius={12}
           listening={false}
-          shadowEnabled={true}
-          shadowBlur={14}
-          shadowOffsetX={3}
-          shadowOffsetY={5}
-          shadowOpacity={0.18}
-          shadowColor="#000000"
         />
         {/* Frame body - dashed border */}
         <Rect
@@ -118,7 +141,8 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           stroke={color}
           strokeWidth={2}
           dash={[8, 4]}
-          cornerRadius={4}
+          cornerRadius={12}
+          opacity={0.55}
           listening={false}
           perfectDrawEnabled={false}
         />
@@ -128,8 +152,19 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           width={width}
           height={titleBarHeight}
           fill={color}
-          opacity={0.25}
-          cornerRadius={[4, 4, 0, 0]}
+          opacity={0.15}
+          cornerRadius={[12, 12, 0, 0]}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        {/* Divider between title bar and body */}
+        <Rect
+          x={0}
+          y={titleBarHeight}
+          width={width}
+          height={1}
+          fill={color}
+          opacity={0.3}
           listening={false}
           perfectDrawEnabled={false}
         />
