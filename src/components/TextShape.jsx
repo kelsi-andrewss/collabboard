@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Text, Rect, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
+import { getContrastColor } from '../utils/colorUtils.js';
 
 function TextShapeInner({
   id, x, y, width = 200, text = '', fontSize = 16, color = '#1a1a1a',
@@ -15,6 +16,9 @@ function TextShapeInner({
   const widthRef = useRef(width);
   const textareaRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDark, setIsDark] = useState(
+    document.documentElement.getAttribute('data-theme') === 'dark'
+  );
 
   useEffect(() => {
     widthRef.current = width;
@@ -40,12 +44,25 @@ function TextShapeInner({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete]);
 
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
   const handleTextChange = (e) => {
     onUpdate(id, { text: e.target.value });
   };
 
   const currentX = dragPos?.id === id ? dragPos.x : x;
   const currentY = dragPos?.id === id ? dragPos.y : y;
+
+  const canvasBg = isDark ? '#111827' : '#ffffff';
+  const visibleColor = getContrastColor(canvasBg) === getContrastColor(color)
+    ? color
+    : (isDark ? '#f9fafb' : '#111827');
 
   return (
     <>
@@ -128,7 +145,7 @@ function TextShapeInner({
             fontSize={fontSize}
             fontFamily="sans-serif"
             lineHeight={1.3}
-            fill={color}
+            fill={visibleColor}
             wrap="word"
             align="left"
             onClick={(e) => {
@@ -171,7 +188,7 @@ function TextShapeInner({
                   padding: '0',
                   margin: '0',
                   pointerEvents: 'auto',
-                  color: color,
+                  color: visibleColor,
                   overflow: 'hidden',
                   display: 'block',
                   minHeight: `${fontSize * 1.3}px`,

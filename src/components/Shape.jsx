@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
+import { getContrastColor } from '../utils/colorUtils.js';
 
 function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
@@ -185,7 +186,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             height={height}
             padding={10}
             fontSize={Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}
-            fill="#ffffff"
+            fill={getContrastColor(color)}
             verticalAlign="middle"
             align="center"
             fontFamily="sans-serif"
@@ -232,7 +233,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
                   textAlign: 'center',
                   fontSize: `${Math.max(12, Math.min(32, width * TEXT_SCALE_FACTOR))}px`,
                   fontFamily: 'sans-serif',
-                  color: '#ffffff',
+                  color: getContrastColor(color),
                   lineHeight: '1.2',
                   padding: '0',
                   margin: '0',
