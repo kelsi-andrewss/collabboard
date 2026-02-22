@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Link, Check, Settings } from 'lucide-react';
+import { HelpCircle, Link, Check, Settings, ArrowLeftRight } from 'lucide-react';
 import { PresenceAvatars } from './PresenceAvatars.jsx';
 import { UserAvatarMenu } from './UserAvatarMenu.jsx';
 import { useDraggableFloat } from '../hooks/useDraggableFloat';
@@ -56,7 +56,7 @@ function HeaderRightInner({ state, handlers }) {
       style={{ right: 16, top: 16 }}
     >
       <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">
-        {orientation === 'vertical' ? '↔' : '↕'}
+        <ArrowLeftRight size={16} />
       </button>
       {orientation === 'vertical' ? (
         <>
