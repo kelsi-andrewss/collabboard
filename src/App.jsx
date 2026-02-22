@@ -760,12 +760,40 @@ export function App() {
 
   const dragDrawStateRef = useRef({ start: null, justSetFirst: false, suppressClick: false });
 
+  const isScribblingRef = useRef(false);
+  const scribblePointsRef = useRef([]);
+  const [scribblePreview, setScribblePreview] = useState([]);
+
+  const onScribbleUpdate = (points) => {
+    setScribblePreview([...points]);
+  };
+
+  const onScribbleCommit = (points) => {
+    setScribblePreview([]);
+    if (points.length < 4) return;
+    const color = currentColorRef.current || '#333333';
+    board.addObject({
+      type: 'line',
+      points,
+      strokeWidth: 2,
+      color,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      userId: user?.uid || null,
+    });
+    setPendingTool(null);
+    setPendingToolCount(0);
+  };
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter, handleStageMouseDown, handleStageMouseUp } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
     connectorFirstPointRef, setConnectorFirstPoint,
     addObject: board.addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
     dragDrawStateRef,
+    isScribblingRef, scribblePointsRef, onScribbleUpdate, onScribbleCommit,
   });
   handleRecenterRef.current = handleRecenter;
 
@@ -966,6 +994,31 @@ export function App() {
               state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: handleFollowUser }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
+            {scribblePreview.length >= 4 && (() => {
+              const pts = scribblePreview;
+              const pairs = [];
+              for (let i = 0; i + 3 < pts.length; i += 2) {
+                const sx = pts[i] * stageScale + stagePos.x;
+                const sy = pts[i + 1] * stageScale + stagePos.y;
+                const ex = pts[i + 2] * stageScale + stagePos.x;
+                const ey = pts[i + 3] * stageScale + stagePos.y;
+                pairs.push(`M${sx},${sy} L${ex},${ey}`);
+              }
+              return (
+                <svg
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }}
+                >
+                  <path
+                    d={pairs.join(' ')}
+                    stroke={currentColorRef.current || '#333333'}
+                    strokeWidth={2}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              );
+            })()}
             <FABButtons
               state={{ showAI, darkMode: preferences.darkMode, isOffCenter, canEdit }}
               handlers={{ setShowAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter }}

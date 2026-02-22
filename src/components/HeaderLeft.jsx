@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type, Minus, MoveRight } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type, Minus, MoveRight, Pencil } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -343,6 +343,15 @@ function HeaderLeftInner({ state, handlers }) {
                     />
                   )}
                 </div>
+
+                <button
+                  data-toolbar-item="scribble"
+                  className={`snap-toggle ${pendingTool === 'scribble' ? 'active' : ''}`}
+                  onClick={() => setPendingTool(pendingTool === 'scribble' ? null : 'scribble')}
+                  title="Free-draw Scribble (drag to draw)"
+                >
+                  <Pencil size={18} />
+                </button>
 
                 <span className="header-divider" />
               </>
