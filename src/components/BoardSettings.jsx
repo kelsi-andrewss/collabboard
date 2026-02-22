@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Globe, Lock, Trash2, Users, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
 
 function formatTemplateDate(ts) {
@@ -9,7 +10,7 @@ function formatTemplateDate(ts) {
   return ts.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function BoardSettings({ board, currentUserId, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
+export function BoardSettings({ board, currentUserId, currentUser, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
@@ -213,7 +214,10 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
           <div className="member-list">
             {board.ownerId && (
               <div className="member-row">
-                <span className="member-uid">{board.ownerId === currentUserId ? 'You (owner)' : board.ownerId}</span>
+                {board.ownerId === currentUserId && currentUser && (
+                  <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
+                )}
+                <span className="member-uid">{board.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : board.ownerId}</span>
                 <span className="member-role owner">owner</span>
               </div>
             )}

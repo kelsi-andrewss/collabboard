@@ -795,6 +795,7 @@ export function App() {
               <BoardSettings
                 board={currentBoard}
                 currentUserId={user?.uid}
+                currentUser={user}
                 onUpdateSettings={(patches) => updateBoardSettings(boardId, patches)}
                 onInviteMember={(uid, role) => inviteMember(boardId, uid, role)}
                 onRemoveMember={(uid) => removeMember(boardId, uid)}

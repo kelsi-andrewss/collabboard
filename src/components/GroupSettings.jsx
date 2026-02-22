@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
 import './GroupSettings.css';
 
-export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
+export function GroupSettings({ group, currentUserId, currentUser, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
   const [inviteRole, setInviteRole] = useState('member');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
@@ -146,7 +147,10 @@ export function GroupSettings({ group, currentUserId, onUpdateGroup, onInviteMem
           <div className="member-list">
             {group.ownerId && (
               <div className="member-row">
-                <span className="member-uid">{group.ownerId === currentUserId ? 'You (owner)' : group.ownerId}</span>
+                {group.ownerId === currentUserId && currentUser && (
+                  <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
+                )}
+                <span className="member-uid">{group.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : group.ownerId}</span>
                 <span className="member-role owner">owner</span>
               </div>
             )}
