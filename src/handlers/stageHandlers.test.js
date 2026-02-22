@@ -17,9 +17,6 @@ function makeConfig(overrides = {}) {
     pendingToolRef: { current: null },
     pendingToolCountRef: { current: 0 },
     onPendingToolPlace: vi.fn(),
-    connectorFirstPointRef: { current: null },
-    setConnectorFirstPoint: vi.fn(),
-    addObject: vi.fn(),
     ...overrides,
   };
 }
@@ -311,36 +308,23 @@ describe('ghost-placement agreement — click, move, click', () => {
   });
 
   it('line at scale 1.0 — placed coords equal canvas coords', () => {
-    const p1Pos = { x: 200, y: 300 };
-    const p2Pos = { x: 400, y: 500 };
-    const connectorFirstPointRef = { current: null };
-    const setConnectorFirstPoint = vi.fn((pt) => { connectorFirstPointRef.current = pt; });
+    const canvasPos = { x: 200, y: 300 };
     const cfg = makeConfig({
       pendingToolRef: { current: 'line' },
       pendingToolCountRef: { current: 0 },
-      connectorFirstPointRef,
-      setConnectorFirstPoint,
     });
     const { handleStageClick } = makeStageHandlers(cfg);
 
-    const fakeStage1 = makeFakeStage(p1Pos);
-    const fakeTarget1 = { getStage: () => fakeStage1, name: () => 'bg-rect' };
-    handleStageClick({ target: fakeTarget1 });
+    const fakeStage = makeFakeStage(canvasPos);
+    const fakeTarget = { getStage: () => fakeStage, name: () => 'bg-rect' };
+    handleStageClick({ target: fakeTarget });
 
-    expect(setConnectorFirstPoint).toHaveBeenCalledTimes(1);
-    const firstPt = setConnectorFirstPoint.mock.calls[0][0];
-    expect(firstPt.x).toBe(200);
-    expect(firstPt.y).toBe(300);
-
-    const fakeStage2 = makeFakeStage(p2Pos);
-    const fakeTarget2 = { getStage: () => fakeStage2, name: () => 'bg-rect' };
-    handleStageClick({ target: fakeTarget2 });
-
-    expect(cfg.addObject).toHaveBeenCalledTimes(1);
-    const addArgs = cfg.addObject.mock.calls[0][0];
-    expect(addArgs.x).toBe(200);
-    expect(addArgs.y).toBe(300);
-    expect(addArgs.type).toBe('line');
+    const [, placedX, placedY] = cfg.onPendingToolPlace.mock.calls[0];
+    const ghost = ghostPos('line', 200, 300, 1.0);
+    expect(placedX).toBe(ghost.x);
+    expect(placedY).toBe(ghost.y);
+    expect(placedX).toBe(200);
+    expect(placedY).toBe(300);
   });
 
   it('default shape (rectangle) at scale 1.5 — handler passes raw canvas coords', () => {
