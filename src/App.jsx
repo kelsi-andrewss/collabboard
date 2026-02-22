@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Eye, Lock, ArrowLeft } from 'lucide-react';
+import { Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import { usePresence } from './hooks/usePresence';
@@ -664,17 +664,10 @@ export function App() {
               handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
             />
           )}
-          {(!boardId) && (
+          {(!boardId) && user && (
             <>
-              <button className="help-btn" onClick={() => updatePreference('darkMode', !preferences.darkMode)} title={preferences.darkMode ? 'Light mode' : 'Dark mode'}>
-                {preferences.darkMode ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
-              {user && (
-                <>
-                  <span className="header-divider" />
-                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
-                </>
-              )}
+              <span className="header-divider" />
+              <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
             </>
           )}
         </div>
