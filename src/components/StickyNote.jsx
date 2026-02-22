@@ -97,18 +97,18 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
           height={height}
           fill={color}
           shadowEnabled={true}
-          shadowBlur={frameId ? 6 : 18}
-          shadowOffsetX={frameId ? 1 : 4}
-          shadowOffsetY={frameId ? 2 : 6}
-          shadowOpacity={frameId ? 0.12 : 0.22}
-          shadowColor={isSelected ? color : '#000000'}
-          cornerRadius={4}
-          stroke={isSelected ? '#2563eb' : isMultiSelected ? '#6366f1' : darkenHex(color, 0.2)}
-          strokeWidth={isMultiSelected ? 3 : 2}
+          shadowBlur={frameId ? 3 : 6}
+          shadowOffsetX={0}
+          shadowOffsetY={frameId ? 1 : 1}
+          shadowOpacity={frameId ? 0.15 : 0.30}
+          shadowColor="#000000"
+          cornerRadius={12}
+          stroke={isSelected ? '#6750A4' : isMultiSelected ? '#6366f1' : darkenHex(color, 0.15)}
+          strokeWidth={isSelected ? 2 : isMultiSelected ? 3 : 1}
         />
         {dragState?.draggingId === id && dragState?.illegalDrag && (
           <Rect x={0} y={0} width={width} height={height}
-            fill="#ef4444" opacity={0.35} cornerRadius={4}
+            fill="#ef4444" opacity={0.35} cornerRadius={12}
             listening={false} perfectDrawEnabled={false} />
         )}
         {!isEditing ? (

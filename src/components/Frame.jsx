@@ -120,36 +120,36 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           shadowOpacity={0.22}
           shadowColor="#000000"
         />
-        {/* Translucent background fill derived from frame color */}
+        {/* Translucent background fill — M3 surface at ~8% opacity */}
         <Rect
           ref={bgRectRef}
           width={width}
           height={height}
           fill={color}
-          opacity={0.85}
+          opacity={0.08}
           cornerRadius={12}
           listening={false}
         />
-        {/* Frame body - solid border */}
+        {/* Frame body border — outline-variant in default state, primary when selected */}
         <Rect
           ref={borderRectRef}
           width={width}
           height={height}
           fill="transparent"
-          stroke={color}
-          strokeWidth={2}
+          stroke={isSelected ? '#6750A4' : '#CAC4D0'}
+          strokeWidth={isSelected ? 2 : 1}
           cornerRadius={12}
           opacity={1}
           listening={false}
           perfectDrawEnabled={false}
         />
-        {/* Title bar */}
+        {/* Title bar — frame color as surface accent */}
         <Rect
           ref={titleBarRef}
           width={width}
           height={titleBarHeight}
           fill={color}
-          opacity={0.9}
+          opacity={1}
           cornerRadius={[12, 12, 0, 0]}
           listening={false}
           perfectDrawEnabled={false}
@@ -161,11 +161,11 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           width={width}
           height={1}
           fill={color}
-          opacity={0.9}
+          opacity={0.6}
           listening={false}
           perfectDrawEnabled={false}
         />
-        {/* Title text */}
+        {/* Title text — white for contrast on colored title bar */}
         {!isEditing ? (
           <Text
             ref={titleTextRef}
@@ -176,7 +176,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             height={titleBarHeight}
             fontSize={titleFontSize}
             fontStyle="bold"
-            fill={titleColor}
+            fill="#ffffff"
             verticalAlign="middle"
             fontFamily="sans-serif"
             ellipsis={true}
@@ -219,7 +219,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
                   fontSize: `${titleFontSize}px`,
                   fontWeight: 'bold',
                   fontFamily: 'sans-serif',
-                  color: titleColor,
+                  color: '#ffffff',
                   padding: '0',
                   margin: '0',
                   pointerEvents: 'auto',

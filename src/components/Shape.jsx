@@ -114,13 +114,13 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             fill={color}
             cornerRadius={4}
             shadowEnabled={true}
-            shadowBlur={frameId ? 6 : 18}
-            shadowOffsetX={frameId ? 1 : 4}
-            shadowOffsetY={frameId ? 2 : 6}
-            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowBlur={frameId ? 3 : 6}
+            shadowOffsetX={0}
+            shadowOffsetY={frameId ? 1 : 1}
+            shadowOpacity={frameId ? 0.15 : 0.30}
             shadowColor="#000000"
-            stroke={isMultiSelected ? '#6366f1' : undefined}
-            strokeWidth={isMultiSelected ? 3 : 0}
+            stroke={isSelected ? '#6750A4' : isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isSelected ? 2 : isMultiSelected ? 3 : 0}
           />
         )}
         {type === 'circle' && (
@@ -132,13 +132,13 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             radiusY={height / 2}
             fill={color}
             shadowEnabled={true}
-            shadowBlur={frameId ? 6 : 18}
-            shadowOffsetX={frameId ? 1 : 4}
-            shadowOffsetY={frameId ? 2 : 6}
-            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowBlur={frameId ? 3 : 6}
+            shadowOffsetX={0}
+            shadowOffsetY={frameId ? 1 : 1}
+            shadowOpacity={frameId ? 0.15 : 0.30}
             shadowColor="#000000"
-            stroke={isMultiSelected ? '#6366f1' : undefined}
-            strokeWidth={isMultiSelected ? 3 : 0}
+            stroke={isSelected ? '#6750A4' : isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isSelected ? 2 : isMultiSelected ? 3 : 0}
           />
         )}
         {type === 'triangle' && (
@@ -148,13 +148,13 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             height={height}
             fill={color}
             shadowEnabled={true}
-            shadowBlur={frameId ? 6 : 18}
-            shadowOffsetX={frameId ? 1 : 4}
-            shadowOffsetY={frameId ? 2 : 6}
-            shadowOpacity={frameId ? 0.12 : 0.22}
+            shadowBlur={frameId ? 3 : 6}
+            shadowOffsetX={0}
+            shadowOffsetY={frameId ? 1 : 1}
+            shadowOpacity={frameId ? 0.15 : 0.30}
             shadowColor="#000000"
-            stroke={isMultiSelected ? '#6366f1' : undefined}
-            strokeWidth={isMultiSelected ? 3 : 0}
+            stroke={isSelected ? '#6750A4' : isMultiSelected ? '#6366f1' : undefined}
+            strokeWidth={isSelected ? 2 : isMultiSelected ? 3 : 0}
             sceneFunc={(ctx, shape) => {
               const w = shape.width();
               const h = shape.height();
