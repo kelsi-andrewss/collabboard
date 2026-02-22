@@ -11,7 +11,7 @@
   font-weight: 500;
   cursor: pointer;
   padding: var(--md-sys-spacing-sm);
-  min-height: 48px;
+  min-height: 36px;
   border-radius: var(--md-sys-shape-corner-small);
   transition: background var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard), color var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
   position: relative;
@@ -142,7 +142,7 @@
 
 .toolbar {
   display: flex;
-  gap: var(--md-sys-spacing-lg);
+  gap: var(--md-sys-spacing-xs);
   align-items: center;
 }
 
@@ -157,7 +157,7 @@
 }
 
 .tool-split-button button {
-  background: transparent;
+  background: var(--md-sys-color-surface-container);
   border: none;
   border-radius: 0;
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
@@ -227,7 +227,7 @@
 }
 
 .snap-toggle {
-  background: transparent;
+  background: var(--md-sys-color-surface-container);
   border: none;
   border-radius: var(--md-sys-shape-corner-small);
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
@@ -255,6 +255,7 @@
 }
 
 .snap-toggle:hover {
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
 }
 
