@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Sun, Moon, Maximize } from 'lucide-react';
+import { MessageSquare, Maximize } from 'lucide-react';
 import './FABButtons.css';
 
 function FABButtonsInner({ state, handlers }) {
-  const { showAI, darkMode, isOffCenter, canEdit } = state;
-  const { setShowAI, setDarkMode, handleRecenter } = handlers;
+  const { showAI, isOffCenter, canEdit } = state;
+  const { setShowAI, handleRecenter } = handlers;
   const [pulseActive, setPulseActive] = useState(false);
 
   useEffect(() => {
@@ -33,15 +33,6 @@ function FABButtonsInner({ state, handlers }) {
         </button>
       )}
 
-      <button
-        data-fab-item="theme"
-        className="theme-fab"
-        onClick={() => setDarkMode(!darkMode)}
-        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-      >
-        {darkMode ? <Sun size={24} /> : <Moon size={24} />}
-      </button>
-
       {isOffCenter && (
         <button
           data-fab-item="recenter"
@@ -61,7 +52,6 @@ function areEqual(prev, next) {
   const ps = prev.state, ns = next.state;
   return (
     ps.showAI === ns.showAI &&
-    ps.darkMode === ns.darkMode &&
     ps.isOffCenter === ns.isOffCenter &&
     ps.canEdit === ns.canEdit
   );
