@@ -176,11 +176,11 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
       if (hasText || hasTitle) {
         let desc = `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
         if (hasText) {
-          const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
+          const truncated = obj.text.length > 200 ? obj.text.slice(0, 200) + '...' : obj.text;
           desc += `, text:"${truncated}"`;
         }
         if (hasTitle) {
-          const truncatedTitle = obj.title.length > 500 ? obj.title.slice(0, 500) + '...' : obj.title;
+          const truncatedTitle = obj.title.length > 200 ? obj.title.slice(0, 200) + '...' : obj.title;
           desc += `, title:"${truncatedTitle}"`;
         }
         if (obj.color) desc += `, color:${obj.color}`;
