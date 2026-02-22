@@ -560,6 +560,7 @@ export function GroupPage({
         <GroupSettings
           group={groupObj}
           currentUserId={user?.uid}
+          currentUser={user}
           onUpdateGroup={(patches) => onUpdateGroup && onUpdateGroup(groupId, patches)}
           onInviteMember={(uid, role) => onInviteGroupMember && onInviteGroupMember(groupId, uid, role)}
           onRemoveMember={(uid) => onRemoveGroupMember && onRemoveGroupMember(groupId, uid)}

@@ -166,7 +166,7 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
   }).filter(Boolean);
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 500 }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 500 }}>
       {/* Ghost recenter FAB */}
       <div style={GHOST_FAB_STYLE}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
