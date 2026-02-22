@@ -14,6 +14,8 @@ const mockOrderBy = vi.fn((field) => ({ type: 'orderBy', field }));
 const mockLimit = vi.fn((n) => ({ type: 'limit', n }));
 const mockQuery = vi.fn((...args) => ({ type: 'query', args }));
 const mockGetDocs = vi.fn();
+const mockGetDoc = vi.fn(() => Promise.resolve({ exists: () => false, data: () => null }));
+const mockDoc = vi.fn((db, ...path) => ({ __type: 'doc', path: path.join('/') }));
 
 vi.mock('firebase/firestore', () => ({
   collection: (...args) => mockCollection(...args),
@@ -22,6 +24,8 @@ vi.mock('firebase/firestore', () => ({
   orderBy: (...args) => mockOrderBy(...args),
   limit: (...args) => mockLimit(...args),
   getDocs: (...args) => mockGetDocs(...args),
+  getDoc: (...args) => mockGetDoc(...args),
+  doc: (...args) => mockDoc(...args),
 }));
 
 import { BoardSettings } from './BoardSettings.jsx';
@@ -69,6 +73,9 @@ describe('BoardSettings — member search Firestore query', () => {
     mockQuery.mockClear();
     mockGetDocs.mockClear();
     mockGetDocs.mockResolvedValue({ docs: [] });
+    mockGetDoc.mockClear();
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => null });
+    mockDoc.mockClear();
   });
 
   afterEach(() => {
@@ -523,5 +530,89 @@ describe('BoardSettings — template toggle', () => {
     );
     expect(screen.queryByText('Update Template')).toBeNull();
     expect(screen.getByText('This board is a template.')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BoardSettings — Developer section (Performance overlay toggle)
+// ---------------------------------------------------------------------------
+
+describe('BoardSettings — Developer section', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('does not render the Developer section when preferences prop is absent', () => {
+    render(<BoardSettings {...defaultProps()} />);
+    expect(screen.queryByText('Developer')).toBeNull();
+    expect(screen.queryByText('Performance overlay')).toBeNull();
+  });
+
+  it('renders the Developer section when preferences and onUpdatePreference are provided', () => {
+    const preferences = { showPerfOverlay: false };
+    const onUpdatePreference = vi.fn();
+    render(
+      <BoardSettings
+        {...defaultProps({ preferences, onUpdatePreference })}
+      />
+    );
+    expect(screen.getByText('Developer')).toBeTruthy();
+    expect(screen.getByText('Performance overlay')).toBeTruthy();
+  });
+
+  it('renders the toggle switch with aria-checked=false when showPerfOverlay is false', () => {
+    const preferences = { showPerfOverlay: false };
+    const onUpdatePreference = vi.fn();
+    render(
+      <BoardSettings
+        {...defaultProps({ preferences, onUpdatePreference })}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: 'Performance overlay' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('renders the toggle switch with aria-checked=true when showPerfOverlay is true', () => {
+    const preferences = { showPerfOverlay: true };
+    const onUpdatePreference = vi.fn();
+    render(
+      <BoardSettings
+        {...defaultProps({ preferences, onUpdatePreference })}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: 'Performance overlay' });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('calls onUpdatePreference with ("showPerfOverlay", true) when toggle is clicked while off', () => {
+    const preferences = { showPerfOverlay: false };
+    const onUpdatePreference = vi.fn();
+    render(
+      <BoardSettings
+        {...defaultProps({ preferences, onUpdatePreference })}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: 'Performance overlay' });
+    fireEvent.click(toggle);
+    expect(onUpdatePreference).toHaveBeenCalledWith('showPerfOverlay', true);
+  });
+
+  it('calls onUpdatePreference with ("showPerfOverlay", false) when toggle is clicked while on', () => {
+    const preferences = { showPerfOverlay: true };
+    const onUpdatePreference = vi.fn();
+    render(
+      <BoardSettings
+        {...defaultProps({ preferences, onUpdatePreference })}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: 'Performance overlay' });
+    fireEvent.click(toggle);
+    expect(onUpdatePreference).toHaveBeenCalledWith('showPerfOverlay', false);
+  });
+
+  it('does not render the Developer section when only preferences is provided without onUpdatePreference', () => {
+    const preferences = { showPerfOverlay: false };
+    render(<BoardSettings {...defaultProps({ preferences })} />);
+    expect(screen.queryByText('Developer')).toBeNull();
   });
 });
