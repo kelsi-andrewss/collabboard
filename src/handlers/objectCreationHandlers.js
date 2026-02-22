@@ -92,7 +92,7 @@ export function makeObjectCreationHandlers({
       y: pos.y,
       width: 200,
       fontSize: 16,
-      color: '#1a1a1a',
+      color: shapeColors.text.active,
       rotation: 0,
       frameId: null,
       childIds: [],
