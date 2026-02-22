@@ -157,9 +157,9 @@
 }
 
 .tool-split-button button {
-  background: var(--md-sys-color-surface-container);
-  border: none;
-  border-radius: 0;
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-small);
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
@@ -227,8 +227,8 @@
 }
 
 .snap-toggle {
-  background: var(--md-sys-color-surface-container);
-  border: none;
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-small);
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
   color: var(--md-sys-color-on-surface-variant);
@@ -255,7 +255,7 @@
 }
 
 .snap-toggle:hover {
-  background: var(--md-sys-color-surface-container-high);
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
   color: var(--md-sys-color-on-surface);
 }
 
