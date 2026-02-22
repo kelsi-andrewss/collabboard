@@ -35,6 +35,7 @@ function getRecentTimestamps(timestamps) {
 export function useAI(boardId, boardActions, objects, user, isAdmin) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
+  const [chatHistory, setChatHistory] = useState([]);
 
   const requestTimestampsRef = useRef(getRecentTimestamps(loadTimestamps()));
 
@@ -131,6 +132,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
     }
 
     const contextPrompt = buildBoardContext() + prompt;
+    setChatHistory(prev => [...prev, { role: 'user', message: prompt, timestamp: Date.now() }]);
     setIsTyping(true);
     setError(null);
     try {
@@ -275,15 +277,18 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
       } else {
       }
 
-      return result.response.text();
+      const responseText = result.response.text();
+      setChatHistory(prev => [...prev, { role: 'ai', message: responseText, timestamp: Date.now() }]);
+      return responseText;
     } catch (err) {
       const msg = err?.message || "Unknown error occurred";
       setError(msg);
+      setChatHistory(prev => [...prev, { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() }]);
       return `Error: ${msg}`;
     } finally {
       setIsTyping(false);
     }
   };
 
-  return { sendCommand, isTyping, error, clearError: () => setError(null) };
+  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory };
 }

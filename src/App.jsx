@@ -782,7 +782,7 @@ export function App() {
             />
             {canEdit && (
               <AIPanel
-                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error }}
+                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory }}
                 handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
               />
             )}
