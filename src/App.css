@@ -48,12 +48,81 @@
   box-shadow: var(--md-sys-elevation-2);
   z-index: 100;
   user-select: none;
-  cursor: grab;
+  cursor: default;
   overflow: visible;
 }
 
 .floating-toolbar-chip:active {
+  cursor: default;
+}
+
+.chip-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  cursor: grab;
+  color: var(--md-sys-color-outline-variant);
+  padding: 0 2px;
+  align-self: stretch;
+}
+
+.chip-grip:active {
   cursor: grabbing;
+}
+
+.chip-orient-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  padding: 0;
+  transition: color var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+.chip-orient-btn:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.floating-toolbar-chip[data-orient="vertical"] {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .toolbar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .header-divider {
+  width: 100%;
+  height: 1px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .tool-split-button {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-indicator {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .chip-grip {
+  width: 100%;
+  height: 16px;
+  align-self: auto;
+  flex-direction: row;
+  justify-content: center;
 }
 
 .header-left {

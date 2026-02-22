@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export function useDraggableFloat(storageKey, defaultPos) {
   const [pos, setPos] = useState(() => {
@@ -15,6 +15,28 @@ export function useDraggableFloat(storageKey, defaultPos) {
     }
     return defaultPos;
   });
+
+  const [orientation, setOrientation] = useState(() => {
+    try {
+      const stored = localStorage.getItem(storageKey + '-orient');
+      if (stored === 'horizontal' || stored === 'vertical') return stored;
+    } catch {
+      // localStorage unavailable
+    }
+    return 'horizontal';
+  });
+
+  const toggleOrientation = useCallback(() => {
+    setOrientation(prev => {
+      const next = prev === 'horizontal' ? 'vertical' : 'horizontal';
+      try {
+        localStorage.setItem(storageKey + '-orient', next);
+      } catch {
+        // localStorage unavailable
+      }
+      return next;
+    });
+  }, [storageKey]);
 
   const elementRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -114,6 +136,8 @@ export function useDraggableFloat(storageKey, defaultPos) {
 
   return {
     pos,
+    orientation,
+    toggleOrientation,
     dragHandleProps: {
       onMouseDown,
       ref: elementRef,

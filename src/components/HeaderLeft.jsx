@@ -26,8 +26,8 @@ function HeaderLeftInner({ state, handlers }) {
   const [zoomInputVal, setZoomInputVal] = useState('');
   const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
 
-  const { pos: posIdentity, dragHandleProps: dragIdentity } = useDraggableFloat('toolbar-left-identity', { x: 16, y: 16 });
-  const { pos: posTools, dragHandleProps: dragTools } = useDraggableFloat('toolbar-left-tools', { x: 16, y: 72 });
+  const { pos: posIdentity, dragHandleProps: dragIdentity, orientation: orientIdentity, toggleOrientation: toggleOrientIdentity } = useDraggableFloat('toolbar-left-identity', { x: 16, y: 16 });
+  const { pos: posTools, dragHandleProps: dragTools, orientation: orientTools, toggleOrientation: toggleOrientTools } = useDraggableFloat('toolbar-left-tools', { x: 16, y: 72 });
 
   useEffect(() => {
     if (!showBoardSwitcher) return;
@@ -141,9 +141,10 @@ function HeaderLeftInner({ state, handlers }) {
       <div
         className="floating-toolbar-chip"
         ref={dragIdentity.ref}
-        onMouseDown={dragIdentity.onMouseDown}
+        data-orient={orientIdentity === 'vertical' ? 'vertical' : undefined}
         style={{ left: posIdentity.x, top: posIdentity.y }}
       >
+        <span className="chip-grip" onMouseDown={dragIdentity.onMouseDown}>&#10815;</span>
         <span
           className="logo-text home-link"
           onClick={() => { setBoardId(null); setBoardName(''); }}
@@ -206,15 +207,24 @@ function HeaderLeftInner({ state, handlers }) {
             </div>
           )}
         </div>}
+        <button
+          className="chip-orient-btn"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={toggleOrientIdentity}
+          title="Toggle orientation"
+        >
+          &#x2194;
+        </button>
       </div>
 
       {showToolbar && (
         <div
           className="floating-toolbar-chip"
           ref={dragTools.ref}
-          onMouseDown={dragTools.onMouseDown}
+          data-orient={orientTools === 'vertical' ? 'vertical' : undefined}
           style={{ left: posTools.x, top: posTools.y }}
         >
+          <span className="chip-grip" onMouseDown={dragTools.onMouseDown}>&#10815;</span>
           <div className="toolbar">
             {canEdit && (
               <>
@@ -453,6 +463,14 @@ function HeaderLeftInner({ state, handlers }) {
               </>
             )}
           </div>
+          <button
+            className="chip-orient-btn"
+            onMouseDown={e => e.stopPropagation()}
+            onClick={toggleOrientTools}
+            title="Toggle orientation"
+          >
+            &#x2194;
+          </button>
         </div>
       )}
     </>
