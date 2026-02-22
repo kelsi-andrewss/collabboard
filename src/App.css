@@ -1,34 +1,5 @@
 :root {
   --header-height: 60px;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-tertiary: #6b7280;
-  --border-color: #e5e7eb;
-  --header-bg: #1f2937;
-  --toolbar-bg: #374151;
-  --accent-primary: #4f46e5;
-  --accent-hover: #4338ca;
-  --canvas-bg: #f9fafb;
-  --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.07);
-  --shadow-lg: 0 10px 25px -4px rgba(0,0,0,0.25), 0 4px 8px -2px rgba(0,0,0,0.1);
-}
-
-[data-theme='dark'] {
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-tertiary: #b0b8c4;
-  --border-color: #374151;
-  --header-bg: #030712;
-  --toolbar-bg: #1f2937;
-  --accent-primary: #6366f1;
-  --accent-hover: #4f46e5;
-  --canvas-bg: #030712;
 }
 
 #root {

@@ -1,0 +1,32 @@
+:root {
+  /* Background aliases */
+  --bg-primary: var(--md-sys-color-surface);
+  --bg-secondary: var(--md-sys-color-surface-container);
+  --bg-tertiary: var(--md-sys-color-surface-container-high);
+  --bg-hover: var(--md-sys-color-surface-container-highest);
+  --bg-active: var(--md-sys-color-primary-container);
+  --bg-input: var(--md-sys-color-surface-container-low);
+
+  /* Text aliases */
+  --text-primary: var(--md-sys-color-on-surface);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+  --text-tertiary: var(--md-sys-color-outline);
+  --text-inverse: var(--md-sys-color-inverse-on-surface);
+
+  /* Accent aliases */
+  --accent-primary: var(--md-sys-color-primary);
+  --accent-hover: var(--md-sys-color-primary-container);
+  --accent-text: var(--md-sys-color-on-primary);
+
+  /* Border aliases */
+  --border-color: var(--md-sys-color-outline-variant);
+  --border-focus: var(--md-sys-color-primary);
+
+  /* Danger aliases */
+  --danger-color: var(--md-sys-color-error);
+  --danger-hover: var(--md-sys-color-error-container);
+  --danger-text: var(--md-sys-color-on-error);
+
+  /* Shadow alias */
+  --shadow-color: var(--md-sys-color-shadow);
+}
