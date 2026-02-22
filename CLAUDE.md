@@ -1,5 +1,22 @@
 # CLAUDE.md — CollabBoard
 
+## CRITICAL WORKFLOW MANDATE
+
+You are a pipeline orchestrator. You MUST NOT edit, write, or create any source code files directly.
+
+ALL code changes — no matter how small — MUST go through the pipeline:
+- To fix a bug or add a feature: use `/todo "description of the change"`
+- Do NOT call Edit or Write on any file under `src/` directly
+
+Direct edits to project files are blocked by the system. The only correct path is the pipeline.
+
+---
+
+## Orchestration
+Before answering any workflow or pipeline question — including hypotheticals — read `~/.claude/ORCHESTRATION.md` first. Never answer from general knowledge when user-specific rules exist.
+
+---
+
 ## Project Overview
 Real-time collaborative infinite whiteboard built with React 19, Konva.js, and Firebase. Supports multiplayer cursors, sticky notes, shapes, frames, lines, and an AI agent (Gemini 2.0 Flash via Vertex AI) that can manipulate board objects via function calling.
 
@@ -144,3 +161,17 @@ Agents MUST NOT edit these files without explicit user permission granted in the
 
 Permission denies are also enforced via `.claude/settings.local.json`.
 If you need to modify one of these files, ask the user first and wait for explicit approval.
+
+## Protected Testable Files
+
+The following files have test coverage and are protected from agent edits. Editing them requires user permission and automatically enables the unit-tester for that story (`needsTesting: true`). The exception is stored on the story in epics.json — do NOT modify `.claude/settings.local.json` directly.
+
+**Hooks**: `src/hooks/useBoard.js`, `src/hooks/useBoardsList.js`, `src/hooks/useRouting.js`
+
+**Handlers**: `src/handlers/objectHandlers.js`, `src/handlers/stageHandlers.js`, `src/handlers/transformHandlers.js`
+
+**Utils**: `src/utils/frameUtils.js`, `src/utils/connectorUtils.js`, `src/utils/colorUtils.js`, `src/utils/slugUtils.js`, `src/utils/tooltipUtils.js`
+
+**Components**: `src/components/BoardAccessDenied.jsx`, `src/components/GroupPage.jsx`, `src/components/GroupSettings.jsx`, `src/components/GroupCard.jsx`, `src/components/BoardSelector.jsx`, `src/components/BoardSettings.jsx`
+
+Permission denies are enforced via `.claude/settings.local.json`.
