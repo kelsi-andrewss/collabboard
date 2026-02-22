@@ -121,7 +121,7 @@ export function makeFrameDragHandlers({
     if (overFrame) {
       const isNewParent = frame.frameId !== overFrame.id;
       if (isNewParent) {
-        const titleBar = Math.max(32, Math.min(52, overFrame.height * 0.12));
+        const titleBar = 48;
         const minX = overFrame.x + FRAME_MARGIN;
         const minY = overFrame.y + titleBar + FRAME_MARGIN;
         snapped.x = Math.max(minX, snapped.x);

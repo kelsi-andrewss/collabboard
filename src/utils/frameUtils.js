@@ -93,8 +93,10 @@ export function computeAncestorExpansions(childX, childY, childW, childH, parent
       const sb = (sib.type === 'line' || sib.type === 'arrow') ? getLineBounds(sib) : sib;
       minLeft   = Math.min(minLeft,   sb.x);
       minTop    = Math.min(minTop,    sb.y);
-      maxRight  = Math.max(maxRight,  sb.x + (sb.width || 150));
-      maxBottom = Math.max(maxBottom, sb.y + (sb.height || 150));
+      const sbW = sb.width || (sb.type === 'text' ? 200 : 150);
+      const sbH = sb.height || (sb.type === 'text' ? (sb.fontSize || 16) * 2 : 150);
+      maxRight  = Math.max(maxRight,  sb.x + sbW);
+      maxBottom = Math.max(maxBottom, sb.y + sbH);
     }
 
     // We only ever expand, never shrink. newX/newY shift left/up only if children
