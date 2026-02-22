@@ -36,8 +36,8 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete, id]);
 
-  const titleBarHeight = Math.max(40, Math.min(64, height * 0.13));
-  const titleFontSize = Math.max(16, Math.min(28, titleBarHeight * 0.55));
+  const titleBarHeight = 48;
+  const titleFontSize = 20;
   const titleColor = color;
 
   return (
@@ -283,7 +283,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
               borderRectRef.current.width(finalW);
               borderRectRef.current.height(finalH);
             }
-            const finalTitleBarH = Math.max(32, Math.min(52, finalH * 0.12));
+            const finalTitleBarH = 48;
             if (titleBarRef.current) {
               titleBarRef.current.width(finalW);
               titleBarRef.current.height(finalTitleBarH);
@@ -314,7 +314,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
                 bgRectRef.current.height(clamped.height);
                 borderRectRef.current.width(clamped.width);
                 borderRectRef.current.height(clamped.height);
-                const clampedTitleBarH = Math.max(32, Math.min(52, clamped.height * 0.12));
+                const clampedTitleBarH = 48;
                 titleBarRef.current.width(clamped.width);
                 titleBarRef.current.height(clampedTitleBarH);
                 titleTextRef.current.width(clamped.width - 16);
