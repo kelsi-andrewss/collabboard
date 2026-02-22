@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, serverTimestamp, doc, updateDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export function useBoardsList(currentUser, { isAdminView = false, groups = [] } = {}) {
+export function useBoardsList(currentUser, { isAdminView = false } = {}) {
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
 
