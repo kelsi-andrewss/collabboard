@@ -87,7 +87,7 @@ export function makeObjectCreationHandlers({
     const pos = findOpenSpot(200, 20);
     board.addObject({
       type: 'text',
-      text: '',
+      text: 'Type something...',
       x: pos.x,
       y: pos.y,
       width: 200,

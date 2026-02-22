@@ -7,12 +7,13 @@ function TextShapeInner({
   rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd,
   onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false,
   gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos,
-  onTypingChange, canEdit = true,
+  onTypingChange, canEdit = true, pendingTool,
 }) {
   const groupRef = useRef();
   const textRef = useRef();
   const trRef = useRef();
   const widthRef = useRef(width);
+  const textareaRef = useRef();
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ function TextShapeInner({
         x={currentX}
         y={currentY}
         rotation={rotation}
-        draggable={canEdit && !isEditing}
+        draggable={canEdit}
         dragDistance={3}
         onClick={(e) => {
           e.cancelBubble = true;
@@ -71,6 +72,11 @@ function TextShapeInner({
           onSelect(id);
         }}
         onDragStart={() => {
+          if (isEditing) {
+            textareaRef.current?.blur();
+            setIsEditing(false);
+            onTypingChange?.(false);
+          }
           if (dragLayerRef?.current && groupRef.current) {
             groupRef.current.moveTo(dragLayerRef.current);
           }
@@ -116,7 +122,8 @@ function TextShapeInner({
         {!isEditing ? (
           <Text
             ref={textRef}
-            text={text || ''}
+            text={text || 'Type something...'}
+            opacity={text ? 1 : 0.35}
             width={width}
             fontSize={fontSize}
             fontFamily="sans-serif"
@@ -146,6 +153,7 @@ function TextShapeInner({
               pointerEvents: 'none',
             }}>
               <textarea
+                ref={textareaRef}
                 value={text}
                 onChange={handleTextChange}
                 onBlur={() => { setIsEditing(false); onTypingChange?.(false); }}
@@ -175,9 +183,24 @@ function TextShapeInner({
                 onFocus={(e) => {
                   e.target.style.height = 'auto';
                   e.target.style.height = e.target.scrollHeight + 'px';
-                  const val = e.target.value;
-                  e.target.value = '';
-                  e.target.value = val;
+                  e.target.select();
+                }}
+                onMouseDown={(e) => {
+                  const startX = e.clientX;
+                  const startY = e.clientY;
+                  const onMouseMove = (me) => {
+                    if (Math.abs(me.clientX - startX) > 3 || Math.abs(me.clientY - startY) > 3) {
+                      window.removeEventListener('mousemove', onMouseMove);
+                      window.removeEventListener('mouseup', onMouseUp);
+                      textareaRef.current?.blur();
+                    }
+                  };
+                  const onMouseUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                  };
+                  window.addEventListener('mousemove', onMouseMove);
+                  window.addEventListener('mouseup', onMouseUp);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -191,16 +214,21 @@ function TextShapeInner({
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && canEdit && (
+      {isSelected && !isEditing && canEdit && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['middle-left', 'middle-right']}
           anchorSize={10}
-          anchorStrokeWidth={2}
           anchorCornerRadius={2}
           anchorHitStrokeWidth={12}
+          borderStroke="#6366f1"
+          borderStrokeWidth={1.5}
+          borderDash={[4, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#6366f1"
+          anchorStrokeWidth={1.5}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 40) return oldBox;
             return newBox;

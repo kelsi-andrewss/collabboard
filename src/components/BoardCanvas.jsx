@@ -7,74 +7,81 @@ import { LineShape } from './LineShape';
 import { TextShape } from './TextShape';
 import { Cursors } from './Cursors';
 import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
-import { PORTS, getPortCoords } from '../utils/connectorUtils.js';
+import { PORTS, getPortCoords, findSnapTarget } from '../utils/connectorUtils.js';
 
 const PORT_DISPLAY_RADIUS = 8;
 
 const OFFSCREEN = -99999;
+
+function ConnectorGhostLayer({ stageScale, layerRef, connectorFirstPoint, ghostLineRef, tooltipGroupRef }) {
+  const strokeW = 1.5 / stageScale;
+  const dashLen = 8 / stageScale;
+  const dashGap = 4 / stageScale;
+  const ghostOpacity = 0.45;
+
+  const isDrawing = connectorFirstPoint !== null;
+
+  return (
+    <Layer ref={layerRef} listening={false}>
+      {isDrawing && (
+        <Circle
+          x={connectorFirstPoint.x}
+          y={connectorFirstPoint.y}
+          radius={6 / stageScale}
+          fill="#6366f1"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      )}
+      {isDrawing ? (
+        <Line
+          ref={ghostLineRef}
+          x={connectorFirstPoint.x}
+          y={connectorFirstPoint.y}
+          points={[0, 0, 0, 0]}
+          stroke="#6366f1"
+          strokeWidth={strokeW * 2}
+          dash={[dashLen, dashGap]}
+          opacity={ghostOpacity}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ) : (
+        <Line
+          ref={ghostLineRef}
+          points={[0, 0, 0, 0]}
+          x={OFFSCREEN}
+          y={OFFSCREEN}
+          stroke="#6366f1"
+          strokeWidth={strokeW * 2}
+          dash={[dashLen, dashGap]}
+          opacity={0}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      )}
+      <Group ref={tooltipGroupRef} x={OFFSCREEN} y={OFFSCREEN} listening={false}>
+        <Text
+          x={8 / stageScale}
+          y={8 / stageScale}
+          text={isDrawing ? 'Press Esc to cancel' : 'Press Esc to exit'}
+          fontSize={12 / stageScale}
+          fontFamily="sans-serif"
+          fill="#6366f1"
+          opacity={0.7}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </Group>
+    </Layer>
+  );
+}
 
 function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
   const strokeW = 1.5 / stageScale;
   const dashLen = 6 / stageScale;
   const dashGap = 3 / stageScale;
   const ghostOpacity = 0.45;
-
-  if (pendingTool === 'line') {
-    return (
-      <Layer ref={layerRef}>
-        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
-          <Line
-            points={[0, 0, 200 / stageScale, 0]}
-            stroke="#6366f1"
-            strokeWidth={strokeW * 2}
-            dash={[dashLen, dashGap]}
-            perfectDrawEnabled={false}
-          />
-          <Text
-            x={0}
-            y={8 / stageScale}
-            text="Press Esc to cancel"
-            fontSize={12 / stageScale}
-            fontFamily="sans-serif"
-            fill="#6366f1"
-            opacity={0.7}
-            listening={false}
-            perfectDrawEnabled={false}
-          />
-        </Group>
-      </Layer>
-    );
-  }
-
-  if (pendingTool === 'arrow') {
-    return (
-      <Layer ref={layerRef}>
-        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
-          <Arrow
-            points={[0, 0, 200 / stageScale, 0]}
-            stroke="#6366f1"
-            strokeWidth={strokeW * 2}
-            fill="#6366f1"
-            pointerLength={10 / stageScale}
-            pointerWidth={8 / stageScale}
-            dash={[dashLen, dashGap]}
-            perfectDrawEnabled={false}
-          />
-          <Text
-            x={0}
-            y={8 / stageScale}
-            text="Press Esc to cancel"
-            fontSize={12 / stageScale}
-            fontFamily="sans-serif"
-            fill="#6366f1"
-            opacity={0.7}
-            listening={false}
-            perfectDrawEnabled={false}
-          />
-        </Group>
-      </Layer>
-    );
-  }
 
   if (pendingTool === 'frame') {
     const fw = Math.round(window.innerWidth * 0.55 / stageScale);
@@ -288,11 +295,21 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const dragLayerRef = useRef();
   const ghostLayerRef = useRef();
   const ghostNodeRef = useRef();
+  const connectorGhostLayerRef = useRef();
+  const ghostLineKonvaRef = useRef();
+  const tooltipGroupKonvaRef = useRef();
+  const hoveredSnapTargetRef = useRef(null);
+  const portCircleRefsRef = useRef({});
+  const objectsRef = useRef({});
+  const connectorFirstPointRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
-    activeTool, selectedIds, canEdit, pendingTool,
+    activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint,
   } = state;
+
+  objectsRef.current = objects;
+  connectorFirstPointRef.current = connectorFirstPoint;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
@@ -330,15 +347,57 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     const canvasX = pos.x;
     const canvasY = pos.y;
 
-    if (ghostNodeRef.current) {
+    const tool = pendingTool;
+    const isConnectorTool = tool === 'line' || tool === 'arrow';
+
+    if (isConnectorTool) {
+      const objs = objectsRef.current;
+      const snapTarget = findSnapTarget(canvasX, canvasY, objs, new Set());
+      const prevSnap = hoveredSnapTargetRef.current;
+      const snapChanged = (
+        prevSnap?.objectId !== snapTarget?.objectId ||
+        prevSnap?.port !== snapTarget?.port
+      );
+
+      if (snapChanged) {
+        if (prevSnap) {
+          const key = `${prevSnap.objectId}-${prevSnap.port}`;
+          const circleNode = portCircleRefsRef.current[key];
+          if (circleNode) {
+            circleNode.fill('rgba(99,102,241,0.15)');
+          }
+        }
+        if (snapTarget) {
+          const key = `${snapTarget.objectId}-${snapTarget.port}`;
+          const circleNode = portCircleRefsRef.current[key];
+          if (circleNode) {
+            circleNode.fill('rgba(99,102,241,0.6)');
+          }
+        }
+        hoveredSnapTargetRef.current = snapTarget;
+        mainLayerRef.current?.batchDraw();
+      }
+
+      const fp = connectorFirstPointRef.current;
+      if (fp !== null && ghostLineKonvaRef.current) {
+        const endX = snapTarget ? snapTarget.x : canvasX;
+        const endY = snapTarget ? snapTarget.y : canvasY;
+        ghostLineKonvaRef.current.points([0, 0, endX - fp.x, endY - fp.y]);
+        if (tooltipGroupKonvaRef.current) {
+          tooltipGroupKonvaRef.current.x(canvasX);
+          tooltipGroupKonvaRef.current.y(canvasY);
+        }
+        connectorGhostLayerRef.current?.batchDraw();
+      } else if (fp === null && tooltipGroupKonvaRef.current) {
+        tooltipGroupKonvaRef.current.x(canvasX);
+        tooltipGroupKonvaRef.current.y(canvasY);
+        connectorGhostLayerRef.current?.batchDraw();
+      }
+    } else if (ghostNodeRef.current) {
       const node = ghostNodeRef.current;
-      const tool = pendingTool;
       if (tool === 'sticky') {
         node.x(canvasX - 100 / stageScale);
         node.y(canvasY - 100 / stageScale);
-      } else if (tool === 'line' || tool === 'arrow') {
-        node.x(canvasX);
-        node.y(canvasY);
       } else if (tool === 'text') {
         node.x(canvasX);
         node.y(canvasY);
@@ -590,6 +649,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   canEdit={canEdit}
                   onAutoFit={handleFrameAutoFit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -614,6 +674,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -637,6 +698,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -685,6 +747,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -695,7 +758,10 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const selectedObj = selectedId ? objects[selectedId] : null;
           const isLineSelected = selectedObj && (selectedObj.type === 'line' || selectedObj.type === 'arrow');
 
-          if (!isConnectorTool && !isLineSelected) return null;
+          if (!isConnectorTool && !isLineSelected) {
+            portCircleRefsRef.current = {};
+            return null;
+          }
 
           const portTargets = [];
 
@@ -714,18 +780,22 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
           const portRadius = PORT_DISPLAY_RADIUS / stageScale;
           const strokeW = 1.5 / stageScale;
+          const hovered = hoveredSnapTargetRef.current;
+          const nextRefs = {};
           const circles = [];
           for (const obj of portTargets) {
             for (const port of PORTS) {
               const p = getPortCoords(obj, port);
               const key = `${obj.id}-${port}`;
+              const isHovered = hovered && hovered.objectId === obj.id && hovered.port === port;
               circles.push(
                 <Circle
                   key={key}
+                  ref={(node) => { if (node) nextRefs[key] = node; }}
                   x={p.x}
                   y={p.y}
                   radius={portRadius}
-                  fill="rgba(99,102,241,0.15)"
+                  fill={isHovered ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.15)'}
                   stroke="#6366f1"
                   strokeWidth={strokeW}
                   listening={false}
@@ -734,6 +804,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
               );
             }
           }
+          portCircleRefsRef.current = nextRefs;
           return circles;
         })()}
         {selRect && (
@@ -752,7 +823,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         <Cursors presentUsers={presentUsers} userId={currentUserId} />
       </Layer>
       <Layer ref={dragLayerRef} />
-      {pendingTool && (
+      {pendingTool && (pendingTool === 'line' || pendingTool === 'arrow') && (
+        <ConnectorGhostLayer
+          stageScale={stageScale}
+          layerRef={connectorGhostLayerRef}
+          connectorFirstPoint={connectorFirstPoint}
+          ghostLineRef={ghostLineKonvaRef}
+          tooltipGroupRef={tooltipGroupKonvaRef}
+        />
+      )}
+      {pendingTool && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <GhostLayer
           pendingTool={pendingTool}
           stageScale={stageScale}
@@ -785,7 +865,7 @@ export function areEqual(prev, next) {
     ps.activeTool === ns.activeTool &&
     ps.selectedIds === ns.selectedIds &&
     ps.canEdit === ns.canEdit &&
-    ps.connectorState === ns.connectorState &&
+    ps.connectorFirstPoint === ns.connectorFirstPoint &&
     ps.pendingTool === ns.pendingTool
   );
 }

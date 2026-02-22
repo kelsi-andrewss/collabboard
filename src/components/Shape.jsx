@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true }) {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -16,7 +16,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   }, [width, height]);
 
   useEffect(() => {
-    if (isSelected && !isEditing) {
+    if (isSelected && !isEditing && trRef.current) {
       trRef.current.nodes([groupRef.current]);
       trRef.current.getLayer().batchDraw();
     }
@@ -256,14 +256,19 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && canEdit && (
+      {isSelected && !isEditing && canEdit && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <Transformer
           ref={trRef}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           anchorSize={10}
-          anchorStrokeWidth={2}
           anchorCornerRadius={2}
           anchorHitStrokeWidth={12}
+          borderStroke="#6366f1"
+          borderStrokeWidth={1.5}
+          borderDash={[4, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#6366f1"
+          anchorStrokeWidth={1.5}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 5 || newBox.height < 5) return oldBox;
             return newBox;

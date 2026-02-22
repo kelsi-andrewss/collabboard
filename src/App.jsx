@@ -105,7 +105,7 @@ export function App() {
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
   const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup } = useGroupsList(user, effectiveAdminView);
-  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
+  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, publishTemplate, updateTemplate, unpublishTemplate, createBoardFromTemplate } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
 
   const currentBoard = boardId ? allBoards.find(b => b.id === boardId) || null : null;
   const boardGroup = currentBoard?.groupId ? groups.find(g => g.id === currentBoard.groupId) : null;
@@ -229,6 +229,9 @@ export function App() {
   const pendingToolCountRef = useRef(0);
   pendingToolRef.current = pendingTool;
   pendingToolCountRef.current = pendingToolCount;
+  const [connectorFirstPoint, setConnectorFirstPoint] = useState(null);
+  const connectorFirstPointRef = useRef(null);
+  connectorFirstPointRef.current = connectorFirstPoint;
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
   useEffect(() => {
@@ -323,6 +326,11 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (connectorFirstPointRef.current !== null) {
+          e.preventDefault();
+          setConnectorFirstPoint(null);
+          return;
+        }
         if (pendingToolRef.current) {
           e.preventDefault();
           setPendingTool(null);
@@ -590,9 +598,17 @@ export function App() {
     setPendingToolCount(c => c + 1);
   };
 
+  const currentColorRef = useRef(shapeColors.shapes.active);
+  currentColorRef.current = shapeColors.shapes.active;
+  const currentStrokeWidthRef = useRef(3);
+  const userIdRef = useRef(user?.uid);
+  userIdRef.current = user?.uid;
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
+    connectorFirstPointRef, setConnectorFirstPoint,
+    addObject: board.addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
   });
   handleRecenterRef.current = handleRecenter;
 
@@ -705,6 +721,7 @@ export function App() {
                 deleteGroupCascade={deleteGroupCascade}
                 setGroupProtected={setGroupProtected}
                 moveGroup={moveGroup}
+                createBoardFromTemplate={createBoardFromTemplate}
               />
             )}
             <FABButtons
@@ -751,7 +768,7 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool }}
+              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             <FABButtons
@@ -783,6 +800,9 @@ export function App() {
                 onRemoveMember={(uid) => removeMember(boardId, uid)}
                 onClose={() => setShowBoardSettings(false)}
                 isGroupAdmin={isGroupAdmin}
+                publishTemplate={publishTemplate}
+                updateTemplate={updateTemplate}
+                unpublishTemplate={unpublishTemplate}
               />
             )}
             {contextMenu && canEdit && (() => {
