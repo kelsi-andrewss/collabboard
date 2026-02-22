@@ -546,7 +546,13 @@ export async function executeToolCall(toolName, toolArgs, context) {
       await Promise.all(validIds.map(id => act().updateObject(id, { color })));
       return { success: true, updatedCount: validIds.length };
     } else if (toolName === "createConnector") {
-      const { startObjectId, startPort, endObjectId, endPort, color = '#6366f1', arrowhead = true } = toolArgs;
+      let { startObjectId, startPort, endObjectId, endPort, color = '#6366f1', arrowhead = true } = toolArgs;
+      if (toolArgs.startFrameIndex !== undefined && frameIndexMap[toolArgs.startFrameIndex]) {
+        startObjectId = frameIndexMap[toolArgs.startFrameIndex].id;
+      }
+      if (toolArgs.endFrameIndex !== undefined && frameIndexMap[toolArgs.endFrameIndex]) {
+        endObjectId = frameIndexMap[toolArgs.endFrameIndex].id;
+      }
       const currentObjs = objs();
       const startValidation = validateObjectExists(startObjectId, currentObjs, 'createConnector');
       if (startValidation) return startValidation;

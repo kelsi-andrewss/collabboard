@@ -363,14 +363,16 @@ export const toolDeclarations = [
     parameters: {
       type: "OBJECT",
       properties: {
-        startObjectId: { type: "STRING", description: "ID of the object to connect from" },
+        startObjectId: { type: "STRING", description: "ID of the object to connect from. Omit if using startFrameIndex." },
+        startFrameIndex: { type: "INTEGER", description: "frameIndex of a frame created earlier in this same request. Use instead of startObjectId when connecting to a frame created in the same batch." },
         startPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the start object" },
-        endObjectId: { type: "STRING", description: "ID of the object to connect to" },
+        endObjectId: { type: "STRING", description: "ID of the object to connect to. Omit if using endFrameIndex." },
+        endFrameIndex: { type: "INTEGER", description: "frameIndex of a frame created earlier in this same request. Use instead of endObjectId when connecting to a frame created in the same batch." },
         endPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the end object" },
         color: { type: "STRING", description: "Hex color code (default '#6366f1')" },
         arrowhead: { type: "BOOLEAN", description: "Whether to show an arrowhead (default true)" }
       },
-      required: ["startObjectId", "startPort", "endObjectId", "endPort"]
+      required: ["startPort", "endPort"]
     }
   }
 ];
@@ -385,7 +387,7 @@ export function buildSystemPrompt(aiResponseMode) {
 function buildSystemPromptText(responseModeInstruction) {
   return `You are a whiteboard assistant acting on behalf of the logged-in user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create boards.
 
-CRITICAL RULE: NEVER ask the user for clarification. ALWAYS use your best judgment and act immediately. When a request is ambiguous, pick the most reasonable interpretation, act on it, and include one brief sentence in your response explaining what you chose to do and why (e.g. "I interpreted 'organize this' as arranging by creation order — let me know if you meant something else").
+CRITICAL RULE: NEVER ask the user for clarification. ALWAYS use your best judgment and act immediately. When a request is ambiguous, pick the most reasonable interpretation, act on it, and include one brief sentence in your response explaining what you chose to do and why (e.g. "I interpreted 'organize this' as arranging by creation order — let me know if you meant something else"). NEVER include object IDs in your response text — refer to objects by their label, type, color, or position instead.
 
 RESPONSE RULE: ${responseModeInstruction}
 
