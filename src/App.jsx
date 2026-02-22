@@ -212,6 +212,15 @@ export function App() {
     }
   }, [canEdit]);
 
+  // Reset activeTool to the preferred default whenever a board is loaded
+  const dragModeRef = useRef(preferences.dragMode);
+  dragModeRef.current = preferences.dragMode;
+  useEffect(() => {
+    if (boardId) {
+      setActiveTool(dragModeRef.current || 'pan');
+    }
+  }, [boardId]);
+
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(null);
@@ -230,7 +239,7 @@ export function App() {
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
-  const [activeTool, setActiveTool] = useState('pan');
+  const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
   selectedIdsRef.current = selectedIds;
@@ -703,7 +712,7 @@ export function App() {
       {user && (
         <div className="header">
           <HeaderLeft
-            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale }}
+            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.dragMode }}
             handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
           />
           <div className="header-right">

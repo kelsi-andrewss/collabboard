@@ -167,3 +167,49 @@
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 2px;
 }
+
+/* Drag mode segmented picker */
+.drag-mode-picker {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-small);
+  overflow: hidden;
+}
+
+.drag-mode-option {
+  padding: var(--md-sys-spacing-1) var(--md-sys-spacing-3);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--md-sys-color-outline);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  transition:
+    background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.drag-mode-option:first-child {
+  border-left: none;
+}
+
+.drag-mode-option:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.drag-mode-option--active {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.drag-mode-option--active:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-secondary-container) 92%, var(--md-sys-color-on-secondary-container));
+}
+
+.drag-mode-option:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+}

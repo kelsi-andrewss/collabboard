@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Shield, Type, Minus, MoveRight } from 'lucide-react';
+import { StickyNote, AppWindow, ChevronDown, Grid3x3, Undo2, Home, Search, MousePointer2, Hand, Shield, Type, Minus, MoveRight } from 'lucide-react';
 import { ColorPickerMenu } from './ColorPickerMenu.jsx';
 import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
@@ -10,7 +10,7 @@ import { useDraggableFloat } from '../hooks/useDraggableFloat';
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
 
 function HeaderLeftInner({ state, handlers }) {
-  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale } = state;
+  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
     handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
@@ -347,7 +347,7 @@ function HeaderLeftInner({ state, handlers }) {
               </>
             )}
 
-            {setActiveTool && (
+            {setActiveTool && dragMode === 'pan' && (
               <button
                 data-toolbar-item="select"
                 className={`snap-toggle ${activeTool === 'select' ? 'active' : ''}`}
@@ -355,6 +355,16 @@ function HeaderLeftInner({ state, handlers }) {
                 title={activeTool === 'select' ? 'Switch to Pan' : 'Switch to Select'}
               >
                 <MousePointer2 size={18} />
+              </button>
+            )}
+            {setActiveTool && dragMode === 'select' && (
+              <button
+                data-toolbar-item="pan"
+                className={`snap-toggle ${activeTool === 'pan' ? 'active' : ''}`}
+                onClick={() => setActiveTool(activeTool === 'pan' ? 'select' : 'pan')}
+                title={activeTool === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
+              >
+                <Hand size={18} />
               </button>
             )}
 
@@ -476,7 +486,8 @@ function areEqual(prev, next) {
     ps.canEdit === ns.canEdit &&
     ps.isAdmin === ns.isAdmin &&
     ps.adminViewActive === ns.adminViewActive &&
-    ps.stageScale === ns.stageScale
+    ps.stageScale === ns.stageScale &&
+    ps.dragMode === ns.dragMode
   );
 }
 
