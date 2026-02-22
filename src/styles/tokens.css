@@ -1,4 +1,10 @@
 @import './tokens/_color-base.css';
+@import './tokens/_color-amber.css';
+@import './tokens/_color-indigo.css';
+@import './tokens/_color-rose.css';
+@import './tokens/_color-sage.css';
+@import './tokens/_color-teal.css';
+@import './tokens/_color-violet.css';
 @import './tokens/_typography.css';
 @import './tokens/_elevation.css';
 @import './tokens/_shape.css';
