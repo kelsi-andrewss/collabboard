@@ -7,7 +7,7 @@ import './BoardSettings.css';
 import './GroupSettings.css';
 
 export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
-  const [inviteRole, setInviteRole] = useState('member');
+  const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
@@ -15,6 +15,7 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
+  const [openAcknowledged, setOpenAcknowledged] = useState(false);
   const [memberProfiles, setMemberProfiles] = useState({});
   const userSearchTimerRef = useRef(null);
 
@@ -54,6 +55,9 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
     setLocalVisibility(newVisibility);
+    if (newVisibility !== 'open') {
+      setOpenAcknowledged(false);
+    }
   };
 
   const handleUserSearch = (term) => {
@@ -147,6 +151,14 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                 <div className="visibility-open-warning">
                   <AlertTriangle size={16} />
                   <span>Anyone can find, view, and edit this group.</span>
+                  <label className="visibility-open-ack">
+                    <input
+                      type="checkbox"
+                      checked={openAcknowledged}
+                      onChange={e => setOpenAcknowledged(e.target.checked)}
+                    />
+                    I understand — anyone can view and edit this group
+                  </label>
                 </div>
               )}
             </>
@@ -196,10 +208,11 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                     onChange={(e) => onInviteMember(uid, e.target.value)}
                   >
                     {isGlobalAdmin && <option value="admin">admin</option>}
-                    <option value="member">member</option>
+                    <option value="editor">editor</option>
+                    <option value="viewer">viewer</option>
                   </select>
                 ) : (
-                  <span className="member-role">{role}</span>
+                  <span className="member-role">{role === 'member' ? 'viewer' : role}</span>
                 )}
                 {canManage && uid !== currentUserId && (
                   <button className="member-remove-btn" onClick={() => onRemoveMember(uid)}>
@@ -228,7 +241,8 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                   onChange={e => setInviteRole(e.target.value)}
                 >
                   {isGlobalAdmin && <option value="admin">admin</option>}
-                  <option value="member">member</option>
+                  <option value="editor">editor</option>
+                  <option value="viewer">viewer</option>
                 </select>
               </div>
               {userSearchOpen && (
@@ -273,7 +287,7 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
             <button
               type="button"
               className="group-settings-save-btn"
-              disabled={!protectedDirty && !visibilityDirty}
+              disabled={!protectedDirty && !visibilityDirty || (localVisibility === 'open' && !openAcknowledged)}
               onClick={() => {
                 if (protectedDirty) onSetProtected(localProtected);
                 if (visibilityDirty) onUpdateGroup({ visibility: localVisibility });

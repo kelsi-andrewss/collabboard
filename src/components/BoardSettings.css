@@ -141,6 +141,20 @@
   line-height: 1.4;
 }
 
+.visibility-open-ack {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-xs);
+  margin-top: var(--md-sys-spacing-xs);
+  font-size: var(--md-sys-typescale-body-small-size);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.visibility-open-ack input[type="checkbox"] {
+  accent-color: var(--md-sys-color-tertiary);
+}
+
 .member-empty {
   display: flex;
   align-items: center;
