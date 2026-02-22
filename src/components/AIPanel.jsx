@@ -8,8 +8,8 @@ function formatTimestamp(ts) {
 }
 
 function AIPanelInner({ state, handlers }) {
-  const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading } = state;
-  const { handleAISubmit, setAiPrompt, clearError } = handlers;
+  const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading, pendingDeletions } = state;
+  const { handleAISubmit, setAiPrompt, clearError, confirmDeletions, cancelDeletions } = handlers;
   const historyEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -25,6 +25,8 @@ function AIPanelInner({ state, handlers }) {
   }, [chatHistory, showAI]);
 
   if (!showAI) return null;
+
+  const hasPendingDeletions = pendingDeletions && pendingDeletions.length > 0;
 
   return (
     <div className="ai-panel">
@@ -45,6 +47,26 @@ function AIPanelInner({ state, handlers }) {
           </div>
         )
       )}
+      {hasPendingDeletions && (
+        <div className="ai-delete-confirm">
+          <p className="ai-delete-confirm-title">
+            The AI wants to delete {pendingDeletions.length} object{pendingDeletions.length !== 1 ? 's' : ''}:
+          </p>
+          <ul className="ai-delete-confirm-list">
+            {pendingDeletions.map(({ objectId, label }) => (
+              <li key={objectId}>{label}</li>
+            ))}
+          </ul>
+          <div className="ai-delete-confirm-actions">
+            <button className="ai-delete-confirm-btn ai-delete-confirm-btn--cancel" onClick={cancelDeletions}>
+              Cancel
+            </button>
+            <button className="ai-delete-confirm-btn ai-delete-confirm-btn--delete" onClick={confirmDeletions}>
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmitAndRefocus} className="ai-input-area">
         <input
           ref={inputRef}
@@ -53,9 +75,9 @@ function AIPanelInner({ state, handlers }) {
           value={aiPrompt}
           onChange={(e) => setAiPrompt(e.target.value)}
           autoFocus
-          disabled={isTyping}
+          disabled={isTyping || hasPendingDeletions}
         />
-        <button type="submit" disabled={isTyping}>
+        <button type="submit" disabled={isTyping || hasPendingDeletions}>
           <Send size={16} />
         </button>
       </form>
@@ -79,7 +101,8 @@ function areEqual(prev, next) {
     ps.isTyping === ns.isTyping &&
     ps.error === ns.error &&
     ps.chatHistory === ns.chatHistory &&
-    ps.isHistoryLoading === ns.isHistoryLoading
+    ps.isHistoryLoading === ns.isHistoryLoading &&
+    ps.pendingDeletions === ns.pendingDeletions
   );
 }
 

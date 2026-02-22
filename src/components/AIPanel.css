@@ -162,3 +162,63 @@
   font-style: italic;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
+
+.ai-delete-confirm {
+  padding: 10px 12px;
+  margin: 0 10px 0;
+  background: var(--md-sys-color-error-container);
+  border: 1px solid var(--md-sys-color-error);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-error-container);
+}
+
+.ai-delete-confirm-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.ai-delete-confirm-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-delete-confirm-list li {
+  word-break: break-word;
+}
+
+.ai-delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ai-delete-confirm-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.ai-delete-confirm-btn--cancel {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.ai-delete-confirm-btn--cancel:hover {
+  background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 92%, var(--md-sys-color-on-surface) 8%);
+}
+
+.ai-delete-confirm-btn--delete {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+
+.ai-delete-confirm-btn--delete:hover {
+  background: color-mix(in srgb, var(--md-sys-color-error) 92%, var(--md-sys-color-on-error) 8%);
+}

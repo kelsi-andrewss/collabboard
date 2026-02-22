@@ -859,8 +859,8 @@ export function App() {
             />
             {canEdit && (
               <AIPanel
-                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory, isHistoryLoading: ai.isHistoryLoading }}
-                handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
+                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory, isHistoryLoading: ai.isHistoryLoading, pendingDeletions: ai.pendingDeletions }}
+                handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError, confirmDeletions: ai.confirmDeletions, cancelDeletions: ai.cancelDeletions }}
               />
             )}
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
