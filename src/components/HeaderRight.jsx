@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { HelpCircle, Link, Check, Settings } from 'lucide-react';
 import { PresenceAvatars } from './PresenceAvatars.jsx';
 import { UserAvatarMenu } from './UserAvatarMenu.jsx';
+import { useDraggableFloat } from '../hooks/useDraggableFloat';
 
 function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user } = state;
   const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
   const [copied, setCopied] = useState(false);
+  const { pos, dragHandleProps } = useDraggableFloat('toolbar-right', null);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -15,7 +17,12 @@ function HeaderRightInner({ state, handlers }) {
   };
 
   return (
-    <div className="header-right">
+    <div
+      className="floating-toolbar-chip"
+      ref={dragHandleProps.ref}
+      onMouseDown={dragHandleProps.onMouseDown}
+      style={pos ? { left: pos.x, top: pos.y } : { right: 16, top: 16 }}
+    >
       <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />
       <span className="header-divider" />
       <div className="header-icon-group">

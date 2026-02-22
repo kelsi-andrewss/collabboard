@@ -579,7 +579,7 @@ export function App() {
       board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-      const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+      const fh = Math.round(window.innerHeight * 0.55 / stageScale);
       board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
       let objData;
@@ -633,10 +633,9 @@ export function App() {
     const bounds = getContentBounds(board.objects);
     if (!bounds) return false;
     const { minX, minY, maxX, maxY } = bounds;
-    const HEADER_HEIGHT = 60;
     const PADDING = 60;
     const viewW = window.innerWidth;
-    const viewH = window.innerHeight - HEADER_HEIGHT;
+    const viewH = window.innerHeight;
     const screenLeft   = minX * stageScale + stagePos.x;
     const screenTop    = minY * stageScale + stagePos.y;
     const screenRight  = maxX * stageScale + stagePos.x;
@@ -929,7 +928,7 @@ export function App() {
                     }},
                     { label: 'Add Frame here', action: () => {
                       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-                      const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+                      const fh = Math.round(window.innerHeight * 0.55 / stageScale);
                       board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
                     }},
                     { separator: true },
