@@ -495,7 +495,8 @@
 
 .zoom-dropdown {
   position: absolute;
-  bottom: calc(100% + var(--md-sys-spacing-sm));
+  top: calc(100% + var(--md-sys-spacing-sm));
+  bottom: auto;
   right: 0;
   background: var(--md-sys-color-surface-container);
   border: 1px solid var(--md-sys-color-outline-variant);
