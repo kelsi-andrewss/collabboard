@@ -767,3 +767,18 @@
   left: 100%;
   right: auto;
 }
+
+.floating-toolbar-chip[data-orient="vertical"] {
+  gap: var(--md-sys-spacing-1);
+  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .help-btn {
+  height: 32px;
+  width: 32px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .chip-orient-btn {
+  height: 32px;
+  width: 32px;
+}
