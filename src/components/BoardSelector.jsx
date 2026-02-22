@@ -567,7 +567,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         const rootGroupIds = new Set(groupsProp.filter(g => !g.parentGroupId).map(g => g.id));
         const groupedEntries = sortedGroupEntries.filter(([k]) => k !== null && k !== 'null' && rootGroupIds.has(k));
         const ungroupedBoards = sortedGroupEntries
-          .filter(([k]) => k === null || k === 'null' || !rootGroupIds.has(k))
+          .filter(([k]) => k === null || k === 'null')
           .flatMap(([, bs]) => bs);
 
         const allItems = [
