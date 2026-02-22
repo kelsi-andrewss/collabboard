@@ -82,8 +82,9 @@
 
 .avatar-you-badge {
   position: absolute;
-  bottom: -1px;
-  right: -4px;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   font-size: 0.5rem;
@@ -141,4 +142,12 @@
 .user-detail-status {
   font-size: 0.75rem;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .avatar-circle {
+  margin-right: 0;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .avatar-you-wrapper {
+  margin-right: 0;
 }
