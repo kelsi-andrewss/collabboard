@@ -134,20 +134,72 @@ describe('getConnectedEndpointUpdates', () => {
     endConnectedId: null, endConnectedPort: null,
   };
 
-  it('updates startConnectedId endpoint when target moves', () => {
+  it('updates startConnectedId endpoint when target moves and returns full bounds', () => {
     const objects = { rect1: rect, line1: line };
     const updates = getConnectedEndpointUpdates('rect1', objects);
     expect(updates).toHaveLength(1);
     expect(updates[0].id).toBe('line1');
-    // bottom port of rect at (200,100,100,80) = center-x=250, y+h=180
-    expect(updates[0].data.points[0]).toBe(250 - 0); // p.x - obj.x
-    expect(updates[0].data.points[1]).toBe(180 - 0); // p.y - obj.y
+    // bottom port of rect at (200,100,100,80): cx=250, y+h=180
+    // abs points after update: start=(250,180), end=(100,100)
+    // bounds: x=100, y=100, w=150, h=80
+    // relative points: start=(150,80), end=(0,0)
+    const d = updates[0].data;
+    expect(d.x).toBe(100);
+    expect(d.y).toBe(100);
+    expect(d.width).toBe(150);
+    expect(d.height).toBe(80);
+    expect(d.points).toEqual([150, 80, 0, 0]);
   });
 
   it('returns empty array when no connectors reference the moved object', () => {
     const objects = { rect1: rect, line1: line };
     const updates = getConnectedEndpointUpdates('other-id', objects);
     expect(updates).toHaveLength(0);
+  });
+
+  it('produces correct bounds when connector has non-zero x/y (stale position guard)', () => {
+    // Simulates the case where a recent endpoint-circle drag moved the connector
+    // to x=50, y=60 (via recalcBounds) but board.objects still has x=0, y=0.
+    // The new code works in absolute coordinates so the result is correct either way.
+    const staleConnector = {
+      id: 'line1', type: 'line', x: 50, y: 60,
+      // relative points relative to x=50,y=60: start=(200,80), end=(50,40)
+      // absolute: start=(250,140), end=(100,100) — same absolute endpoints as 'line' above
+      points: [200, 80, 50, 40],
+      startConnectedId: 'rect1', startConnectedPort: 'bottom',
+      endConnectedId: null, endConnectedPort: null,
+    };
+    const objects = { rect1: rect, line1: staleConnector };
+    const updates = getConnectedEndpointUpdates('rect1', objects);
+    expect(updates).toHaveLength(1);
+    const d = updates[0].data;
+    // abs points: start updated to (250,180), end stays (100,100)
+    // bounds: x=100, y=100, w=150, h=80; relative points: (150,80),(0,0)
+    expect(d.x).toBe(100);
+    expect(d.y).toBe(100);
+    expect(d.width).toBe(150);
+    expect(d.height).toBe(80);
+    expect(d.points).toEqual([150, 80, 0, 0]);
+  });
+
+  it('updates endConnectedId endpoint and returns full bounds', () => {
+    const lineEnd = {
+      id: 'lineEnd', type: 'arrow', x: 0, y: 0,
+      points: [50, 50, 250, 140],
+      startConnectedId: null, startConnectedPort: null,
+      endConnectedId: 'rect1', endConnectedPort: 'bottom',
+    };
+    const objects = { rect1: rect, lineEnd };
+    const updates = getConnectedEndpointUpdates('rect1', objects);
+    expect(updates).toHaveLength(1);
+    const d = updates[0].data;
+    // abs end updated to (250,180); abs start stays (50,50)
+    // bounds: x=50, y=50, w=200, h=130
+    expect(d.x).toBe(50);
+    expect(d.y).toBe(50);
+    expect(d.width).toBe(200);
+    expect(d.height).toBe(130);
+    expect(d.points).toEqual([0, 0, 200, 130]);
   });
 });
 

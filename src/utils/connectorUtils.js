@@ -46,15 +46,29 @@ export function getConnectedEndpointUpdates(movedId, objects) {
   const updates = [];
   for (const obj of Object.values(objects)) {
     if (obj.type !== 'line' && obj.type !== 'arrow') continue;
-    const pts = obj.points ? [...obj.points] : [0, 0, 200, 0];
+    const rawPts = obj.points ? [...obj.points] : [0, 0, 200, 0];
+    const objX = obj.x ?? 0;
+    const objY = obj.y ?? 0;
+
+    // Convert relative points to absolute coordinates so the result does not
+    // depend on the connector's current x/y in board.objects.  This matters
+    // when a recent endpoint-circle drag has updated the connector's bounds
+    // (via LineShape onUpdate / recalcBounds) but the Firestore onSnapshot has
+    // not yet propagated the new x/y back into board.objects.  Writing only
+    // relative points against a stale x/y produces wrong positions.
+    const absPts = [];
+    for (let i = 0; i < rawPts.length; i += 2) {
+      absPts.push(objX + rawPts[i], objY + rawPts[i + 1]);
+    }
+
     let changed = false;
 
     if (obj.startConnectedId === movedId && obj.startConnectedPort) {
       const target = objects[obj.startConnectedId];
       if (target) {
         const p = getPortCoords(target, obj.startConnectedPort);
-        pts[0] = p.x - obj.x;
-        pts[1] = p.y - obj.y;
+        absPts[0] = p.x;
+        absPts[1] = p.y;
         changed = true;
       }
     }
@@ -63,16 +77,36 @@ export function getConnectedEndpointUpdates(movedId, objects) {
       const target = objects[obj.endConnectedId];
       if (target) {
         const p = getPortCoords(target, obj.endConnectedPort);
-        const lastIdx = pts.length - 2;
-        pts[lastIdx] = p.x - obj.x;
-        pts[lastIdx + 1] = p.y - obj.y;
+        const lastIdx = absPts.length - 2;
+        absPts[lastIdx] = p.x;
+        absPts[lastIdx + 1] = p.y;
         changed = true;
       }
     }
 
-    if (changed) {
-      updates.push({ id: obj.id, data: { points: pts } });
+    if (!changed) continue;
+
+    // Recompute connector bounds from absolute points (mirrors LineShape
+    // recalcBounds).  Writing x/y/width/height alongside points ensures the
+    // write is self-consistent regardless of the connector's current position
+    // in Firestore.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < absPts.length; i += 2) {
+      if (absPts[i] < minX) minX = absPts[i];
+      if (absPts[i] > maxX) maxX = absPts[i];
+      if (absPts[i + 1] < minY) minY = absPts[i + 1];
+      if (absPts[i + 1] > maxY) maxY = absPts[i + 1];
     }
+    const newX = minX;
+    const newY = minY;
+    const newWidth = maxX - minX;
+    const newHeight = maxY - minY;
+    const relPts = [];
+    for (let i = 0; i < absPts.length; i += 2) {
+      relPts.push(absPts[i] - newX, absPts[i + 1] - newY);
+    }
+
+    updates.push({ id: obj.id, data: { x: newX, y: newY, width: newWidth, height: newHeight, points: relPts } });
   }
   return updates;
 }
