@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
-import { darkenHex } from '../utils/colorUtils';
-
 
 function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit, pendingTool }) {
   const groupRef = useRef();
@@ -39,7 +37,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
 
   const titleBarHeight = 48;
   const titleFontSize = 20;
-  const titleColor = darkenHex(color, 0.6);
+  const titleColor = color;
 
   return (
     <>
