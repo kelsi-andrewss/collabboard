@@ -39,7 +39,7 @@
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-xs);
-  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
+  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-md);
   background: color-mix(in srgb, var(--md-sys-color-surface) 85%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
