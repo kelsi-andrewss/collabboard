@@ -76,7 +76,7 @@ export function computeAncestorExpansions(childX, childY, childW, childH, parent
   let cx = childX, cy = childY, cw = childW, ch = childH;
   let currentParent = working[parentFrameId];
   while (currentParent) {
-    const titleBarHeight = Math.max(32, Math.min(52, currentParent.height * 0.12));
+    const titleBarHeight = 48;
 
     // Envelope: start from the trigger child's full bounding box, then grow it to
     // include all siblings so the parent is large enough to contain all its children.
