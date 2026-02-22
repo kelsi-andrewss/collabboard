@@ -210,7 +210,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
   const objs = () => objectsRef.current || {};
 
   const persistHistory = (currentBoardId, messages) => {
-    if (!currentBoardId) return;
+    if (!currentBoardId || !messages || !Array.isArray(messages)) return;
     const capped = messages.length > MAX_PERSISTED_MESSAGES
       ? messages.slice(messages.length - MAX_PERSISTED_MESSAGES)
       : messages;
