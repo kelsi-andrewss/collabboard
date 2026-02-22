@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useUserPreferences } from './hooks/useUserPreferences';
 import { usePresence } from './hooks/usePresence';
 import { useReactions } from './hooks/useReactions';
+import { useFollowMode } from './hooks/useFollowMode';
 import { useBoard } from './hooks/useBoard';
 import { useUndoStack } from './hooks/useUndoStack';
 import { useBoardsList } from './hooks/useBoardsList';
@@ -14,6 +15,7 @@ import { useRouting } from './hooks/useRouting';
 import { useCanvasViewport } from './hooks/useCanvasViewport';
 import { useShapeColors } from './hooks/useShapeColors';
 import { GroupPage } from './components/GroupPage.jsx';
+import { FollowModeIndicator } from './components/FollowModeIndicator.jsx';
 import { buildSlugChain } from './utils/slugUtils.js';
 import { Tutorial, HOME_STEPS } from './components/Tutorial';
 import { BoardSelector } from './components/BoardSelector.jsx';
@@ -112,6 +114,9 @@ export function App() {
   const presence = usePresence(boardId, user);
   const { cursorSyncLatencyRef } = presence;
   const { reactions, sendReaction } = useReactions(boardId, user);
+  const { followUserId, setFollowUserId, followedUserPresence, isFollowing } = useFollowMode(presence.presentUsers);
+  const isFollowingRef = useRef(false);
+  isFollowingRef.current = isFollowing;
   const rawBoard = useBoard(boardId, user);
   const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
@@ -130,6 +135,49 @@ export function App() {
 
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
+
+  // Broadcast viewport to RTDB so others can follow this user
+  useEffect(() => {
+    if (!boardId) return;
+    presence.updateViewport(stagePos.x, stagePos.y, stageScale);
+  }, [stagePos.x, stagePos.y, stageScale, boardId]);
+
+  // Sync viewport to followed user's presence
+  const preSyncViewportRef = useRef(null);
+  useEffect(() => {
+    if (!isFollowing || !followedUserPresence) return;
+    const { stageX, stageY, stageScale: fScale } = followedUserPresence;
+    if (stageX == null || stageY == null || fScale == null) return;
+    setStagePos({ x: stageX, y: stageY });
+    setStageScale(fScale);
+  }, [followedUserPresence?.stageX, followedUserPresence?.stageY, followedUserPresence?.stageScale, isFollowing]);
+
+  // Save viewport before entering follow mode; restore on exit
+  useEffect(() => {
+    if (isFollowing) {
+      preSyncViewportRef.current = { pos: stagePos, scale: stageScale };
+    }
+  }, [isFollowing]);
+
+  // Auto-exit follow mode when followed user leaves presence
+  useEffect(() => {
+    if (followUserId && !presence.presentUsers[followUserId]) {
+      setFollowUserId(null);
+    }
+  }, [presence.presentUsers, followUserId]);
+
+  const handleFollowUser = useCallback((uid) => {
+    setFollowUserId(uid);
+  }, [setFollowUserId]);
+
+  const handleExitFollow = useCallback(() => {
+    setFollowUserId(null);
+    if (preSyncViewportRef.current) {
+      setStagePos(preSyncViewportRef.current.pos);
+      setStageScale(preSyncViewportRef.current.scale);
+      preSyncViewportRef.current = null;
+    }
+  }, [setFollowUserId, setStagePos, setStageScale]);
 
   // Thumbnail: 5-minute interval capture while on a board
   const boardIdRef = useRef(boardId);
@@ -328,6 +376,9 @@ export function App() {
   const handleDuplicateMultipleRef = useRef(null);
   const clipboardRef = useRef([]);
 
+  const handleExitFollowRef = useRef(handleExitFollow);
+  handleExitFollowRef.current = handleExitFollow;
+
   // Keyboard shortcuts — registered once; reads via refs
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -375,6 +426,11 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (isFollowingRef.current) {
+          e.preventDefault();
+          handleExitFollowRef.current();
+          return;
+        }
         if (connectorFirstPointRef.current !== null) {
           e.preventDefault();
           setConnectorFirstPoint(null);
@@ -907,7 +963,7 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
+              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: handleFollowUser }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             <FABButtons
@@ -915,6 +971,12 @@ export function App() {
               handlers={{ setShowAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter }}
             />
             <ResizeTooltip state={{ resizeTooltip }} />
+            {isFollowing && followedUserPresence && (
+              <FollowModeIndicator
+                name={followedUserPresence.name}
+                onExit={handleExitFollow}
+              />
+            )}
             <SelectedActionBar
               state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit }}
               handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, updateObjectDirect: rawBoard.updateObject, handleDeleteWithCleanup, updateActiveColor }}

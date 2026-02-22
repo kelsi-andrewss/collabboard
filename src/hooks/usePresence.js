@@ -50,7 +50,7 @@ export function usePresence(boardId, currentUser) {
   }, [boardId, currentUser]);
 
   const lastCursorWrite = useRef(0);
-  const updateCursor = (x, y) => {
+  const updateCursor = (x, y, stageX, stageY, stageScale) => {
     if (!boardId || !currentUser) return;
     const now = Date.now();
     if (now - lastCursorWrite.current < 50) return;
@@ -64,6 +64,9 @@ export function usePresence(boardId, currentUser) {
       lastSeen: serverTimestamp(),
       x,
       y,
+      stageX: stageX ?? 0,
+      stageY: stageY ?? 0,
+      stageScale: stageScale ?? 1,
       isTyping: typingRef.current,
     });
   };
@@ -75,5 +78,16 @@ export function usePresence(boardId, currentUser) {
     }
   };
 
-  return { presentUsers, updateCursor, setTyping, cursorSyncLatencyRef };
+  const lastViewportWrite = useRef(0);
+  const updateViewport = (stageX, stageY, stageScale) => {
+    if (!boardId || !currentUser) return;
+    const now = Date.now();
+    if (now - lastViewportWrite.current < 50) return;
+    lastViewportWrite.current = now;
+    if (presenceRefDb.current) {
+      update(presenceRefDb.current, { stageX, stageY, stageScale });
+    }
+  };
+
+  return { presentUsers, updateCursor, setTyping, updateViewport, cursorSyncLatencyRef };
 }

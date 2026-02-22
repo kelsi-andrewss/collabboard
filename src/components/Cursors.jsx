@@ -1,7 +1,7 @@
 import React from 'react';
 import { Circle, Text, Group, Rect } from 'react-konva';
 
-function CursorsInner({ presentUsers, userId }) {
+function CursorsInner({ presentUsers, userId, onFollowUser }) {
   return (
     <>
       {Object.entries(presentUsers).map(([id, data]) => {
@@ -24,21 +24,27 @@ function CursorsInner({ presentUsers, userId }) {
               stroke="white"
               strokeWidth={1}
             />
-            <Rect
-              x={10}
-              y={-8}
-              width={(typing ? data.name.length * 7 + 30 : data.name.length * 7 + 10)}
-              height={16}
-              fill={data.color}
-              cornerRadius={3}
-            />
-            <Text
-              text={typing ? `${data.name} ...` : data.name}
-              fontSize={10}
-              fill="white"
-              x={15}
-              y={-5}
-            />
+            <Group
+              listening={!!onFollowUser}
+              onClick={onFollowUser ? () => onFollowUser(id) : undefined}
+              onTap={onFollowUser ? () => onFollowUser(id) : undefined}
+            >
+              <Rect
+                x={10}
+                y={-8}
+                width={(typing ? data.name.length * 7 + 30 : data.name.length * 7 + 10)}
+                height={16}
+                fill={data.color}
+                cornerRadius={3}
+              />
+              <Text
+                text={typing ? `${data.name} ...` : data.name}
+                fontSize={10}
+                fill="white"
+                x={15}
+                y={-5}
+              />
+            </Group>
           </Group>
         );
       })}
@@ -48,6 +54,7 @@ function CursorsInner({ presentUsers, userId }) {
 
 function cursorsEqual(prev, next) {
   if (prev.userId !== next.userId) return false;
+  if (prev.onFollowUser !== next.onFollowUser) return false;
   const pu = prev.presentUsers, nu = next.presentUsers;
   const pk = Object.keys(pu), nk = Object.keys(nu);
   if (pk.length !== nk.length) return false;
