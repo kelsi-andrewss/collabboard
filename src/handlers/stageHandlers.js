@@ -5,12 +5,14 @@ export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 5;
 
 const HEADER_HEIGHT = 60;
+const DRAG_DRAW_THRESHOLD = 4;
 
 export function makeStageHandlers({
   setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
   pendingToolRef, pendingToolCountRef, onPendingToolPlace,
   connectorFirstPointRef, setConnectorFirstPoint,
   addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
+  dragDrawStateRef,
 }) {
   const handleMouseMove = (e) => {
     if (!presence.updateCursor) return;
@@ -52,6 +54,21 @@ export function makeStageHandlers({
     if (isBackground || tool) {
 
       if (tool === 'line' || tool === 'arrow') {
+        const drawState = dragDrawStateRef?.current;
+
+        // Drag-draw already committed on mouseup — suppress this click
+        if (drawState?.suppressClick) {
+          drawState.suppressClick = false;
+          return;
+        }
+
+        // Mousedown just set the first point; this click was the "first click"
+        // of the click-and-click flow, not the commit click
+        if (drawState?.justSetFirst) {
+          drawState.justSetFirst = false;
+          return;
+        }
+
         const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
         if (!pos) return;
@@ -107,6 +124,94 @@ export function makeStageHandlers({
     }
   };
 
+  const handleStageMouseDown = (e) => {
+    const tool = pendingToolRef?.current;
+    if (tool !== 'line' && tool !== 'arrow') return;
+    const target = e.target;
+    const stage = target.getStage ? target.getStage() : null;
+    if (!stage) return;
+    const isBackground = target === stage || target.name() === 'bg-rect';
+    if (!isBackground) return;
+
+    const pos = stage.getRelativePointerPosition();
+    if (!pos) return;
+    const canvasX = pos.x;
+    const canvasY = pos.y;
+    const objects = objectsRef.current;
+    const snapTarget = findSnapTarget(canvasX, canvasY, objects, new Set());
+
+    if (!dragDrawStateRef) return;
+    dragDrawStateRef.current.start = { x: canvasX, y: canvasY };
+
+    const firstPoint = connectorFirstPointRef?.current;
+    if (firstPoint === null) {
+      const pt = snapTarget
+        ? { x: snapTarget.x, y: snapTarget.y, connectedId: snapTarget.objectId, connectedPort: snapTarget.port }
+        : { x: canvasX, y: canvasY, connectedId: null, connectedPort: null };
+      setConnectorFirstPoint(pt);
+      dragDrawStateRef.current.justSetFirst = true;
+    }
+  };
+
+  const handleStageMouseUp = (e) => {
+    const tool = pendingToolRef?.current;
+    if (tool !== 'line' && tool !== 'arrow') return;
+    if (!dragDrawStateRef?.current?.start) return;
+
+    const target = e.target;
+    const stage = target.getStage ? target.getStage() : null;
+    if (!stage) return;
+
+    const pos = stage.getRelativePointerPosition();
+    if (!pos) return;
+
+    const start = dragDrawStateRef.current.start;
+    dragDrawStateRef.current.start = null;
+
+    const dx = pos.x - start.x;
+    const dy = pos.y - start.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist <= DRAG_DRAW_THRESHOLD) {
+      // Short click — leave firstPoint set, let the click event handle click-and-click flow
+      return;
+    }
+
+    // It's a drag-draw — commit the connector
+    const firstPoint = connectorFirstPointRef?.current;
+    if (firstPoint === null) return;
+
+    const canvasX = pos.x;
+    const canvasY = pos.y;
+    const objects = objectsRef.current;
+    const snapTarget = findSnapTarget(canvasX, canvasY, objects, new Set());
+
+    const p1 = firstPoint;
+    const p2 = snapTarget
+      ? { x: snapTarget.x, y: snapTarget.y, connectedId: snapTarget.objectId, connectedPort: snapTarget.port }
+      : { x: canvasX, y: canvasY, connectedId: null, connectedPort: null };
+
+    const dxP = p2.x - p1.x;
+    const dyP = p2.y - p1.y;
+
+    addObject({
+      type: tool,
+      x: p1.x,
+      y: p1.y,
+      points: [0, 0, dxP, dyP],
+      startConnectedId: p1.connectedId,
+      startConnectedPort: p1.connectedPort,
+      endConnectedId: p2.connectedId,
+      endConnectedPort: p2.connectedPort,
+      color: currentColorRef?.current || '#3b82f6',
+      strokeWidth: currentStrokeWidthRef?.current || 3,
+      userId: userIdRef?.current || null,
+    });
+    setConnectorFirstPoint(null);
+    dragDrawStateRef.current.suppressClick = true;
+    dragDrawStateRef.current.justSetFirst = false;
+  };
+
   const handleRecenter = () => {
     const bounds = getContentBounds(objectsRef.current);
     if (!bounds) {
@@ -137,5 +242,5 @@ export function makeStageHandlers({
     });
   };
 
-  return { handleMouseMove, handleWheel, handleStageClick, handleRecenter };
+  return { handleMouseMove, handleWheel, handleStageClick, handleRecenter, handleStageMouseDown, handleStageMouseUp };
 }

@@ -639,13 +639,35 @@ export function App() {
   const userIdRef = useRef(user?.uid);
   userIdRef.current = user?.uid;
 
-  const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
+  const dragDrawStateRef = useRef({ start: null, justSetFirst: false, suppressClick: false });
+
+  const { handleMouseMove, handleWheel, handleStageClick, handleRecenter, handleStageMouseDown, handleStageMouseUp } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
     connectorFirstPointRef, setConnectorFirstPoint,
     addObject: board.addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
+    dragDrawStateRef,
   });
   handleRecenterRef.current = handleRecenter;
+
+  const stageMouseDownHandlerRef = useRef(handleStageMouseDown);
+  stageMouseDownHandlerRef.current = handleStageMouseDown;
+  const stageMouseUpHandlerRef = useRef(handleStageMouseUp);
+  stageMouseUpHandlerRef.current = handleStageMouseUp;
+
+  useEffect(() => {
+    if (!boardId) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const onMouseDown = (e) => stageMouseDownHandlerRef.current(e);
+    const onMouseUp = (e) => stageMouseUpHandlerRef.current(e);
+    stage.on('mousedown.dragdraw', onMouseDown);
+    stage.on('mouseup.dragdraw', onMouseUp);
+    return () => {
+      stage.off('mousedown.dragdraw');
+      stage.off('mouseup.dragdraw');
+    };
+  }, [boardId]);
 
   const isOffCenter = (() => {
     if (stagePos.x !== 0 || stagePos.y !== 0 || stageScale !== 1) return true;
