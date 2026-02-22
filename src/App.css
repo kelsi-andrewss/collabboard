@@ -1,5 +1,5 @@
 :root {
-  --header-height: 0px;
+  --header-height: 64px;
 }
 
 #root {
@@ -350,6 +350,11 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  padding-top: var(--header-height);
+}
+
+.home-content .controls-bar {
+  padding-left: 140px;
 }
 
 .login-content {
