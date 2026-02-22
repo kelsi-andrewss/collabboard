@@ -117,9 +117,10 @@ export async function executeToolCall(toolName, toolArgs, context) {
       if (rows * columns > 500) {
         return { error: `createGrid: rows * columns (${rows * columns}) exceeds maximum of 500` };
       }
-      let idx = 0;
+      const gridObjects = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < columns; c++) {
+          const idx = r * columns + c;
           const objData = {
             type: objectType === 'sticky' ? 'sticky' : objectType,
             x: startX + c * (cellWidth + gapX),
@@ -130,9 +131,20 @@ export async function executeToolCall(toolName, toolArgs, context) {
           if (color) objData.color = color;
           else if (objectType === 'sticky') objData.color = '#fef08a';
           if (labels && labels[idx]) objData.text = labels[idx];
-          await act().addObject(objData);
-          idx++;
+          gridObjects.push(objData);
         }
+      }
+      if (gridObjects.length > 100) {
+        const chunkSize = 50;
+        for (let i = 0; i < gridObjects.length; i += chunkSize) {
+          const chunk = gridObjects.slice(i, i + chunkSize);
+          await Promise.all(chunk.map(obj => act().addObject(obj)));
+          if (i + chunkSize < gridObjects.length) {
+            await new Promise(r => setTimeout(r, 50));
+          }
+        }
+      } else {
+        await Promise.all(gridObjects.map(obj => act().addObject(obj)));
       }
     } else if (toolName === "arrangeInGrid") {
       const { objectIds, columns: cols, startX = 100, startY = 100, gapX = 20, gapY = 20 } = toolArgs;
@@ -416,11 +428,11 @@ export async function executeToolCall(toolName, toolArgs, context) {
       const { cx, cy, radius, color = '#333333' } = toolArgs;
       const sides = Math.min(12, Math.max(3, Math.round(toolArgs.sides)));
       const pts = regularPolygonVertices(cx, cy, radius, sides);
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[i], b = pts[(i + 1) % pts.length];
+      const lineObjects = pts.map((a, i) => {
+        const b = pts[(i + 1) % pts.length];
         const ox = Math.min(a.x, b.x);
         const oy = Math.min(a.y, b.y);
-        await act().addObject({
+        return {
           type: 'line',
           x: ox,
           y: oy,
@@ -429,8 +441,9 @@ export async function executeToolCall(toolName, toolArgs, context) {
           points: [a.x - ox, a.y - oy, b.x - ox, b.y - oy],
           color,
           strokeWidth: 2,
-        });
-      }
+        };
+      });
+      await Promise.all(lineObjects.map(obj => act().addObject(obj)));
     } else if (toolName === "drawPerpendicularBisector") {
       const { x1, y1, x2, y2, length, color = '#333333' } = toolArgs;
       const seg = perpendicularBisector(x1, y1, x2, y2, length);
@@ -468,10 +481,10 @@ export async function executeToolCall(toolName, toolArgs, context) {
         return { error: "drawTangentLine: external point is inside the circle" };
       }
       const lines = tangentLines(cx, cy, radius, px, py);
-      for (const seg of lines) {
+      await Promise.all(lines.map(seg => {
         const ox = Math.min(seg.x1, seg.x2);
         const oy = Math.min(seg.y1, seg.y2);
-        await act().addObject({
+        return act().addObject({
           type: 'line',
           x: ox,
           y: oy,
@@ -481,7 +494,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
           color,
           strokeWidth: 2,
         });
-      }
+      }));
     } else if (toolName === "drawDistanceLabel") {
       const { x1, y1, x2, y2, label } = toolArgs;
       const mx = (x1 + x2) / 2;
