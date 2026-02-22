@@ -8,7 +8,6 @@ const DEFAULT_PREFERENCES = {
   highContrast: false,
   reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   largeText: false,
-  aiResponseMode: 'short',
 };
 
 const LS_KEY = 'collabboard-preferences';

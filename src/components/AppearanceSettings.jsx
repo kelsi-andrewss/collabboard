@@ -60,32 +60,6 @@ export function AppearanceSettings({ preferences, updatePreference, onClose }) {
         </div>
 
         <div className="appearance-section">
-          <h3>AI</h3>
-          <div className="toggle-row">
-            <div className="toggle-label-group">
-              <span className="toggle-label">Response style</span>
-              <span className="toggle-description">Short: one-line confirmation. Full: detailed explanation.</span>
-            </div>
-            <div className="segmented-control" role="group" aria-label="AI response style">
-              <button
-                className={`segmented-option${preferences.aiResponseMode === 'short' ? ' segmented-option--active' : ''}`}
-                onClick={() => updatePreference('aiResponseMode', 'short')}
-                aria-pressed={preferences.aiResponseMode === 'short'}
-              >
-                Short
-              </button>
-              <button
-                className={`segmented-option${preferences.aiResponseMode === 'full' ? ' segmented-option--active' : ''}`}
-                onClick={() => updatePreference('aiResponseMode', 'full')}
-                aria-pressed={preferences.aiResponseMode === 'full'}
-              >
-                Full
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="appearance-section">
           <h3>Accessibility</h3>
           <div className="toggle-row">
             <div className="toggle-label-group">
