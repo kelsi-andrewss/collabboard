@@ -1,9 +1,9 @@
 .tutorial-tooltip {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  box-shadow: var(--md-sys-elevation-3);
   max-width: 300px;
   min-width: 220px;
 }
@@ -11,7 +11,7 @@
 .tutorial-step-indicator {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-outline);
   margin-bottom: 6px;
   letter-spacing: 0.05em;
 }
@@ -19,13 +19,13 @@
 .tutorial-title {
   margin: 0 0 8px 0;
   font-size: 1.1rem;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .tutorial-desc {
   margin: 0 0 16px 0;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   line-height: 1.4;
 }
 
@@ -38,19 +38,19 @@
 .tutorial-skip {
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-outline);
   font-size: 0.8rem;
   cursor: pointer;
   padding: 6px 12px;
 }
 
 .tutorial-skip:hover {
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .tutorial-next {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   border: none;
   border-radius: 6px;
   padding: 6px 16px;
@@ -60,5 +60,6 @@
 }
 
 .tutorial-next:hover {
-  background: var(--accent-hover);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
