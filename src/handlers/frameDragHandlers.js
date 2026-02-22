@@ -2,7 +2,6 @@ import {
   findOverlappingFrame,
   findFrameAtPoint,
   computeAncestorExpansions,
-  hasDisallowedSiblingOverlap,
   rectsOverlap,
   getDescendantIds,
   findObjectsToAbsorb,
@@ -62,9 +61,7 @@ export function makeFrameDragHandlers({
       action = 'remove';
       dragOverFrameId = currentFrameId;  // Point to parent so highlight renders
     }
-    const droppedRect = { x: pos.x, y: pos.y, width: frame.width || 400, height: frame.height || 300 };
-    const illegalDrag = hasDisallowedSiblingOverlap(id, 'frame', droppedRect, overFrameId || null, candidates, FRAME_MARGIN);
-    setDragState({ draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag });
+    setDragState({ draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag: false });
     if (setDragPos) setDragPos({ id, x: pos.x, y: pos.y });
   };
 
@@ -139,41 +136,6 @@ export function makeFrameDragHandlers({
     // Find top-level stickies/shapes whose center falls inside the dropped frame — they will be absorbed
     const droppedRect = { x: snapped.x, y: snapped.y, width: ow, height: oh };
     const absorbIds = new Set(findObjectsToAbsorb(id, droppedRect, board.objects));
-
-    // Sibling overlap check: reject only if frame overlaps non-absorbable siblings (other frames)
-    // Build a temporary objects map with absorbed objects removed so the check ignores them
-    const objectsWithoutAbsorbed = Object.fromEntries(
-      Object.entries(board.objects).filter(([k]) => !absorbIds.has(k))
-    );
-    if (hasDisallowedSiblingOverlap(id, 'frame', droppedRect, newFrameId || null, objectsWithoutAbsorbed, FRAME_MARGIN)) {
-      // Abort: reset Konva nodes to pre-drag positions
-      const stage = stageRef.current;
-      const node = stage?.findOne('.' + id);
-      if (node) { node.x(frame.x); node.y(frame.y); }
-      const descIds = getDescendantIds(id, board.objects);
-      for (const cid of descIds) {
-        const c = board.objects[cid];
-        const cn = stage?.findOne('.' + cid);
-        if (c && cn) { cn.x(c.x); cn.y(c.y); }
-      }
-      stage?.batchDraw();
-      frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };
-      setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
-      if (setResizeTooltip && resizeTooltipTimer) {
-        showErrorTooltip(
-          "Can't place here — overlaps another frame.",
-          {
-            screenX: frame.x * stageScale + stagePos.x,
-            screenY: frame.y * stageScale + stagePos.y,
-            objW: (frame.width || 400) * stageScale,
-            objH: (frame.height || 300) * stageScale,
-          },
-          setResizeTooltip,
-          resizeTooltipTimer,
-        );
-      }
-      return;
-    }
 
     const dx = snapped.x - frame.x;
     const dy = snapped.y - frame.y;
