@@ -53,6 +53,7 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
     const u3 = onSnapshot(query(ref, where(`members.${uid}`, '!=', null)), handle('member'), onError);
 
     return () => { u1(); u2(); u3(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, isAdminView]);
 
   const createBoard = async (name, groupId = null, visibility = 'private') => {
