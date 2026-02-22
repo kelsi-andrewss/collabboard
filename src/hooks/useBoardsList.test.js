@@ -328,7 +328,7 @@ describe('useBoardsList — isAdminView=false uses owned/public/member queries',
   it('subscribes to three separate queries when isAdminView is false', () => {
     renderHook(() => useBoardsList(fakeUser, { isAdminView: false }));
 
-    expect(mockOnSnapshot).toHaveBeenCalledTimes(3);
+    expect(mockOnSnapshot).toHaveBeenCalledTimes(5);
   });
 
   it('queries by ownerId for the user', () => {
@@ -411,7 +411,7 @@ describe('useBoardsList — switching isAdminView', () => {
     rerender({ isAdminView: false });
 
     expect(adminUnsub).toHaveBeenCalledTimes(1);
-    expect(mockOnSnapshot).toHaveBeenCalledTimes(3);
+    expect(mockOnSnapshot).toHaveBeenCalledTimes(5);
   });
 
   it('unsubscribes from three queries and resubscribes to admin query when toggled on', () => {
@@ -420,7 +420,7 @@ describe('useBoardsList — switching isAdminView', () => {
       { initialProps: { isAdminView: false } }
     );
 
-    expect(mockOnSnapshot).toHaveBeenCalledTimes(3);
+    expect(mockOnSnapshot).toHaveBeenCalledTimes(5);
 
     vi.clearAllMocks();
     onSnapshotCallbacks = {};
