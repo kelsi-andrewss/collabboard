@@ -126,7 +126,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           width={width}
           height={height}
           fill={color}
-          opacity={0.3}
+          opacity={0.85}
           cornerRadius={12}
           listening={false}
         />
@@ -139,7 +139,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           stroke={color}
           strokeWidth={2}
           cornerRadius={12}
-          opacity={0.7}
+          opacity={1}
           listening={false}
           perfectDrawEnabled={false}
         />
@@ -149,7 +149,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           width={width}
           height={titleBarHeight}
           fill={color}
-          opacity={0.35}
+          opacity={0.9}
           cornerRadius={[12, 12, 0, 0]}
           listening={false}
           perfectDrawEnabled={false}
@@ -161,7 +161,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           width={width}
           height={1}
           fill={color}
-          opacity={0.5}
+          opacity={0.9}
           listening={false}
           perfectDrawEnabled={false}
         />
