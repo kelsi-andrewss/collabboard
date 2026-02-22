@@ -369,6 +369,21 @@ export const toolDeclarations = [
     }
   },
   {
+    name: "moodboardLayout",
+    description: "Rearranges all board objects (or selected objects) into an aesthetic masonry-style grid grouped by color.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        targetIds: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Optional list of object IDs to rearrange. If empty or omitted, all objects are rearranged."
+        }
+      },
+      required: []
+    }
+  },
+  {
     name: "createConnector",
     description: "Creates a connector (line or arrow) anchored between two existing objects at specific ports. Use this instead of createShape when the user asks to connect, link, or draw an arrow between two objects.",
     parameters: {
@@ -426,6 +441,7 @@ TOOL SELECTION:
 - "arrange in a grid" → arrangeInGrid (moves existing objects; does NOT create new ones)
 - "space evenly" / "distribute" → spaceEvenly
 - "fit frame to contents" / "resize frame to fit" → fitFrameToContents (not resizeObject + moveObject)
+- "moodboard" / "arrange by color" / "group by color" / "aesthetic layout" → moodboardLayout (rearranges into masonry grid sorted by color)
 - "create a board" / "make a new board" → createBoard
 - "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.

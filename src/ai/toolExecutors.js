@@ -1,5 +1,6 @@
 import { regularPolygonVertices, perpendicularBisector, angleBisector, tangentLines } from '../utils/geometryUtils.js';
 import { getPortCoords } from '../utils/connectorUtils.js';
+import { computeMoodboardLayout } from '../utils/moodboardUtils.js';
 
 async function batchUpdate(act, updates) {
   if (!updates.length) return;
@@ -571,6 +572,37 @@ export async function executeToolCall(toolName, toolArgs, context) {
       if (validIds.length === 0) return { error: "changeMultipleColors: no valid objects found" };
       await batchUpdate(act, validIds.map(id => ({ id, data: { color } })));
       return { success: true, updatedCount: validIds.length };
+    } else if (toolName === "moodboardLayout") {
+      const currentObjs = objs();
+      const allItems = Object.values(currentObjs);
+      const targetIds = toolArgs.targetIds;
+      const candidates = (targetIds && targetIds.length > 0)
+        ? allItems.filter(o => targetIds.includes(o.id))
+        : allItems;
+      if (candidates.length === 0) return { error: "moodboardLayout: no objects found" };
+      const patches = computeMoodboardLayout(candidates);
+      const moodboardUpdates = [];
+      for (const patch of patches) {
+        const { id, ...data } = patch;
+        if (currentObjs[id] && currentObjs[id].type === 'frame') {
+          const frame = currentObjs[id];
+          const dx = data.x - frame.x;
+          const dy = data.y - frame.y;
+          if (dx !== 0 || dy !== 0) {
+            const children = allItems.filter(o => o.frameId === id);
+            for (const child of children) {
+              moodboardUpdates.push({ id: child.id, data: { x: child.x + dx, y: child.y + dy } });
+            }
+          }
+        }
+        moodboardUpdates.push({ id, data });
+      }
+      if (moodboardUpdates.length > 0) {
+        const CHUNK = 500;
+        for (let i = 0; i < moodboardUpdates.length; i += CHUNK) {
+          await batchUpdate(act, moodboardUpdates.slice(i, i + CHUNK));
+        }
+      }
     } else if (toolName === "createConnector") {
       let { startObjectId, startPort, endObjectId, endPort, color = '#6366f1', arrowhead = true } = toolArgs;
       if (toolArgs.startFrameIndex !== undefined && frameIndexMap[toolArgs.startFrameIndex]) {
