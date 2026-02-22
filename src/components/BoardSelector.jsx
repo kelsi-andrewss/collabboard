@@ -54,9 +54,9 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup, createBoardFromTemplate }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, user, groups: groupsProp = [], createGroup, isAdmin, adminViewActive, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup, createBoardFromTemplate }) {
   const effectiveAdminView = isAdmin && adminViewActive;
-  const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
+  const { boards, loading, createBoard, deleteBoard, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView });
   const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -392,8 +392,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   // Sort boards within each group by updatedAt
   for (const key of Object.keys(boardsByGroup)) {
     boardsByGroup[key].sort((a, b) => {
-      const aTime = a.updatedAt?.toMillis?.() ?? a.updatedAt?.seconds * 1000 ?? 0;
-      const bTime = b.updatedAt?.toMillis?.() ?? b.updatedAt?.seconds * 1000 ?? 0;
+      const aTime = a.updatedAt?.toMillis?.() ?? (a.updatedAt?.seconds ?? 0) * 1000;
+      const bTime = b.updatedAt?.toMillis?.() ?? (b.updatedAt?.seconds ?? 0) * 1000;
       return bTime - aTime;
     });
   }
@@ -431,8 +431,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         const bNull = b === null || b === 'null';
         if (aNull) return -1;
         if (bNull) return 1;
-        const aTime = aBoards[0]?.updatedAt?.toMillis?.() ?? aBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
-        const bTime = bBoards[0]?.updatedAt?.toMillis?.() ?? bBoards[0]?.updatedAt?.seconds * 1000 ?? 0;
+        const aTime = aBoards[0]?.updatedAt?.toMillis?.() ?? (aBoards[0]?.updatedAt?.seconds ?? 0) * 1000;
+        const bTime = bBoards[0]?.updatedAt?.toMillis?.() ?? (bBoards[0]?.updatedAt?.seconds ?? 0) * 1000;
         return bTime - aTime;
       });
     } else if (sortMode === 'name') {
