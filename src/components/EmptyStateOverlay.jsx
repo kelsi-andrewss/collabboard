@@ -7,7 +7,7 @@ const GHOST_FAB_STYLE = {
   width: 56,
   height: 56,
   borderRadius: 28,
-  background: 'var(--accent-primary)',
+  background: 'var(--md-sys-color-primary)',
   opacity: 0.4,
   display: 'flex',
   alignItems: 'center',
@@ -97,8 +97,8 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
 
   if (!isEmpty || !canEdit) return null;
 
-  const arrowColor = darkMode ? '#c4b5fd' : '#6366f1';
-  const labelColor = darkMode ? 'rgba(196, 181, 253, 0.6)' : 'rgba(99, 102, 241, 0.5)';
+  const arrowColor = 'var(--md-sys-color-primary)';
+  const labelColor = 'var(--md-sys-color-outline)';
 
   const GROUPS = [
     { key: 'addContent', labelText: 'Add stickies, shapes & frames', targetKey: 'sticky' },
@@ -193,6 +193,7 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
             fontStyle: 'italic',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
+            opacity: 0.6,
           }}
         >
           {labelText}
