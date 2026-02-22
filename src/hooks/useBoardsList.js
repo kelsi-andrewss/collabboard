@@ -24,12 +24,13 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
       return unsub;
     }
 
-    const snaps = { owned: [], public: [], member: [], groupMember: [] };
+    const snaps = { owned: [], public: [], member: [], groupMember: [], template: [] };
     let resolved = 0;
+    const QUERY_COUNT = 5;
 
     const merge = () => {
       const seen = new Set();
-      return [...snaps.owned, ...snaps.public, ...snaps.member, ...snaps.groupMember].filter(b => {
+      return [...snaps.owned, ...snaps.public, ...snaps.member, ...snaps.groupMember, ...snaps.template].filter(b => {
         if (seen.has(b.id)) return false;
         seen.add(b.id);
         return true;
@@ -38,13 +39,13 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
 
     const onError = () => {
       resolved++;
-      if (resolved === 4) setLoading(false);
+      if (resolved === QUERY_COUNT) setLoading(false);
     };
 
     const handle = (key) => (snap) => {
       snaps[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (resolved < 4) resolved++;
-      if (resolved === 4) setLoading(false);
+      if (resolved < QUERY_COUNT) resolved++;
+      if (resolved === QUERY_COUNT) setLoading(false);
       setBoards(merge());
     };
 
@@ -56,8 +57,9 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
       handle('groupMember'),
       onError
     );
+    const u5 = onSnapshot(query(ref, where('template', '==', true)), handle('template'), onError);
 
-    return () => { u1(); u2(); u3(); u4(); };
+    return () => { u1(); u2(); u3(); u4(); u5(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, isAdminView]);
 
@@ -126,6 +128,18 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
       [`members.${uid}`]: deleteField(),
       updatedAt: serverTimestamp(),
     });
+  };
+
+  const transferOwner = async (boardId, newOwnerUid, previousOwnerUid) => {
+    const batch = writeBatch(db);
+    const boardRef = doc(db, 'boards', boardId);
+    batch.update(boardRef, {
+      ownerId: newOwnerUid,
+      [`members.${previousOwnerUid}`]: 'editor',
+      [`members.${newOwnerUid}`]: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+    await batch.commit();
   };
 
   const moveBoard = async (boardId, newGroupId) => {
@@ -223,5 +237,5 @@ export function useBoardsList(currentUser, { isAdminView = false } = {}) {
     return newBoardId;
   };
 
-  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, setBoardProtected, publishTemplate, updateTemplate, unpublishTemplate, createBoardFromTemplate };
+  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, transferOwner, moveBoard, setBoardProtected, publishTemplate, updateTemplate, unpublishTemplate, createBoardFromTemplate };
 }

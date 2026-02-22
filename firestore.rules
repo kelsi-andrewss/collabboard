@@ -30,6 +30,9 @@ service cloud.firestore {
         return resource.data.groupMembers != null
           && request.auth.uid in resource.data.groupMembers;
       }
+      function isTemplate() {
+        return resource.data.template == true;
+      }
 
       function boardAclKeys() {
         return ['members', 'visibility', 'ownerId'];
@@ -45,7 +48,7 @@ service cloud.firestore {
       function isContentOnlyWrite() { return touchedKeys().hasOnly(boardContentKeys()); }
 
       allow read: if request.auth != null
-        && (isGlobalAdmin() || isLegacyBoard() || isPublic() || isOpen() || isOwner() || isMember() || isGroupAdmin() || isGroupMember());
+        && (isGlobalAdmin() || isLegacyBoard() || isPublic() || isOpen() || isOwner() || isMember() || isGroupAdmin() || isGroupMember() || isTemplate());
 
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid;
@@ -53,6 +56,7 @@ service cloud.firestore {
       allow update: if request.auth != null
         && (
           isGlobalAdmin()
+          || (isOwner() && touchedKeys().hasOnly(boardAclKeys().concat(boardContentKeys())))
           || (
             request.resource.data.ownerId == resource.data.ownerId
             && (
@@ -128,8 +132,10 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/groups/$(boardData().groupId)).data.members[request.auth.uid] == 'admin';
         }
 
+        function boardIsTemplate() { return boardData().template == true; }
+
         allow read: if request.auth != null
-          && (isGlobalAdmin() || boardIsOwner() || boardIsEditor() || boardIsGroupAdmin());
+          && (isGlobalAdmin() || boardIsOwner() || boardIsEditor() || boardIsGroupAdmin() || boardIsTemplate());
 
         allow write: if request.auth != null
           && (isGlobalAdmin() || boardIsOwner() || boardIsGroupAdmin());
