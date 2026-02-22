@@ -188,9 +188,13 @@
 }
 
 .header-right {
+  position: fixed;
+  top: 12px;
+  right: 16px;
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-md);
+  z-index: 100;
 }
 
 .admin-mode-badge {
