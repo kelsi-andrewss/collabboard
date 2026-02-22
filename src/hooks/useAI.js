@@ -429,6 +429,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
         const mutations = tracker.getMutations();
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
+          boardActionsRef.current.onAIToolSuccess?.();
         }
 
         if (collectedDeletions.length > 0) {

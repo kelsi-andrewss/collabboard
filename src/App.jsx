@@ -22,6 +22,7 @@ import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
 import { makeStageHandlers, MIN_SCALE, MAX_SCALE } from './handlers/stageHandlers.js';
 import { getContentBounds, findOverlappingFrame, computeAncestorExpansions, FRAME_MARGIN } from './utils/frameUtils.js';
+import { Confetti } from './components/Confetti.jsx';
 import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
 import { ResizeTooltip } from './components/ResizeTooltip.jsx';
@@ -177,6 +178,7 @@ export function App() {
     updateObject: rawBoard?.updateObject,
     deleteObject: rawBoard?.deleteObject,
     pushCompoundEntry: board.pushCompoundEntry,
+    onAIToolSuccess: () => onAIToolSuccessRef.current?.(),
     createBoard: aiCreateBoard,
     getBoards: () => allBoards,
     createGroup,
@@ -225,6 +227,9 @@ export function App() {
     }
   }, [boardId]);
 
+  const [confettiPos, setConfettiPos] = useState(null);
+  const objectCountRef = useRef(0);
+  const onAIToolSuccessRef = useRef(null);
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(null);
@@ -461,10 +466,9 @@ export function App() {
           }
           if (items.length === 0) return;
           const OFFSET = 20;
-          const board = boardRef.current;
           const refs = await Promise.all(
             items.map((snapshot, i) =>
-              board.addObject({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
+              trackedAddObjectRef.current({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
             )
           );
           const newIds = refs.map(r => r.id);
@@ -603,23 +607,42 @@ export function App() {
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
 
+  const triggerConfettiAtCenter = () => {
+    setConfettiPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  };
+  onAIToolSuccessRef.current = triggerConfettiAtCenter;
+
+  const trackedAddObjectRef = useRef(null);
+  const trackedAddObject = async (...args) => {
+    const ref = await board.addObject(...args);
+    if (ref) {
+      const next = objectCountRef.current + 1;
+      objectCountRef.current = next;
+      if (next > 0 && next % 10 === 0) {
+        triggerConfettiAtCenter();
+      }
+    }
+    return ref;
+  };
+  trackedAddObjectRef.current = trackedAddObject;
+
   const onPendingToolPlace = async (toolType, canvasX, canvasY) => {
     if (!canEditRef.current) return;
     const defaults = { userId: user.uid };
     if (toolType === 'line') {
       const len = Math.round(200 / stageScale);
-      board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      trackedAddObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'arrow') {
       const len = Math.round(200 / stageScale);
-      board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
+      trackedAddObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'text') {
       const textFontSize = Math.round(16 / stageScale);
       const textWidth = Math.round(200 / stageScale);
-      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
+      trackedAddObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round(window.innerHeight * 0.55 / stageScale);
-      board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
+      trackedAddObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
       let objData;
       if (toolType === 'sticky') {
@@ -630,7 +653,7 @@ export function App() {
       } else {
         objData = { type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults };
       }
-      const ref = await board.addObject(objData);
+      const ref = await trackedAddObject(objData);
       const objId = ref.id;
       const overFrame = findOverlappingFrame(
         { id: objId, x: objData.x, y: objData.y, width: objData.width || 100, height: objData.height || 100 },
@@ -864,6 +887,9 @@ export function App() {
               />
             )}
             <EmptyStateOverlay isEmpty={Object.keys(board.objects).length === 0} darkMode={preferences.darkMode} canEdit={canEdit} />
+            {confettiPos && (
+              <Confetti x={confettiPos.x} y={confettiPos.y} onDone={() => setConfettiPos(null)} />
+            )}
             {!canEdit && (
               <div className="view-only-banner"><Eye size={14} /> View only</div>
             )}
@@ -985,7 +1011,7 @@ export function App() {
                         items.map((snapshot, i) => {
                           const x = (i === 0 ? canvasX : snapshot.x + OFFSET + dx) + i * OFFSET;
                           const y = (i === 0 ? canvasY : snapshot.y + OFFSET + dy) + i * OFFSET;
-                          return board.addObject({ ...snapshot, x, y });
+                          return trackedAddObject({ ...snapshot, x, y });
                         })
                       );
                       const pasteIds = pasteRefs.map(r => r.id);
@@ -996,15 +1022,15 @@ export function App() {
                       setSelectedIds(allIds);
                     }},
                     { label: 'Add Sticky here', action: () => {
-                      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
+                      trackedAddObject({ type: 'sticky', text: 'New Sticky Note', x: contextMenu.canvasX - 75, y: contextMenu.canvasY - 75, color: shapeColors.sticky.active, userId: user.uid });
                     }},
                     { label: 'Add Shape here', action: () => {
-                      board.addObject({ type: 'rectangle', x: contextMenu.canvasX - 50, y: contextMenu.canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, userId: user.uid });
+                      trackedAddObject({ type: 'rectangle', x: contextMenu.canvasX - 50, y: contextMenu.canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, userId: user.uid });
                     }},
                     { label: 'Add Frame here', action: () => {
                       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
                       const fh = Math.round(window.innerHeight * 0.55 / stageScale);
-                      board.addObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
+                      trackedAddObject({ type: 'frame', x: contextMenu.canvasX - fw / 2, y: contextMenu.canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, userId: user.uid });
                     }},
                     { separator: true },
                     { label: 'Undo', shortcut: '⌘Z', action: () => { if (board.canUndo) board.undo(); } },
