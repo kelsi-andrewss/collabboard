@@ -1,32 +1,18 @@
 :root {
-  /* Background aliases */
-  --bg-primary: var(--md-sys-color-surface);
-  --bg-secondary: var(--md-sys-color-surface-container);
-  --bg-tertiary: var(--md-sys-color-surface-container-high);
-  --bg-hover: var(--md-sys-color-surface-container-highest);
-  --bg-active: var(--md-sys-color-primary-container);
-  --bg-input: var(--md-sys-color-surface-container-low);
-
-  /* Text aliases */
+  /* Text aliases — still referenced in App.jsx and ColorPickerMenu.jsx */
   --text-primary: var(--md-sys-color-on-surface);
   --text-secondary: var(--md-sys-color-on-surface-variant);
-  --text-tertiary: var(--md-sys-color-outline);
-  --text-inverse: var(--md-sys-color-inverse-on-surface);
 
-  /* Accent aliases */
-  --accent-primary: var(--md-sys-color-primary);
-  --accent-hover: var(--md-sys-color-primary-container);
-  --accent-text: var(--md-sys-color-on-primary);
+  /* Background aliases — still referenced in Avatar.jsx */
+  --bg-tertiary: var(--md-sys-color-surface-container-high);
 
-  /* Border aliases */
-  --border-color: var(--md-sys-color-outline-variant);
-  --border-focus: var(--md-sys-color-primary);
-
-  /* Danger aliases */
-  --danger-color: var(--md-sys-color-error);
-  --danger-hover: var(--md-sys-color-error-container);
-  --danger-text: var(--md-sys-color-on-error);
-
-  /* Shadow alias */
-  --shadow-color: var(--md-sys-color-shadow);
+  /* Named spacing aliases — referenced throughout component CSS files.
+     Maps to the 4px-grid numeric tokens defined in tokens/_spacing.css. */
+  --md-sys-spacing-xs: var(--md-sys-spacing-1);   /* 4px */
+  --md-sys-spacing-sm: var(--md-sys-spacing-2);   /* 8px */
+  --md-sys-spacing-md: var(--md-sys-spacing-3);   /* 12px */
+  --md-sys-spacing-lg: var(--md-sys-spacing-4);   /* 16px */
+  --md-sys-spacing-xl: var(--md-sys-spacing-6);   /* 24px */
+  --md-sys-spacing-2xl: var(--md-sys-spacing-8);  /* 32px */
+  --md-sys-spacing-3xl: var(--md-sys-spacing-10); /* 40px */
 }
