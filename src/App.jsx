@@ -53,16 +53,28 @@ export function App() {
     if (!stage || !bId) return;
     const bgRect = stage.findOne('.bg-rect');
     const originalFill = bgRect ? bgRect.fill() : null;
+    const html = document.documentElement;
+    const origTheme = html.getAttribute('data-theme');
     try {
       const captureOpts = { pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 };
-      if (bgRect) bgRect.fill('#ffffff');
+
+      // Light capture with actual theme surface color
+      html.setAttribute('data-theme', 'light');
+      const lightSurface = getComputedStyle(html).getPropertyValue('--md-sys-color-surface').trim();
+      if (bgRect) bgRect.fill(lightSurface);
       const lightUrl = stage.toDataURL(captureOpts);
-      if (bgRect) bgRect.fill('#111827');
+
+      // Dark capture with actual theme surface color
+      html.setAttribute('data-theme', 'dark');
+      const darkSurface = getComputedStyle(html).getPropertyValue('--md-sys-color-surface').trim();
+      if (bgRect) bgRect.fill(darkSurface);
       const darkUrl = stage.toDataURL(captureOpts);
+
       saveThumbnail(bId, lightUrl, darkUrl).catch(() => {});
     } catch {
     } finally {
       if (bgRect) bgRect.fill(originalFill);
+      html.setAttribute('data-theme', origTheme);
     }
   };
 
@@ -127,6 +139,12 @@ export function App() {
     }
     prevBoardIdRef.current = boardId;
   }, [boardId]);
+
+  // Thumbnail: re-capture when theme or dark mode preference changes
+  useEffect(() => {
+    if (!boardId) return;
+    captureThumbnail(boardId);
+  }, [preferences.themeColor, preferences.darkMode, boardId]);
 
   useEffect(() => {
     if (boardId && (!boardName || groupSlugs.length === 0) && allBoards.length > 0) {
