@@ -8,6 +8,7 @@ import { findNonOverlappingPosition } from "../utils/frameUtils";
 const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const RATE_LIMIT_KEY = 'ai_request_timestamps';
+const MAX_CHAT_HISTORY = 100;
 
 function loadTimestamps() {
   try {
@@ -85,6 +86,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
   useEffect(() => { boardActionsRef.current = boardActions; }, [boardActions]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
   useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { setChatHistory([]); }, [boardId]);
 
   // Define tools for the model
   const tools = useMemo(() => ({
@@ -113,23 +115,56 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
 
   const buildBoardContext = () => {
     if (!objects || Object.keys(objects).length === 0) return '';
-    const summaries = Object.values(objects).map(obj => {
-      let desc = `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
-      if (obj.text) {
-        const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
-        desc += `, text:"${truncated}"`;
+    const allObjs = Object.values(objects);
+    const total = allObjs.length;
+
+    const typeCounts = {};
+    for (const obj of allObjs) {
+      typeCounts[obj.type] = (typeCounts[obj.type] || 0) + 1;
+    }
+    const summaryParts = Object.entries(typeCounts).map(([type, count]) => `${count} ${type}${count !== 1 ? 's' : ''}`);
+    const summaryLine = `Board has ${total} object${total !== 1 ? 's' : ''}: ${summaryParts.join(', ')}.`;
+
+    const MAX_OBJECTS = 50;
+    let truncationNote = '';
+    let displayObjs = allObjs;
+
+    if (total > MAX_OBJECTS) {
+      const frames = allObjs.filter(o => o.type === 'frame');
+      const nonFrames = allObjs.filter(o => o.type !== 'frame');
+      const sortedNonFrames = [...nonFrames].sort((a, b) => {
+        const ta = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+        const tb = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        return tb - ta;
+      });
+      const remaining = MAX_OBJECTS - frames.length;
+      displayObjs = [...frames, ...sortedNonFrames.slice(0, Math.max(0, remaining))];
+      truncationNote = ` (showing ${displayObjs.length} of ${total} objects — frames always included, others by recency)`;
+    }
+
+    const summaries = displayObjs.map(obj => {
+      const hasText = obj.text && obj.text.trim().length > 0;
+      const hasTitle = obj.title && obj.title.trim().length > 0;
+      if (hasText || hasTitle) {
+        let desc = `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
+        if (hasText) {
+          const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
+          desc += `, text:"${truncated}"`;
+        }
+        if (hasTitle) {
+          const truncatedTitle = obj.title.length > 500 ? obj.title.slice(0, 500) + '...' : obj.title;
+          desc += `, title:"${truncatedTitle}"`;
+        }
+        if (obj.color) desc += `, color:${obj.color}`;
+        if (obj.width) desc += `, size:${Math.round(obj.width)}x${Math.round(obj.height || obj.width)}`;
+        if (obj.rotation) desc += `, rotation:${Math.round(obj.rotation)}`;
+        if (obj.frameId) desc += `, frameId:${obj.frameId}`;
+        return desc;
       }
-      if (obj.title) {
-        const truncatedTitle = obj.title.length > 500 ? obj.title.slice(0, 500) + '...' : obj.title;
-        desc += `, title:"${truncatedTitle}"`;
-      }
-      if (obj.color) desc += `, color:${obj.color}`;
-      if (obj.width) desc += `, size:${Math.round(obj.width)}x${Math.round(obj.height || obj.width)}`;
-      if (obj.rotation) desc += `, rotation:${Math.round(obj.rotation)}`;
-      if (obj.frameId) desc += `, frameId:${obj.frameId}`;
-      return desc;
+      return `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
     });
-    return `[Current board objects: ${summaries.join(' | ')}]\n\n`;
+
+    return `[${summaryLine}${truncationNote} Objects: ${summaries.join(' | ')}]\n\n`;
   };
 
   // Wrapper: find non-overlapping position using the latest objects snapshot.
@@ -171,7 +206,10 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
     }
 
     const contextPrompt = buildBoardContext() + prompt;
-    setChatHistory(prev => [...prev, { role: 'user', message: prompt, timestamp: Date.now() }]);
+    setChatHistory(prev => {
+      const next = [...prev, { role: 'user', message: prompt, timestamp: Date.now() }];
+      return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+    });
     setIsTyping(true);
     setError(null);
     try {
@@ -336,12 +374,18 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
       }
 
       const responseText = result.response.text();
-      setChatHistory(prev => [...prev, { role: 'ai', message: responseText, timestamp: Date.now() }]);
+      setChatHistory(prev => {
+        const next = [...prev, { role: 'ai', message: responseText, timestamp: Date.now() }];
+        return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+      });
       return responseText;
     } catch (err) {
       const msg = err?.message || "Unknown error occurred";
       setError(msg);
-      setChatHistory(prev => [...prev, { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() }]);
+      setChatHistory(prev => {
+        const next = [...prev, { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() }];
+        return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+      });
       return `Error: ${msg}`;
     } finally {
       setIsTyping(false);
