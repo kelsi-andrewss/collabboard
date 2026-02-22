@@ -143,8 +143,6 @@
 .toolbar {
   display: flex;
   gap: var(--md-sys-spacing-lg);
-  border-left: 1px solid var(--md-sys-color-outline-variant);
-  padding-left: var(--md-sys-spacing-lg);
   align-items: center;
 }
 

@@ -5,6 +5,7 @@ import { ShapeIcon } from './ShapeIcon.jsx';
 import { darkenHex } from '../utils/colorUtils.js';
 import './BoardSwitcher.css';
 import { buildSlugChain } from '../utils/slugUtils.js';
+import { useDraggableFloat } from '../hooks/useDraggableFloat';
 
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
 
@@ -24,6 +25,9 @@ function HeaderLeftInner({ state, handlers }) {
   const [zoomEditing, setZoomEditing] = useState(false);
   const [zoomInputVal, setZoomInputVal] = useState('');
   const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
+
+  const { pos: posIdentity, dragHandleProps: dragIdentity } = useDraggableFloat('toolbar-left-identity', { x: 16, y: 16 });
+  const { pos: posTools, dragHandleProps: dragTools } = useDraggableFloat('toolbar-left-tools', { x: 16, y: 72 });
 
   useEffect(() => {
     if (!showBoardSwitcher) return;
@@ -133,309 +137,325 @@ function HeaderLeftInner({ state, handlers }) {
   };
 
   return (
-    <div className="header-left">
-      <span
-        className="logo-text home-link"
-        onClick={() => { setBoardId(null); setBoardName(''); }}
+    <>
+      <div
+        className="floating-toolbar-chip"
+        ref={dragIdentity.ref}
+        onMouseDown={dragIdentity.onMouseDown}
+        style={{ left: posIdentity.x, top: posIdentity.y }}
       >
-        <Home size={16} />
-        CollabBoard
-      </span>
-
-      {isAdmin && adminViewActive && (
-        <span className="admin-mode-badge">
-          <Shield size={12} />
-          Admin
+        <span
+          className="logo-text home-link"
+          onClick={() => { setBoardId(null); setBoardName(''); }}
+        >
+          <Home size={16} />
+          CollabBoard
         </span>
-      )}
 
-      {showToolbar && <div className="board-switcher" ref={switcherRef}>
-        <button
-          className="board-switcher-btn"
-          onClick={() => setShowBoardSwitcher(v => !v)}
-        >
-          {boardName || 'Board'}
-          <ChevronDown size={12} />
-        </button>
-        {showBoardSwitcher && (
-          <div className="board-switcher-dropdown">
-            <div className="board-switcher-search">
-              <Search size={13} />
-              <input
-                autoFocus
-                placeholder="Search boards..."
-                value={boardSearch}
-                onChange={e => setBoardSearch(e.target.value)}
-                onClick={e => e.stopPropagation()}
-              />
-            </div>
-            <div className="board-switcher-list">
-              {filteredGroups.length === 0 && (
-                <span className="board-switcher-empty">No boards found</span>
-              )}
-              {filteredGroups.map(({ group, items }) => (
-                <div key={group ?? '__ungrouped'} className="board-switcher-group">
-                  {group && <span className="board-switcher-group-label">{group}</span>}
-                  {items.map(b => (
-                    <button
-                      key={b.id}
-                      className={`board-switcher-item ${b.id === boardId ? 'active' : ''}`}
-                      onClick={() => {
-                        const bGroup = b.groupId ? groupsList.find(g => g.id === b.groupId) : null;
-                        if (onSwitchBoard) onSwitchBoard(bGroup ? buildSlugChain(bGroup, groupsList) : [], b.id, b.name);
-                        else { setBoardId(b.id); setBoardName(b.name); }
-                        setShowBoardSwitcher(false); setBoardSearch('');
-                      }}
-                    >
-                      {b.name}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>}
-
-      {showToolbar && <div className="toolbar">
-        {canEdit && (
-          <>
-            <div className="tool-split-button no-outline">
-              <button data-toolbar-item="sticky" className={pendingTool === 'sticky' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'sticky' ? null : 'sticky') : handleAddSticky()} title="Add Sticky Note (click to place)">
-                <StickyNote size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
-              </button>
-              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
-                <ChevronDown size={14} />
-              </button>
-              {showColorPicker === 'sticky' && (
-                <ColorPickerMenu
-                  type="sticky"
-                  data={shapeColors.sticky}
-                  history={colorHistory}
-                  onSelect={updateActiveColor}
-                />
-              )}
-            </div>
-
-            <div className="tool-split-button no-outline">
-              <button data-toolbar-item="shape" className={pendingTool === activeShapeType ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === activeShapeType ? null : activeShapeType) : handleActiveShapeAdd()} title={`Add ${activeShapeType} (click to place)`}>
-                <ShapeIcon type={activeShapeType} color={shapeColors.shapes.active} />
-              </button>
-              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'shapes' ? null : 'shapes')}>
-                <ChevronDown size={14} />
-              </button>
-              {showColorPicker === 'shapes' && (
-                <ColorPickerMenu
-                  type={activeShapeType}
-                  data={shapeColors.shapes}
-                  history={colorHistory}
-                  onSelect={updateActiveColor}
-                  shapeSelector={{
-                    types: ['rectangle', 'circle', 'triangle'],
-                    activeType: activeShapeType,
-                    onSelect: handleShapeAdd,
-                  }}
-                />
-              )}
-            </div>
-
-            <div className="tool-split-button no-outline" ref={connectorRef}>
-              <button
-                data-toolbar-item={activeConnectorType}
-                className={(pendingTool === 'line' || pendingTool === 'arrow') ? 'tool-active' : ''}
-                onClick={() => {
-                  if (setPendingTool) {
-                    setPendingTool(pendingTool === activeConnectorType ? null : activeConnectorType);
-                  } else if (activeConnectorType === 'arrow') {
-                    handleAddArrow();
-                  } else {
-                    handleAddLine();
-                  }
-                }}
-                title={activeConnectorType === 'arrow' ? 'Add Arrow (click to place)' : 'Add Line (click to place)'}
-              >
-                {activeConnectorType === 'arrow'
-                  ? <MoveRight size={18} stroke={shapeColors.line.active} strokeWidth={2} />
-                  : <Minus size={18} stroke={shapeColors.line.active} strokeWidth={2} />
-                }
-              </button>
-              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'connector' ? null : 'connector')}>
-                <ChevronDown size={14} />
-              </button>
-              {showColorPicker === 'connector' && (
-                <ColorPickerMenu
-                  type={activeConnectorType}
-                  data={shapeColors.line}
-                  history={colorHistory}
-                  onSelect={updateActiveColor}
-                  shapeSelector={{
-                    types: ['line', 'arrow'],
-                    activeType: activeConnectorType,
-                    onSelect: (type) => {
-                      setActiveConnectorType(type);
-                      setShowColorPicker(null);
-                      if (pendingTool === 'line' || pendingTool === 'arrow') {
-                        if (setPendingTool) setPendingTool(type);
-                      }
-                    },
-                  }}
-                />
-              )}
-            </div>
-
-            <div className="tool-split-button no-outline">
-              <button
-                data-toolbar-item="frame"
-                className={pendingTool === 'frame' ? 'tool-active' : ''}
-                onClick={() => setPendingTool(pendingTool === 'frame' ? null : 'frame')}
-                title="Add Frame (click to place)"
-              >
-                <AppWindow size={18} stroke={shapeColors.frame?.active} />
-              </button>
-              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'frame' ? null : 'frame')}>
-                <ChevronDown size={14} />
-              </button>
-              {showColorPicker === 'frame' && (
-                <ColorPickerMenu
-                  type="frame"
-                  data={shapeColors.frame}
-                  history={colorHistory}
-                  onSelect={updateActiveColor}
-                />
-              )}
-            </div>
-
-            <div className="tool-split-button no-outline">
-              <button
-                data-toolbar-item="text"
-                className={pendingTool === 'text' ? 'tool-active' : ''}
-                onClick={() => setPendingTool(pendingTool === 'text' ? null : 'text')}
-                title="Add Text (click to place)"
-              >
-                <Type size={18} stroke={shapeColors.text?.active} />
-              </button>
-              <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'text' ? null : 'text')}>
-                <ChevronDown size={14} />
-              </button>
-              {showColorPicker === 'text' && (
-                <ColorPickerMenu
-                  type="text"
-                  data={shapeColors.text}
-                  history={colorHistory}
-                  onSelect={updateActiveColor}
-                />
-              )}
-            </div>
-
-            <span className="header-divider" />
-          </>
+        {isAdmin && adminViewActive && (
+          <span className="admin-mode-badge">
+            <Shield size={12} />
+            Admin
+          </span>
         )}
 
-        {setActiveTool && (
+        {showToolbar && <div className="board-switcher" ref={switcherRef}>
           <button
-            data-toolbar-item="select"
-            className={`snap-toggle ${activeTool === 'select' ? 'active' : ''}`}
-            onClick={() => setActiveTool(activeTool === 'select' ? 'pan' : 'select')}
-            title={activeTool === 'select' ? 'Switch to Pan' : 'Switch to Select'}
+            className="board-switcher-btn"
+            onClick={() => setShowBoardSwitcher(v => !v)}
           >
-            <MousePointer2 size={18} />
+            {boardName || 'Board'}
+            <ChevronDown size={12} />
           </button>
-        )}
-
-        <button
-          data-toolbar-item="snap"
-          className={`snap-toggle ${snapToGrid ? 'active' : ''}`}
-          onClick={() => { const next = !snapToGrid; setSnapToGrid(next); localStorage.setItem('snapToGrid', next); }}
-          title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
-        >
-          <Grid3x3 size={18} />
-        </button>
-
-        {canEdit && (
-          <button
-            data-toolbar-item="undo"
-            className={`snap-toggle ${canUndo ? '' : 'disabled'}`}
-            onClick={() => canUndo && undo()}
-            title="Undo (Ctrl+Z)"
-            disabled={!canUndo}
-          >
-            <Undo2 size={18} />
-          </button>
-        )}
-
-        {stageScale != null && (
-          <>
-            <span className="header-divider" />
-            <div className="zoom-indicator">
-              <button
-                className="zoom-btn"
-                onClick={() => applyZoom(Math.max(0.1, (stageScale || 1) / 1.15))}
-                title="Zoom Out (Ctrl+-)"
-              >
-                &minus;
-              </button>
-              <div className="zoom-control">
-                {zoomEditing ? (
-                  <input
-                    className="zoom-pct-input"
-                    type="text"
-                    value={zoomInputVal}
-                    onChange={e => setZoomInputVal(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') commitZoomInput();
-                      if (e.key === 'Escape') setZoomEditing(false);
-                    }}
-                    onBlur={commitZoomInput}
-                    autoFocus
-                  />
-                ) : (
-                  <button className="zoom-pct" onClick={() => {
-                    setZoomInputVal(String(Math.round((stageScale || 1) * 100)));
-                    setZoomEditing(true);
-                    setZoomDropdownOpen(false);
-                  }} title="Click to set zoom level">
-                    {Math.round((stageScale || 1) * 100)}%
-                  </button>
+          {showBoardSwitcher && (
+            <div className="board-switcher-dropdown">
+              <div className="board-switcher-search">
+                <Search size={13} />
+                <input
+                  autoFocus
+                  placeholder="Search boards..."
+                  value={boardSearch}
+                  onChange={e => setBoardSearch(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                />
+              </div>
+              <div className="board-switcher-list">
+                {filteredGroups.length === 0 && (
+                  <span className="board-switcher-empty">No boards found</span>
                 )}
-                <div
-                  className="zoom-dropdown-container"
-                  onBlur={e => {
-                    if (!e.currentTarget.contains(e.relatedTarget)) {
-                      setZoomDropdownOpen(false);
-                    }
-                  }}
-                  tabIndex={-1}
-                >
-                  <button
-                    className="zoom-dropdown-btn"
-                    onClick={() => setZoomDropdownOpen(v => !v)}
-                    title="Zoom presets"
-                  >&#9662;</button>
-                  {zoomDropdownOpen && (
-                    <ul className="zoom-dropdown">
-                      {ZOOM_PRESETS.map(pct => (
-                        <li key={pct}>
-                          <button onClick={() => { applyZoom(pct / 100); setZoomDropdownOpen(false); }}>
-                            {pct}%{pct === Math.round((stageScale || 1) * 100) ? ' \u2713' : ''}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                {filteredGroups.map(({ group, items }) => (
+                  <div key={group ?? '__ungrouped'} className="board-switcher-group">
+                    {group && <span className="board-switcher-group-label">{group}</span>}
+                    {items.map(b => (
+                      <button
+                        key={b.id}
+                        className={`board-switcher-item ${b.id === boardId ? 'active' : ''}`}
+                        onClick={() => {
+                          const bGroup = b.groupId ? groupsList.find(g => g.id === b.groupId) : null;
+                          if (onSwitchBoard) onSwitchBoard(bGroup ? buildSlugChain(bGroup, groupsList) : [], b.id, b.name);
+                          else { setBoardId(b.id); setBoardName(b.name); }
+                          setShowBoardSwitcher(false); setBoardSearch('');
+                        }}
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>}
+      </div>
+
+      {showToolbar && (
+        <div
+          className="floating-toolbar-chip"
+          ref={dragTools.ref}
+          onMouseDown={dragTools.onMouseDown}
+          style={{ left: posTools.x, top: posTools.y }}
+        >
+          <div className="toolbar">
+            {canEdit && (
+              <>
+                <div className="tool-split-button no-outline">
+                  <button data-toolbar-item="sticky" className={pendingTool === 'sticky' ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === 'sticky' ? null : 'sticky') : handleAddSticky()} title="Add Sticky Note (click to place)">
+                    <StickyNote size={18} fill={shapeColors.sticky.active} stroke={darkenHex(shapeColors.sticky.active, 0.2)} />
+                  </button>
+                  <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'sticky' ? null : 'sticky')}>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showColorPicker === 'sticky' && (
+                    <ColorPickerMenu
+                      type="sticky"
+                      data={shapeColors.sticky}
+                      history={colorHistory}
+                      onSelect={updateActiveColor}
+                    />
                   )}
                 </div>
-              </div>
+
+                <div className="tool-split-button no-outline">
+                  <button data-toolbar-item="shape" className={pendingTool === activeShapeType ? 'tool-active' : ''} onClick={() => setPendingTool ? setPendingTool(pendingTool === activeShapeType ? null : activeShapeType) : handleActiveShapeAdd()} title={`Add ${activeShapeType} (click to place)`}>
+                    <ShapeIcon type={activeShapeType} color={shapeColors.shapes.active} />
+                  </button>
+                  <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'shapes' ? null : 'shapes')}>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showColorPicker === 'shapes' && (
+                    <ColorPickerMenu
+                      type={activeShapeType}
+                      data={shapeColors.shapes}
+                      history={colorHistory}
+                      onSelect={updateActiveColor}
+                      shapeSelector={{
+                        types: ['rectangle', 'circle', 'triangle'],
+                        activeType: activeShapeType,
+                        onSelect: handleShapeAdd,
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="tool-split-button no-outline" ref={connectorRef}>
+                  <button
+                    data-toolbar-item={activeConnectorType}
+                    className={(pendingTool === 'line' || pendingTool === 'arrow') ? 'tool-active' : ''}
+                    onClick={() => {
+                      if (setPendingTool) {
+                        setPendingTool(pendingTool === activeConnectorType ? null : activeConnectorType);
+                      } else if (activeConnectorType === 'arrow') {
+                        handleAddArrow();
+                      } else {
+                        handleAddLine();
+                      }
+                    }}
+                    title={activeConnectorType === 'arrow' ? 'Add Arrow (click to place)' : 'Add Line (click to place)'}
+                  >
+                    {activeConnectorType === 'arrow'
+                      ? <MoveRight size={18} stroke={shapeColors.line.active} strokeWidth={2} />
+                      : <Minus size={18} stroke={shapeColors.line.active} strokeWidth={2} />
+                    }
+                  </button>
+                  <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'connector' ? null : 'connector')}>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showColorPicker === 'connector' && (
+                    <ColorPickerMenu
+                      type={activeConnectorType}
+                      data={shapeColors.line}
+                      history={colorHistory}
+                      onSelect={updateActiveColor}
+                      shapeSelector={{
+                        types: ['line', 'arrow'],
+                        activeType: activeConnectorType,
+                        onSelect: (type) => {
+                          setActiveConnectorType(type);
+                          setShowColorPicker(null);
+                          if (pendingTool === 'line' || pendingTool === 'arrow') {
+                            if (setPendingTool) setPendingTool(type);
+                          }
+                        },
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="tool-split-button no-outline">
+                  <button
+                    data-toolbar-item="frame"
+                    className={pendingTool === 'frame' ? 'tool-active' : ''}
+                    onClick={() => setPendingTool(pendingTool === 'frame' ? null : 'frame')}
+                    title="Add Frame (click to place)"
+                  >
+                    <AppWindow size={18} stroke={shapeColors.frame?.active} />
+                  </button>
+                  <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'frame' ? null : 'frame')}>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showColorPicker === 'frame' && (
+                    <ColorPickerMenu
+                      type="frame"
+                      data={shapeColors.frame}
+                      history={colorHistory}
+                      onSelect={updateActiveColor}
+                    />
+                  )}
+                </div>
+
+                <div className="tool-split-button no-outline">
+                  <button
+                    data-toolbar-item="text"
+                    className={pendingTool === 'text' ? 'tool-active' : ''}
+                    onClick={() => setPendingTool(pendingTool === 'text' ? null : 'text')}
+                    title="Add Text (click to place)"
+                  >
+                    <Type size={18} stroke={shapeColors.text?.active} />
+                  </button>
+                  <button className="dropdown-arrow" onClick={() => setShowColorPicker(showColorPicker === 'text' ? null : 'text')}>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showColorPicker === 'text' && (
+                    <ColorPickerMenu
+                      type="text"
+                      data={shapeColors.text}
+                      history={colorHistory}
+                      onSelect={updateActiveColor}
+                    />
+                  )}
+                </div>
+
+                <span className="header-divider" />
+              </>
+            )}
+
+            {setActiveTool && (
               <button
-                className="zoom-btn"
-                onClick={() => applyZoom(Math.min(5, (stageScale || 1) * 1.15))}
-                title="Zoom In (Ctrl++)"
+                data-toolbar-item="select"
+                className={`snap-toggle ${activeTool === 'select' ? 'active' : ''}`}
+                onClick={() => setActiveTool(activeTool === 'select' ? 'pan' : 'select')}
+                title={activeTool === 'select' ? 'Switch to Pan' : 'Switch to Select'}
               >
-                +
+                <MousePointer2 size={18} />
               </button>
-            </div>
-          </>
-        )}
-      </div>}
-    </div>
+            )}
+
+            <button
+              data-toolbar-item="snap"
+              className={`snap-toggle ${snapToGrid ? 'active' : ''}`}
+              onClick={() => { const next = !snapToGrid; setSnapToGrid(next); localStorage.setItem('snapToGrid', next); }}
+              title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
+            >
+              <Grid3x3 size={18} />
+            </button>
+
+            {canEdit && (
+              <button
+                data-toolbar-item="undo"
+                className={`snap-toggle ${canUndo ? '' : 'disabled'}`}
+                onClick={() => canUndo && undo()}
+                title="Undo (Ctrl+Z)"
+                disabled={!canUndo}
+              >
+                <Undo2 size={18} />
+              </button>
+            )}
+
+            {stageScale != null && (
+              <>
+                <span className="header-divider" />
+                <div className="zoom-indicator">
+                  <button
+                    className="zoom-btn"
+                    onClick={() => applyZoom(Math.max(0.1, (stageScale || 1) / 1.15))}
+                    title="Zoom Out (Ctrl+-)"
+                  >
+                    &minus;
+                  </button>
+                  <div className="zoom-control">
+                    {zoomEditing ? (
+                      <input
+                        className="zoom-pct-input"
+                        type="text"
+                        value={zoomInputVal}
+                        onChange={e => setZoomInputVal(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitZoomInput();
+                          if (e.key === 'Escape') setZoomEditing(false);
+                        }}
+                        onBlur={commitZoomInput}
+                        autoFocus
+                      />
+                    ) : (
+                      <button className="zoom-pct" onClick={() => {
+                        setZoomInputVal(String(Math.round((stageScale || 1) * 100)));
+                        setZoomEditing(true);
+                        setZoomDropdownOpen(false);
+                      }} title="Click to set zoom level">
+                        {Math.round((stageScale || 1) * 100)}%
+                      </button>
+                    )}
+                    <div
+                      className="zoom-dropdown-container"
+                      onBlur={e => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                          setZoomDropdownOpen(false);
+                        }
+                      }}
+                      tabIndex={-1}
+                    >
+                      <button
+                        className="zoom-dropdown-btn"
+                        onClick={() => setZoomDropdownOpen(v => !v)}
+                        title="Zoom presets"
+                      >&#9662;</button>
+                      {zoomDropdownOpen && (
+                        <ul className="zoom-dropdown">
+                          {ZOOM_PRESETS.map(pct => (
+                            <li key={pct}>
+                              <button onClick={() => { applyZoom(pct / 100); setZoomDropdownOpen(false); }}>
+                                {pct}%{pct === Math.round((stageScale || 1) * 100) ? ' \u2713' : ''}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="zoom-btn"
+                    onClick={() => applyZoom(Math.min(5, (stageScale || 1) * 1.15))}
+                    title="Zoom In (Ctrl++)"
+                  >
+                    +
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
