@@ -229,6 +229,9 @@ export function App() {
   const pendingToolCountRef = useRef(0);
   pendingToolRef.current = pendingTool;
   pendingToolCountRef.current = pendingToolCount;
+  const [connectorFirstPoint, setConnectorFirstPoint] = useState(null);
+  const connectorFirstPointRef = useRef(null);
+  connectorFirstPointRef.current = connectorFirstPoint;
   const GRID_SIZE = 50;
   const snap = (val) => snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : val;
   useEffect(() => {
@@ -323,6 +326,11 @@ export function App() {
       }
 
       if (e.key === 'Escape') {
+        if (connectorFirstPointRef.current !== null) {
+          e.preventDefault();
+          setConnectorFirstPoint(null);
+          return;
+        }
         if (pendingToolRef.current) {
           e.preventDefault();
           setPendingTool(null);
@@ -590,9 +598,17 @@ export function App() {
     setPendingToolCount(c => c + 1);
   };
 
+  const currentColorRef = useRef(shapeColors.shapes.active);
+  currentColorRef.current = shapeColors.shapes.active;
+  const currentStrokeWidthRef = useRef(3);
+  const userIdRef = useRef(user?.uid);
+  userIdRef.current = user?.uid;
+
   const { handleMouseMove, handleWheel, handleStageClick, handleRecenter } = makeStageHandlers({
     setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
     pendingToolRef, pendingToolCountRef, onPendingToolPlace,
+    connectorFirstPointRef, setConnectorFirstPoint,
+    addObject: board.addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
   });
   handleRecenterRef.current = handleRecenter;
 
@@ -751,7 +767,7 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool }}
+              state={{ selectedId, stagePos, stageScale, darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             <FABButtons

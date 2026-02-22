@@ -1,4 +1,5 @@
 import { getContentBounds } from '../utils/frameUtils.js';
+import { findSnapTarget } from '../utils/connectorUtils.js';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 5;
@@ -8,6 +9,8 @@ const HEADER_HEIGHT = 60;
 export function makeStageHandlers({
   setSelectedId, setSelectedIds, setStagePos, setStageScale, presence, objectsRef,
   pendingToolRef, pendingToolCountRef, onPendingToolPlace,
+  connectorFirstPointRef, setConnectorFirstPoint,
+  addObject, currentColorRef, currentStrokeWidthRef, userIdRef,
 }) {
   const handleMouseMove = (e) => {
     if (!presence.updateCursor) return;
@@ -45,14 +48,56 @@ export function makeStageHandlers({
 
   const handleStageClick = (e) => {
     if (e.target === e.target.getStage() || e.target.name() === 'bg-rect') {
-      if (pendingToolRef?.current && onPendingToolPlace) {
+      const tool = pendingToolRef?.current;
+
+      if (tool === 'line' || tool === 'arrow') {
+        const stage = e.target.getStage();
+        const pos = stage.getRelativePointerPosition();
+        if (!pos) return;
+        const canvasX = pos.x;
+        const canvasY = pos.y;
+        const objects = objectsRef.current;
+        const snapTarget = findSnapTarget(canvasX, canvasY, objects, new Set());
+        const firstPoint = connectorFirstPointRef?.current;
+
+        if (firstPoint === null) {
+          const pt = snapTarget
+            ? { x: snapTarget.x, y: snapTarget.y, connectedId: snapTarget.objectId, connectedPort: snapTarget.port }
+            : { x: canvasX, y: canvasY, connectedId: null, connectedPort: null };
+          setConnectorFirstPoint(pt);
+          return;
+        } else {
+          const p1 = firstPoint;
+          const p2 = snapTarget
+            ? { x: snapTarget.x, y: snapTarget.y, connectedId: snapTarget.objectId, connectedPort: snapTarget.port }
+            : { x: canvasX, y: canvasY, connectedId: null, connectedPort: null };
+
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+
+          addObject({
+            type: tool,
+            x: p1.x,
+            y: p1.y,
+            points: [0, 0, dx, dy],
+            startConnectedId: p1.connectedId,
+            startConnectedPort: p1.connectedPort,
+            endConnectedId: p2.connectedId,
+            endConnectedPort: p2.connectedPort,
+            color: currentColorRef?.current || '#3b82f6',
+            strokeWidth: currentStrokeWidthRef?.current || 3,
+            userId: userIdRef?.current || null,
+          });
+          setConnectorFirstPoint(null);
+          return;
+        }
+      }
+
+      if (tool && onPendingToolPlace) {
         const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
         if (pos) {
-          const canvasX = pos.x;
-          const canvasY = pos.y;
-          const count = pendingToolCountRef?.current || 0;
-          onPendingToolPlace(pendingToolRef.current, canvasX, canvasY);
+          onPendingToolPlace(tool, pos.x, pos.y);
         }
         return;
       }
