@@ -560,6 +560,7 @@
   top: 0;
   left: 100%;
   right: auto;
+  margin-left: 5px;
 }
 
 .floating-toolbar-chip[data-orient="vertical"] .toolbar-btn {
@@ -592,4 +593,27 @@
 .floating-toolbar-chip[data-orient="vertical"] .zoom-indicator .zoom-btn {
   height: 32px;
   width: 32px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-dropdown-container {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-pct {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-dropdown-btn {
+  width: 20px;
+  height: 32px;
+  flex-shrink: 0;
 }

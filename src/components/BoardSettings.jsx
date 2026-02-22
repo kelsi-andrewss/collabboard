@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, AlertTriangle } from 'lucide-react';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
@@ -17,11 +17,29 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [localVisibility, setLocalVisibility] = useState(board?.visibility || 'public');
+  const [openAcknowledged, setOpenAcknowledged] = useState(false);
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(
     () => localStorage.getItem('templateUpdateWarningDismissed') === 'true'
   );
+  const [memberProfiles, setMemberProfiles] = useState({});
   const userSearchTimerRef = useRef(null);
+
+  useEffect(() => {
+    const members = board?.members || {};
+    const uids = Object.keys(members);
+    if (!uids.length) {
+      setMemberProfiles({});
+      return;
+    }
+    Promise.all(
+      uids.map(uid => getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? [uid, snap.data()] : [uid, null]))
+    ).then(results => {
+      const profiles = {};
+      results.forEach(([uid, data]) => { if (data) profiles[uid] = data; });
+      setMemberProfiles(profiles);
+    });
+  }, [JSON.stringify(Object.keys(board?.members || {}))]);
 
   if (!board) return null;
 
@@ -35,6 +53,9 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
     setLocalVisibility(newVisibility);
+    if (newVisibility !== 'open') {
+      setOpenAcknowledged(false);
+    }
   };
 
   const handleSaveVisibility = () => {
@@ -153,12 +174,20 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
                 <div className="visibility-open-warning">
                   <AlertTriangle size={16} />
                   <span>Anyone with the link can view and edit this board. Objects may be added, changed, or deleted by anyone.</span>
+                  <label className="visibility-open-ack">
+                    <input
+                      type="checkbox"
+                      checked={openAcknowledged}
+                      onChange={e => setOpenAcknowledged(e.target.checked)}
+                    />
+                    I understand — anyone can view and edit this board
+                  </label>
                 </div>
               )}
               <button
                 type="button"
                 className="settings-save-btn"
-                disabled={!visibilityDirty}
+                disabled={!visibilityDirty || (localVisibility === 'open' && !openAcknowledged)}
                 onClick={handleSaveVisibility}
               >
                 Save
@@ -217,7 +246,10 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
                 {board.ownerId === currentUserId && currentUser && (
                   <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
                 )}
-                <span className="member-uid">{board.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : board.ownerId}</span>
+                {board.ownerId !== currentUserId && memberProfiles[board.ownerId] && (
+                  <Avatar photoURL={memberProfiles[board.ownerId]?.photoURL} name={memberProfiles[board.ownerId]?.displayName || board.ownerId} size="sm" />
+                )}
+                <span className="member-uid">{board.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : memberProfiles[board.ownerId]?.displayName || board.ownerId}</span>
                 <span className="member-role owner">owner</span>
               </div>
             )}
@@ -229,7 +261,13 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
             )}
             {memberEntries.map(([uid, role]) => (
               <div key={uid} className="member-row">
-                <span className="member-uid">{uid === currentUserId ? 'You' : uid}</span>
+                {uid === currentUserId && currentUser && (
+                  <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
+                )}
+                {uid !== currentUserId && memberProfiles[uid] && (
+                  <Avatar photoURL={memberProfiles[uid]?.photoURL} name={memberProfiles[uid]?.displayName || uid} size="sm" />
+                )}
+                <span className="member-uid">{uid === currentUserId ? 'You' : memberProfiles[uid]?.displayName || uid}</span>
                 {canManageMembers ? (
                   <select
                     className="member-role-select"

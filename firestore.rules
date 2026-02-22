@@ -116,6 +116,24 @@ service cloud.firestore {
           && (isGlobalAdmin() || boardIsLegacy() || boardIsOpen() || boardIsOwner()
               || boardIsEditor() || boardIsGroupAdmin());
       }
+
+      match /templateSnapshot/{snapshotId} {
+        function boardData()         { return get(/databases/$(database)/documents/boards/$(boardId)).data; }
+        function boardIsOwner()      { return request.auth.uid == boardData().ownerId; }
+        function boardIsEditor()     { return boardData().members != null && boardData().members[request.auth.uid] == 'editor'; }
+        function boardIsGroupAdmin() {
+          return boardData().groupId != null
+            && exists(/databases/$(database)/documents/groups/$(boardData().groupId))
+            && get(/databases/$(database)/documents/groups/$(boardData().groupId)).data.members != null
+            && get(/databases/$(database)/documents/groups/$(boardData().groupId)).data.members[request.auth.uid] == 'admin';
+        }
+
+        allow read: if request.auth != null
+          && (isGlobalAdmin() || boardIsOwner() || boardIsEditor() || boardIsGroupAdmin());
+
+        allow write: if request.auth != null
+          && (isGlobalAdmin() || boardIsOwner() || boardIsGroupAdmin());
+      }
     }
 
     match /groups/{groupId} {

@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Globe, Lock, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Avatar } from './Avatar.jsx';
 import './BoardSettings.css';
 import './GroupSettings.css';
 
 export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin, onUpdateGroup, onInviteMember, onRemoveMember, onSetProtected, onDeleteGroup, onClose }) {
-  const [inviteRole, setInviteRole] = useState('member');
+  const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
@@ -15,6 +15,8 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [localProtected, setLocalProtected] = useState(group?.protected || false);
   const [localVisibility, setLocalVisibility] = useState(group?.visibility || 'private');
+  const [openAcknowledged, setOpenAcknowledged] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState({});
   const userSearchTimerRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +26,22 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   useEffect(() => {
     setLocalProtected(group?.protected || false);
   }, [group?.protected]);
+
+  useEffect(() => {
+    const members = group?.members || {};
+    const uids = Object.keys(members);
+    if (!uids.length) {
+      setMemberProfiles({});
+      return;
+    }
+    Promise.all(
+      uids.map(uid => getDoc(doc(db, 'users', uid)).then(snap => snap.exists() ? [uid, snap.data()] : [uid, null]))
+    ).then(results => {
+      const profiles = {};
+      results.forEach(([uid, data]) => { if (data) profiles[uid] = data; });
+      setMemberProfiles(profiles);
+    });
+  }, [JSON.stringify(Object.keys(group?.members || {}))]);
 
   if (!group) return null;
 
@@ -37,6 +55,9 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
   const handleVisibilityChange = (newVisibility) => {
     if (!canManage) return;
     setLocalVisibility(newVisibility);
+    if (newVisibility !== 'open') {
+      setOpenAcknowledged(false);
+    }
   };
 
   const handleUserSearch = (term) => {
@@ -130,6 +151,14 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                 <div className="visibility-open-warning">
                   <AlertTriangle size={16} />
                   <span>Anyone can find, view, and edit this group.</span>
+                  <label className="visibility-open-ack">
+                    <input
+                      type="checkbox"
+                      checked={openAcknowledged}
+                      onChange={e => setOpenAcknowledged(e.target.checked)}
+                    />
+                    I understand — anyone can view and edit this group
+                  </label>
                 </div>
               )}
             </>
@@ -150,7 +179,10 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                 {group.ownerId === currentUserId && currentUser && (
                   <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
                 )}
-                <span className="member-uid">{group.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : group.ownerId}</span>
+                {group.ownerId !== currentUserId && memberProfiles[group.ownerId] && (
+                  <Avatar photoURL={memberProfiles[group.ownerId]?.photoURL} name={memberProfiles[group.ownerId]?.displayName || group.ownerId} size="sm" />
+                )}
+                <span className="member-uid">{group.ownerId === currentUserId ? (currentUser?.displayName || 'You') + ' (owner)' : memberProfiles[group.ownerId]?.displayName || group.ownerId}</span>
                 <span className="member-role owner">owner</span>
               </div>
             )}
@@ -162,7 +194,13 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
             )}
             {memberEntries.map(([uid, role]) => (
               <div key={uid} className="member-row">
-                <span className="member-uid">{uid === currentUserId ? 'You' : uid}</span>
+                {uid === currentUserId && currentUser && (
+                  <Avatar photoURL={currentUser.photoURL} name={currentUser.displayName || 'You'} size="sm" />
+                )}
+                {uid !== currentUserId && memberProfiles[uid] && (
+                  <Avatar photoURL={memberProfiles[uid]?.photoURL} name={memberProfiles[uid]?.displayName || uid} size="sm" />
+                )}
+                <span className="member-uid">{uid === currentUserId ? 'You' : memberProfiles[uid]?.displayName || uid}</span>
                 {canManage ? (
                   <select
                     className="member-role-select"
@@ -170,10 +208,11 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                     onChange={(e) => onInviteMember(uid, e.target.value)}
                   >
                     {isGlobalAdmin && <option value="admin">admin</option>}
-                    <option value="member">member</option>
+                    <option value="editor">editor</option>
+                    <option value="viewer">viewer</option>
                   </select>
                 ) : (
-                  <span className="member-role">{role}</span>
+                  <span className="member-role">{role === 'member' ? 'viewer' : role}</span>
                 )}
                 {canManage && uid !== currentUserId && (
                   <button className="member-remove-btn" onClick={() => onRemoveMember(uid)}>
@@ -202,7 +241,8 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
                   onChange={e => setInviteRole(e.target.value)}
                 >
                   {isGlobalAdmin && <option value="admin">admin</option>}
-                  <option value="member">member</option>
+                  <option value="editor">editor</option>
+                  <option value="viewer">viewer</option>
                 </select>
               </div>
               {userSearchOpen && (
@@ -247,7 +287,7 @@ export function GroupSettings({ group, currentUserId, currentUser, isGlobalAdmin
             <button
               type="button"
               className="group-settings-save-btn"
-              disabled={!protectedDirty && !visibilityDirty}
+              disabled={!protectedDirty && !visibilityDirty || (localVisibility === 'open' && !openAcknowledged)}
               onClick={() => {
                 if (protectedDirty) onSetProtected(localProtected);
                 if (visibilityDirty) onUpdateGroup({ visibility: localVisibility });
