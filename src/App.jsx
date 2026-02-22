@@ -99,7 +99,7 @@ export function App() {
   }, [user]);
 
   const { stagePos, setStagePos, stageScale, setStageScale } = useCanvasViewport(boardId, handleRecenterRef, user?.uid);
-  const { shapeColors, setShapeColors, colorHistory, updateColorHistory } = useShapeColors(boardId, preferences.themeColor, preferences.darkMode);
+  const { shapeColors, setShapeColors, colorHistory, updateColorHistory } = useShapeColors(boardId);
 
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
