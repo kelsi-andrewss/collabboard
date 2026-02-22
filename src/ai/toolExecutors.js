@@ -509,6 +509,41 @@ export async function executeToolCall(toolName, toolArgs, context) {
         fontSize: 16,
         color: '#1a1a1a',
       });
+    } else if (toolName === "editText") {
+      const { objectId, text } = toolArgs;
+      const currentObjs = objs();
+      const validationError = validateObjectExists(objectId, currentObjs, 'editText');
+      if (validationError) return validationError;
+      const obj = currentObjs[objectId];
+      const field = obj.type === 'frame' ? 'title' : 'text';
+      await act().updateObject(objectId, { [field]: text });
+      return { success: true, updatedField: field };
+    } else if (toolName === "duplicateObject") {
+      const { objectId, offsetX = 20, offsetY = 20 } = toolArgs;
+      const currentObjs = objs();
+      const validationError = validateObjectExists(objectId, currentObjs, 'duplicateObject');
+      if (validationError) return validationError;
+      const obj = currentObjs[objectId];
+      const { id, createdAt, updatedAt, childIds, frameId, ...cloneData } = obj;
+      const clone = {
+        ...cloneData,
+        x: (cloneData.x || 0) + offsetX,
+        y: (cloneData.y || 0) + offsetY,
+        frameId: null,
+        childIds: [],
+      };
+      const newId = await act().addObject(clone);
+      return { success: true, newObjectId: newId };
+    } else if (toolName === "changeMultipleColors") {
+      const { objectIds, color } = toolArgs;
+      if (objectIds.length > 100) {
+        return { error: `changeMultipleColors: too many objects (${objectIds.length}), max is 100` };
+      }
+      const currentObjs = objs();
+      const validIds = objectIds.filter(id => currentObjs[id]);
+      if (validIds.length === 0) return { error: "changeMultipleColors: no valid objects found" };
+      await Promise.all(validIds.map(id => act().updateObject(id, { color })));
+      return { success: true, updatedCount: validIds.length };
     }
   } catch (error) {
     return { error: error.message };
