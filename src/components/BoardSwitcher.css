@@ -11,7 +11,7 @@
   font-weight: 500;
   cursor: pointer;
   padding: var(--md-sys-spacing-sm);
-  min-height: 48px;
+  min-height: 36px;
   border-radius: var(--md-sys-shape-corner-small);
   transition: background var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard), color var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
   position: relative;
@@ -142,9 +142,7 @@
 
 .toolbar {
   display: flex;
-  gap: var(--md-sys-spacing-lg);
-  border-left: 1px solid var(--md-sys-color-outline-variant);
-  padding-left: var(--md-sys-spacing-lg);
+  gap: var(--md-sys-spacing-xs);
   align-items: center;
 }
 
@@ -155,14 +153,14 @@
   background: transparent;
   border-radius: var(--md-sys-shape-corner-small);
   border: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .tool-split-button button {
   background: transparent;
   border: none;
-  border-radius: 0;
-  padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   display: flex;
@@ -198,7 +196,6 @@
 }
 
 .tool-split-button .dropdown-arrow {
-  border-left: 1px solid var(--md-sys-color-outline-variant);
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-xs);
 }
 
@@ -257,6 +254,7 @@
 }
 
 .snap-toggle:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
   color: var(--md-sys-color-on-surface);
 }
 
@@ -544,4 +542,22 @@
 
 .zoom-dropdown li button:hover::after {
   opacity: var(--md-sys-state-hover-opacity);
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .tool-split-button {
+  overflow: visible;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .color-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
+  margin-top: 0;
+  margin-left: 5px;
+}
+
+.floating-toolbar-chip[data-orient="vertical"] .zoom-dropdown {
+  top: 0;
+  left: 100%;
+  right: auto;
 }

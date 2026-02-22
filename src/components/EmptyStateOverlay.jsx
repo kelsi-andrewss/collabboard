@@ -6,8 +6,11 @@ const GHOST_FAB_STYLE = {
   left: 40,
   width: 56,
   height: 56,
-  borderRadius: 28,
+  borderRadius: 'var(--md-sys-shape-corner-large)',
   background: 'var(--md-sys-color-primary)',
+  color: 'var(--md-sys-color-on-primary)',
+  border: 'none',
+  boxShadow: 'var(--md-sys-elevation-1)',
   opacity: 0.4,
   display: 'flex',
   alignItems: 'center',
@@ -169,7 +172,7 @@ export function EmptyStateOverlay({ isEmpty, darkMode, canEdit = true }) {
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 500 }}>
       {/* Ghost recenter FAB */}
       <div style={GHOST_FAB_STYLE}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
         </svg>
       </div>
