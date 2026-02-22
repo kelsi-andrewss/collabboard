@@ -709,8 +709,8 @@ export function App() {
                 isAdmin={isAdmin}
                 adminViewActive={adminViewActive}
                 onUpdateGroup={updateGroup}
-                onInviteGroupMember={inviteGroupMember}
-                onRemoveGroupMember={removeGroupMember}
+                onInviteGroupMember={(groupId, uid, role) => inviteGroupMember(groupId, uid, role, allBoards, groups)}
+                onRemoveGroupMember={(groupId, uid) => removeGroupMember(groupId, uid, allBoards, groups)}
                 onSetGroupProtected={setGroupProtected}
                 onDeleteGroupCascade={(id, gs, bs) => deleteGroupCascade(id, gs, bs)}
                 allBoards={allBoards}

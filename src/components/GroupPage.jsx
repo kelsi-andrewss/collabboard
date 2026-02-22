@@ -90,7 +90,14 @@ export function GroupPage({
   const groupId = groupObj?.id || null;
 
   const ancestors = groupObj ? buildAncestorChain(groupObj, groups) : [];
-  const childGroups = groups.filter(g => g.parentGroupId === groupId);
+  const childGroups = groups.filter(g =>
+    g.parentGroupId === groupId && (
+      effectiveAdminView ||
+      g.visibility !== 'private' ||
+      g.ownerId === user?.uid ||
+      (g.members && g.members[user?.uid])
+    )
+  );
 
   const isMember = groupObj && user && (
     groupObj.ownerId === user.uid ||
