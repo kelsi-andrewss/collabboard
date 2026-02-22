@@ -448,9 +448,14 @@ export function App() {
           }
           if (items.length === 0) return;
           const OFFSET = 20;
-          for (const snapshot of items) {
-            boardRef.current.addObject({ ...snapshot, x: snapshot.x + OFFSET, y: snapshot.y + OFFSET });
-          }
+          const board = boardRef.current;
+          const refs = await Promise.all(
+            items.map((snapshot, i) =>
+              board.addObject({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
+            )
+          );
+          const newIds = refs.map(r => r.id);
+          setSelectedIds(new Set(newIds));
         };
         doPaste();
         return;
@@ -950,11 +955,15 @@ export function App() {
                       const firstY = items[0].y + OFFSET;
                       const dx = canvasX - firstX;
                       const dy = canvasY - firstY;
-                      items.forEach((snapshot, i) => {
-                        const x = i === 0 ? canvasX : snapshot.x + OFFSET + dx;
-                        const y = i === 0 ? canvasY : snapshot.y + OFFSET + dy;
-                        board.addObject({ ...snapshot, x, y });
-                      });
+                      const pasteRefs = await Promise.all(
+                        items.map((snapshot, i) => {
+                          const x = (i === 0 ? canvasX : snapshot.x + OFFSET + dx) + i * OFFSET;
+                          const y = (i === 0 ? canvasY : snapshot.y + OFFSET + dy) + i * OFFSET;
+                          return board.addObject({ ...snapshot, x, y });
+                        })
+                      );
+                      const pasteIds = pasteRefs.map(r => r.id);
+                      setSelectedIds(new Set(pasteIds));
                     }},
                     { label: 'Select All', shortcut: '⌘A', action: () => {
                       const allIds = new Set(Object.keys(board.objects));
