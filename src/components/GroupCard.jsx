@@ -207,7 +207,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                       <div className="board-card-row">
                         <span className="board-card-name">
                           {b.name}
-                          {b.protected && <span className="shield-badge"><Shield size={10} /></span>}
+                          {b.protected && <span className="shield-badge" title="Delete protection is enabled — this board cannot be deleted until protection is removed"><Shield size={10} /></span>}
                         </span>
                         {onMoveBoard && (
                           <button
