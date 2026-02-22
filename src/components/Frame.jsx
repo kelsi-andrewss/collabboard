@@ -132,7 +132,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           cornerRadius={12}
           listening={false}
         />
-        {/* Frame body - dashed border */}
+        {/* Frame body - solid border */}
         <Rect
           ref={borderRectRef}
           width={width}
@@ -140,7 +140,6 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           fill="transparent"
           stroke={color}
           strokeWidth={2}
-          dash={[8, 4]}
           cornerRadius={12}
           opacity={0.55}
           listening={false}
