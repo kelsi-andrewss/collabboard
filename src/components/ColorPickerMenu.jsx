@@ -31,7 +31,7 @@ const SHAPE_SVGS = {
   ),
 };
 
-export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelector }) {
+export function ColorPickerMenu({ type, data, history = [], onSelect, onCommit, shapeSelector }) {
   const [opacity, setOpacity] = useState(() => parseOpacity(data.active));
   const hexValue = parseColorForInput(data.active);
 
@@ -43,6 +43,7 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
     const hex = e.target.value;
     const color = opacity < 1 ? hexToRgba(hex, opacity) : hex;
     onSelect(type, color);
+    onCommit?.(type, color);
   };
 
   const handleOpacityChange = (e) => {
@@ -50,6 +51,12 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
     setOpacity(newOpacity);
     const color = newOpacity < 1 ? hexToRgba(hexValue, newOpacity) : hexValue;
     onSelect(type, color);
+  };
+
+  const handleOpacityCommit = (e) => {
+    const newOpacity = parseFloat(e.target.value);
+    const color = newOpacity < 1 ? hexToRgba(hexValue, newOpacity) : hexValue;
+    onCommit?.(type, color);
   };
 
   return (
@@ -82,7 +89,7 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
         />
       </div>
       <div className="slider-row" style={{marginTop: 4}}>
-        <label>Op</label>
+        <label>Opacity</label>
         <input
           type="range"
           min="0"
@@ -90,8 +97,10 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
           step="0.05"
           value={opacity}
           onChange={handleOpacityChange}
+          onMouseUp={handleOpacityCommit}
+          onTouchEnd={handleOpacityCommit}
         />
-        <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 30}}>{Math.round(opacity * 100)}%</span>
+        <span style={{fontSize: 'var(--md-sys-typescale-label-small-size)', color: 'var(--md-sys-color-on-surface-variant)', minWidth: 30}}>{Math.round(opacity * 100)}%</span>
       </div>
       <div className="color-suggestions">
         <label>Suggestions</label>
@@ -104,6 +113,7 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
               onClick={() => {
                 setOpacity(1);
                 onSelect(type, c);
+                onCommit?.(type, c);
               }}
             />
           ))}
@@ -122,6 +132,7 @@ export function ColorPickerMenu({ type, data, history = [], onSelect, shapeSelec
                 onClick={() => {
                   setOpacity(parseOpacity(c));
                   onSelect(type, c);
+                  onCommit?.(type, c);
                 }}
               />
             ) : (

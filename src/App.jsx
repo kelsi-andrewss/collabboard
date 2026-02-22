@@ -212,6 +212,15 @@ export function App() {
     }
   }, [canEdit]);
 
+  // Reset activeTool to the preferred default whenever a board is loaded
+  const dragModeRef = useRef(preferences.dragMode);
+  dragModeRef.current = preferences.dragMode;
+  useEffect(() => {
+    if (boardId) {
+      setActiveTool(dragModeRef.current || 'pan');
+    }
+  }, [boardId]);
+
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(null);
@@ -230,7 +239,7 @@ export function App() {
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
-  const [activeTool, setActiveTool] = useState('pan');
+  const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
   selectedIdsRef.current = selectedIds;
@@ -448,9 +457,14 @@ export function App() {
           }
           if (items.length === 0) return;
           const OFFSET = 20;
-          for (const snapshot of items) {
-            boardRef.current.addObject({ ...snapshot, x: snapshot.x + OFFSET, y: snapshot.y + OFFSET });
-          }
+          const board = boardRef.current;
+          const refs = await Promise.all(
+            items.map((snapshot, i) =>
+              board.addObject({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
+            )
+          );
+          const newIds = refs.map(r => r.id);
+          setSelectedIds(new Set(newIds));
         };
         doPaste();
         return;
@@ -595,7 +609,9 @@ export function App() {
       const len = Math.round(200 / stageScale);
       board.addObject({ type: 'arrow', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'text') {
-      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
+      const textFontSize = Math.round(16 / stageScale);
+      const textWidth = Math.round(200 / stageScale);
+      board.addObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
       const fh = Math.round(window.innerHeight * 0.55 / stageScale);
@@ -693,23 +709,25 @@ export function App() {
 
   return (
     <div className="app-container">
-      <div className="header">
-        <HeaderLeft
-          state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale }}
-          handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
-        />
-        <div className="header-right">
-          {user && boardId && (
-            <HeaderRight
-              state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
-              handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
-            />
-          )}
-          {(!boardId) && user && (
-            <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
-          )}
+      {user && (
+        <div className="header">
+          <HeaderLeft
+            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.dragMode }}
+            handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
+          />
+          <div className="header-right">
+            {user && boardId && (
+              <HeaderRight
+                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user }}
+                handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
+              />
+            )}
+            {(!boardId) && user && (
+              <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <div className="app-content">
         {!user && (
           <div className="login-content">
@@ -784,6 +802,8 @@ export function App() {
               allBoards={allBoards}
               groups={groups}
               migrateGroupStrings={migrateGroupStrings}
+              createBoard={createNewBoard}
+              deleteBoard={deleteBoard}
             />
             {showHomeTutorial && (
               <Tutorial
@@ -831,11 +851,11 @@ export function App() {
             <ResizeTooltip state={{ resizeTooltip }} />
             <SelectedActionBar
               state={{ selectedId, objects: board.objects, showSelectedColorPicker, stagePos, stageScale, dragPos, shapeColors, colorHistory, canEdit }}
-              handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, handleDeleteWithCleanup, updateActiveColor }}
+              handlers={{ setShowSelectedColorPicker, updateObject: board.updateObject, updateObjectDirect: rawBoard.updateObject, handleDeleteWithCleanup, updateActiveColor }}
             />
             {canEdit && (
               <AIPanel
-                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory }}
+                state={{ showAI, aiPrompt, isTyping: ai.isTyping, error: ai.error, chatHistory: ai.chatHistory, isHistoryLoading: ai.isHistoryLoading }}
                 handlers={{ handleAISubmit, setAiPrompt, clearError: ai.clearError }}
               />
             )}
@@ -948,11 +968,15 @@ export function App() {
                       const firstY = items[0].y + OFFSET;
                       const dx = canvasX - firstX;
                       const dy = canvasY - firstY;
-                      items.forEach((snapshot, i) => {
-                        const x = i === 0 ? canvasX : snapshot.x + OFFSET + dx;
-                        const y = i === 0 ? canvasY : snapshot.y + OFFSET + dy;
-                        board.addObject({ ...snapshot, x, y });
-                      });
+                      const pasteRefs = await Promise.all(
+                        items.map((snapshot, i) => {
+                          const x = (i === 0 ? canvasX : snapshot.x + OFFSET + dx) + i * OFFSET;
+                          const y = (i === 0 ? canvasY : snapshot.y + OFFSET + dy) + i * OFFSET;
+                          return board.addObject({ ...snapshot, x, y });
+                        })
+                      );
+                      const pasteIds = pasteRefs.map(r => r.id);
+                      setSelectedIds(new Set(pasteIds));
                     }},
                     { label: 'Select All', shortcut: '⌘A', action: () => {
                       const allIds = new Set(Object.keys(board.objects));

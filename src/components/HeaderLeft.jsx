@@ -210,6 +210,7 @@ function HeaderLeftInner({ state, handlers }) {
           className="floating-toolbar-chip"
           ref={dragTools.ref}
           data-orient={orientTools === 'vertical' ? 'vertical' : undefined}
+          data-bottom={posTools.y != null && posTools.y > window.innerHeight / 2 ? 'true' : undefined}
           style={{ left: posTools.x, top: posTools.y }}
         >
           <span className="chip-grip" onMouseDown={dragTools.onMouseDown} onDoubleClick={dragTools.onDoubleClick}>⠿</span>

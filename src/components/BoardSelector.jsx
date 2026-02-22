@@ -647,9 +647,9 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
             <div className="empty-state">
               <div className="empty-state-icon"><LayoutGrid size={40} strokeWidth={1.5} /></div>
               <p className="empty-state-title">
-                {visibleBoards.length === 0 ? 'No boards yet' : `No boards match "${searchQuery}"`}
+                {searchQuery.trim() ? `No boards match "${searchQuery}"` : 'No boards yet'}
               </p>
-              {visibleBoards.length === 0 && (
+              {!searchQuery.trim() && (
                 <p className="empty-state-hint">Hit the + button to create your first one</p>
               )}
             </div>

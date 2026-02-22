@@ -8,7 +8,7 @@ function formatTimestamp(ts) {
 }
 
 function AIPanelInner({ state, handlers }) {
-  const { showAI, aiPrompt, isTyping, error, chatHistory } = state;
+  const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading } = state;
   const { handleAISubmit, setAiPrompt, clearError } = handlers;
   const historyEndRef = useRef(null);
 
@@ -23,17 +23,21 @@ function AIPanelInner({ state, handlers }) {
   return (
     <div className="ai-panel">
       <div className="ai-header">AI Board Agent</div>
-      {chatHistory && chatHistory.length > 0 && (
-        <div className="ai-chat-history">
-          {chatHistory.map((entry, i) => (
-            <div key={i} className={`ai-message ai-message--${entry.role}`}>
-              <span className="ai-message-role">{entry.role === 'user' ? 'You' : 'AI'}</span>
-              <span className="ai-message-timestamp">{formatTimestamp(entry.timestamp)}</span>
-              <p className="ai-message-text">{entry.message}</p>
-            </div>
-          ))}
-          <div ref={historyEndRef} />
-        </div>
+      {isHistoryLoading ? (
+        <div className="ai-history-loading">Loading history...</div>
+      ) : (
+        chatHistory && chatHistory.length > 0 && (
+          <div className="ai-chat-history">
+            {chatHistory.map((entry, i) => (
+              <div key={i} className={`ai-message ai-message--${entry.role}`}>
+                <span className="ai-message-role">{entry.role === 'user' ? 'You' : 'AI'}</span>
+                <span className="ai-message-timestamp">{formatTimestamp(entry.timestamp)}</span>
+                <p className="ai-message-text">{entry.message}</p>
+              </div>
+            ))}
+            <div ref={historyEndRef} />
+          </div>
+        )
       )}
       <form onSubmit={handleAISubmit} className="ai-input-area">
         <input
@@ -67,7 +71,8 @@ function areEqual(prev, next) {
     ps.aiPrompt === ns.aiPrompt &&
     ps.isTyping === ns.isTyping &&
     ps.error === ns.error &&
-    ps.chatHistory === ns.chatHistory
+    ps.chatHistory === ns.chatHistory &&
+    ps.isHistoryLoading === ns.isHistoryLoading
   );
 }
 

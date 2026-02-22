@@ -44,9 +44,9 @@
 }
 
 .slider-row label {
-  font-size: 0.75rem;
+  font-size: var(--md-sys-typescale-label-small-size);
   font-weight: bold;
-  width: 12px;
+  width: auto;
   color: var(--md-sys-color-on-surface-variant);
 }
 

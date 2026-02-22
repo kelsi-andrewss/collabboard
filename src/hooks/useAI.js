@@ -1,7 +1,8 @@
 import { getGenerativeModel } from "firebase/ai";
-import { ai } from "../firebase/config";
+import { ai, db } from "../firebase/config";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { toolDeclarations, systemPrompt } from "../ai/toolDeclarations";
+import { toolDeclarations, buildSystemPrompt } from "../ai/toolDeclarations";
 import { executeToolCall } from "../ai/toolExecutors";
 import { findNonOverlappingPosition } from "../utils/frameUtils";
 
@@ -9,6 +10,8 @@ const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const RATE_LIMIT_KEY = 'ai_request_timestamps';
 const MAX_CHAT_HISTORY = 100;
+const MAX_PERSISTED_MESSAGES = 50;
+const MAX_MESSAGE_TEXT_LENGTH = 2000;
 
 function loadTimestamps() {
   try {
@@ -72,21 +75,42 @@ function createMutationTracker(rawActions, currentObjects) {
   return { addObject, updateObject, deleteObject, getMutations };
 }
 
-export function useAI(boardId, boardActions, objects, user, isAdmin) {
+export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseMode) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const requestTimestampsRef = useRef(getRecentTimestamps(loadTimestamps()));
 
-  // Refs to always access the latest boardActions and objects during async operations
+  // Refs to always access the latest boardActions, objects, and chat history during async operations
   const boardActionsRef = useRef(boardActions);
   const objectsRef = useRef(objects);
   const userRef = useRef(user);
   useEffect(() => { boardActionsRef.current = boardActions; }, [boardActions]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
   useEffect(() => { userRef.current = user; }, [user]);
-  useEffect(() => { setChatHistory([]); }, [boardId]);
+
+  // Load persisted history on board switch; clear immediately so stale history is never shown
+  useEffect(() => {
+    let cancelled = false;
+    setChatHistory([]);
+    if (!boardId) return () => { cancelled = true; };
+
+    setIsHistoryLoading(true);
+    getDoc(doc(db, 'boards', boardId, 'aiHistory', 'messages'))
+      .then((snap) => {
+        if (cancelled) return;
+        if (snap.exists()) {
+          const msgs = snap.data().messages || [];
+          setChatHistory(msgs.slice(-MAX_CHAT_HISTORY));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsHistoryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [boardId]);
 
   // Define tools for the model
   const tools = useMemo(() => ({
@@ -104,9 +128,9 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
     return getGenerativeModel(ai, {
       model: "gemini-2.0-flash",
       tools: [tools],
-      systemInstruction: systemPrompt + userIdentityLine,
+      systemInstruction: buildSystemPrompt(aiResponseMode) + userIdentityLine,
     });
-  }, [boardId, tools, userIdentityLine]);
+  }, [boardId, tools, userIdentityLine, aiResponseMode]);
 
   const chat = useMemo(() => {
     if (!model) return null;
@@ -148,11 +172,11 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
       if (hasText || hasTitle) {
         let desc = `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
         if (hasText) {
-          const truncated = obj.text.length > 500 ? obj.text.slice(0, 500) + '...' : obj.text;
+          const truncated = obj.text.length > 200 ? obj.text.slice(0, 200) + '...' : obj.text;
           desc += `, text:"${truncated}"`;
         }
         if (hasTitle) {
-          const truncatedTitle = obj.title.length > 500 ? obj.title.slice(0, 500) + '...' : obj.title;
+          const truncatedTitle = obj.title.length > 200 ? obj.title.slice(0, 200) + '...' : obj.title;
           desc += `, title:"${truncatedTitle}"`;
         }
         if (obj.color) desc += `, color:${obj.color}`;
@@ -185,8 +209,29 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
   const act = () => boardActionsRef.current;
   const objs = () => objectsRef.current || {};
 
+  const persistHistory = (currentBoardId, messages) => {
+    if (!currentBoardId) return;
+    const capped = messages.length > MAX_PERSISTED_MESSAGES
+      ? messages.slice(messages.length - MAX_PERSISTED_MESSAGES)
+      : messages;
+    const serialized = capped.map(m => ({
+      role: m.role,
+      message: m.message.length > MAX_MESSAGE_TEXT_LENGTH
+        ? m.message.slice(0, MAX_MESSAGE_TEXT_LENGTH)
+        : m.message,
+      timestamp: m.timestamp,
+    }));
+    const historyDocRef = doc(db, 'boards', currentBoardId, 'aiHistory', 'messages');
+    setDoc(historyDocRef, { messages: serialized }, { merge: false }).catch(() => {
+      // fire-and-forget; non-critical
+    });
+  };
+
   const sendCommand = async (prompt) => {
     if (!chat) return "AI is not initialized.";
+
+    // Capture boardId before any await so it cannot change mid-execution
+    const currentBoardId = boardId;
 
     // Rate limit: max 50 requests per 24-hour window, tracked in sessionStorage
     if (!isAdmin) {
@@ -206,9 +251,12 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
     }
 
     const contextPrompt = buildBoardContext() + prompt;
+    const userEntry = { role: 'user', message: prompt, timestamp: Date.now() };
+    let historyWithUser;
     setChatHistory(prev => {
-      const next = [...prev, { role: 'user', message: prompt, timestamp: Date.now() }];
-      return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+      const next = [...prev, userEntry];
+      historyWithUser = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+      return historyWithUser;
     });
     setIsTyping(true);
     setError(null);
@@ -370,27 +418,37 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
         }
-      } else {
       }
 
-      const responseText = result.response.text();
+      let responseText = result.response.text();
+      if (!responseText && calls && calls.length > 0) {
+        responseText = 'Done.';
+      }
+      const aiEntry = { role: 'ai', message: responseText, timestamp: Date.now() };
+      let newHistoryAfterAi;
       setChatHistory(prev => {
-        const next = [...prev, { role: 'ai', message: responseText, timestamp: Date.now() }];
-        return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        const next = [...prev, aiEntry];
+        newHistoryAfterAi = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        return newHistoryAfterAi;
       });
+      persistHistory(currentBoardId, newHistoryAfterAi);
       return responseText;
     } catch (err) {
       const msg = err?.message || "Unknown error occurred";
       setError(msg);
+      const errEntry = { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() };
+      let newHistoryAfterErr;
       setChatHistory(prev => {
-        const next = [...prev, { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() }];
-        return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        const next = [...prev, errEntry];
+        newHistoryAfterErr = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        return newHistoryAfterErr;
       });
+      persistHistory(currentBoardId, newHistoryAfterErr);
       return `Error: ${msg}`;
     } finally {
       setIsTyping(false);
     }
   };
 
-  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory };
+  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory, isHistoryLoading };
 }

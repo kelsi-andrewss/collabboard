@@ -1,5 +1,5 @@
 :root {
-  --header-height: 0px;
+  --header-height: 64px;
 }
 
 #root {
@@ -350,6 +350,11 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  padding-top: var(--header-height);
+}
+
+.home-content .controls-bar {
+  padding-left: 140px;
 }
 
 .login-content {
@@ -789,4 +794,24 @@
 .floating-toolbar-chip[data-orient="vertical"] .chip-orient-btn {
   height: 32px;
   width: 32px;
+}
+
+.floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .color-dropdown {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .zoom-dropdown {
+  top: auto;
+  bottom: calc(100% + var(--md-sys-spacing-sm));
+}
+
+.floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .dropdown-arrow svg {
+  transform: rotate(180deg);
+}
+
+.floating-toolbar-chip[data-bottom="true"]:not([data-orient="vertical"]) .zoom-dropdown-btn {
+  transform: scaleY(-1);
 }

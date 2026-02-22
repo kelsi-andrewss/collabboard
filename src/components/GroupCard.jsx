@@ -23,7 +23,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
   subgroups = [], depth = 0, onCreateSubgroup, onSetGroupProtected, onSetBoardProtected, allGroups = [],
   onGroupDragStart, onGroupDragEnd, draggingGroup, dragOverTargetId,
   onGroupDragOverUnbound, onGroupDropUnbound, onGroupDragLeaveUnbound,
-  onAddBoard, darkMode = false }) {
+  onAddBoard, darkMode = false, rootDropActive = false }) {
   const groupName = group?.name || (typeof group === 'string' ? group : null);
   const groupId = group?.id || null;
   const isCompact = depth >= 2;
@@ -118,7 +118,18 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDragEnd={onGroupDragEnd}
                   draggingGroup={draggingGroup}
                   onGroupDragOver={onGroupDragOverUnbound ? (e) => onGroupDragOverUnbound(e, sub.id) : undefined}
-                  onGroupDrop={onGroupDropUnbound ? (e) => onGroupDropUnbound(e, sub.id) : undefined}
+                  onGroupDrop={onGroupDropUnbound ? (e) => {
+                    const raw = e.dataTransfer.getData('application/json');
+                    if (raw) {
+                      try {
+                        const { sourceGroupId } = JSON.parse(raw);
+                        if ((sourceGroupId || null) === groupId) {
+                          setExpanded(false);
+                        }
+                      } catch { /* ignore malformed drag data */ }
+                    }
+                    onGroupDropUnbound(e, sub.id);
+                  } : undefined}
                   onGroupDragLeave={onGroupDragLeaveUnbound ? (e) => onGroupDragLeaveUnbound(e, sub.id) : undefined}
                   isDragOver={dragOverTargetId === sub.id}
                   dragOverTargetId={dragOverTargetId}
@@ -126,6 +137,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDropUnbound={onGroupDropUnbound}
                   onGroupDragLeaveUnbound={onGroupDragLeaveUnbound}
                   darkMode={darkMode}
+                  rootDropActive={rootDropActive}
                 />
               ))}
               {addingSubgroup && (
@@ -163,8 +175,8 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
               )}
             </div>
           )}
-          {(boards.length > 0 || (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== groupId)) && (() => {
-            const ghostBoard = (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== group?.id)
+          {(boards.length > 0 || (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== groupId && !rootDropActive)) && (() => {
+            const ghostBoard = (isDragOver && draggingBoard && draggingBoard.sourceGroupId !== group?.id && !rootDropActive)
               ? allBoards?.find(b => b.id === draggingBoard.boardId)
               : null;
             const visibleBoards = boards.slice(0, ghostBoard ? 2 : 3);

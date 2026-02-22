@@ -10,7 +10,7 @@ function formatTemplateDate(ts) {
   return ts.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function BoardSettings({ board, currentUserId, currentUser, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
+export function BoardSettings({ board, currentUserId, currentUser, onUpdateSettings, onInviteMember, onRemoveMember, onTransferOwner, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
@@ -272,10 +272,17 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
                   <select
                     className="member-role-select"
                     value={role}
-                    onChange={(e) => onInviteMember(uid, e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value === 'owner') {
+                        onTransferOwner(uid);
+                      } else {
+                        onInviteMember(uid, e.target.value);
+                      }
+                    }}
                   >
                     <option value="editor">editor</option>
                     <option value="viewer">viewer</option>
+                    {isOwner && <option value="owner">owner</option>}
                   </select>
                 ) : (
                   <span className="member-role">{role}</span>
