@@ -1,16 +1,40 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import './AIPanel.css';
 
+function formatTimestamp(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function AIPanelInner({ state, handlers }) {
-  const { showAI, aiPrompt, isTyping, error } = state;
+  const { showAI, aiPrompt, isTyping, error, chatHistory } = state;
   const { handleAISubmit, setAiPrompt, clearError } = handlers;
+  const historyEndRef = useRef(null);
+
+  useEffect(() => {
+    if (showAI && historyEndRef.current) {
+      historyEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatHistory, showAI]);
 
   if (!showAI) return null;
 
   return (
     <div className="ai-panel">
       <div className="ai-header">AI Board Agent</div>
+      {chatHistory && chatHistory.length > 0 && (
+        <div className="ai-chat-history">
+          {chatHistory.map((entry, i) => (
+            <div key={i} className={`ai-message ai-message--${entry.role}`}>
+              <span className="ai-message-role">{entry.role === 'user' ? 'You' : 'AI'}</span>
+              <span className="ai-message-timestamp">{formatTimestamp(entry.timestamp)}</span>
+              <p className="ai-message-text">{entry.message}</p>
+            </div>
+          ))}
+          <div ref={historyEndRef} />
+        </div>
+      )}
       <form onSubmit={handleAISubmit} className="ai-input-area">
         <input
           type="text"
@@ -42,7 +66,8 @@ function areEqual(prev, next) {
     ps.showAI === ns.showAI &&
     ps.aiPrompt === ns.aiPrompt &&
     ps.isTyping === ns.isTyping &&
-    ps.error === ns.error
+    ps.error === ns.error &&
+    ps.chatHistory === ns.chatHistory
   );
 }
 

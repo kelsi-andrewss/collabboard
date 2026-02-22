@@ -100,3 +100,54 @@
 .ai-error:hover {
   background: rgba(239, 68, 68, 0.15);
 }
+
+.ai-chat-history {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ai-message {
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.ai-message--user {
+  background: var(--accent-primary);
+  color: #fff;
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+.ai-message--ai {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.ai-message-role {
+  font-weight: 600;
+  font-size: 0.7rem;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+}
+
+.ai-message-timestamp {
+  font-size: 0.68rem;
+  opacity: 0.6;
+}
+
+.ai-message-text {
+  margin: 4px 0 0;
+  word-break: break-word;
+}
