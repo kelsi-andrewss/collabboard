@@ -384,6 +384,29 @@ export const toolDeclarations = [
     }
   },
   {
+    name: 'controlViewport',
+    description: 'Controls the canvas viewport — zoom in/out, fit all objects on screen, or pan to a specific object.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        action: {
+          type: 'STRING',
+          enum: ['zoomIn', 'zoomOut', 'zoomToFit', 'panToObject'],
+          description: 'The viewport action to perform.'
+        },
+        objectId: {
+          type: 'STRING',
+          description: 'Required for panToObject: the ID of the object to pan to.'
+        },
+        zoomLevel: {
+          type: 'NUMBER',
+          description: 'Optional target zoom scale (0.1-5). Used by zoomIn/zoomOut as the target level instead of the default step.'
+        }
+      },
+      required: ['action']
+    }
+  },
+  {
     name: "createConnector",
     description: "Creates a connector (line or arrow) anchored between two existing objects at specific ports. Use this instead of createShape when the user asks to connect, link, or draw an arrow between two objects.",
     parameters: {
@@ -450,6 +473,9 @@ TOOL SELECTION:
 DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
 
 KEYWORD INTENTS:
+- "zoom in" / "zoom out" → controlViewport with action zoomIn or zoomOut
+- "zoom to fit" / "fit to screen" / "fit all" / "show everything" → controlViewport with action zoomToFit
+- "pan to [object]" / "show me [object]" / "focus on [object]" / "go to [object]" → controlViewport with action panToObject and the matching objectId
 - "connect X to Y" / "link X and Y" → createConnector between those two objects using anchor ports
 - "connect two frames" → createFrame (x2) then createConnector between them
 - "group X" → createFrame around those objects and add them as children via frameIndex

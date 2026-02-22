@@ -601,6 +601,63 @@ export async function executeToolCall(toolName, toolArgs, context) {
         const CHUNK = 500;
         for (let i = 0; i < moodboardUpdates.length; i += CHUNK) {
           await batchUpdate(act, moodboardUpdates.slice(i, i + CHUNK));
+
+        }
+      }
+        } else if (toolName === "controlViewport") {
+      const { action, objectId, zoomLevel } = toolArgs;
+      const { stagePos: vPos, stageScale: vScale, setStagePos: ssp, setStageScale: sss } = context.getViewport();
+      const viewW = window.innerWidth;
+      const viewH = window.innerHeight;
+
+      if (action === 'zoomIn') {
+        const newScale = zoomLevel ?? Math.min(5, vScale * 1.5);
+        const cx = viewW / 2, cy = viewH / 2;
+        sss(newScale);
+        ssp({
+          x: cx - (cx - vPos.x) * (newScale / vScale),
+          y: cy - (cy - vPos.y) * (newScale / vScale),
+        });
+      } else if (action === 'zoomOut') {
+        const newScale = zoomLevel ?? Math.max(0.1, vScale / 1.5);
+        const cx = viewW / 2, cy = viewH / 2;
+        sss(newScale);
+        ssp({
+          x: cx - (cx - vPos.x) * (newScale / vScale),
+          y: cy - (cy - vPos.y) * (newScale / vScale),
+        });
+      } else if (action === 'zoomToFit') {
+        const allObjs = Object.values(context.objs());
+        if (allObjs.length === 0) {
+          sss(1);
+          ssp({ x: 0, y: 0 });
+        } else {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (const o of allObjs) {
+            minX = Math.min(minX, o.x ?? 0);
+            minY = Math.min(minY, o.y ?? 0);
+            maxX = Math.max(maxX, (o.x ?? 0) + (o.width ?? 150));
+            maxY = Math.max(maxY, (o.y ?? 0) + (o.height ?? 150));
+          }
+          const pad = 80;
+          const contentW = maxX - minX + pad * 2;
+          const contentH = maxY - minY + pad * 2;
+          const newScale = Math.min(5, Math.max(0.1, Math.min(viewW / contentW, viewH / contentH) * 0.9));
+          sss(newScale);
+          ssp({
+            x: viewW / 2 - (minX - pad + contentW / 2) * newScale,
+            y: viewH / 2 - (minY - pad + contentH / 2) * newScale,
+          });
+        }
+      } else if (action === 'panToObject') {
+        const obj = context.objs()[objectId];
+        if (obj) {
+          const cx = (obj.x ?? 0) + (obj.width ?? 150) / 2;
+          const cy = (obj.y ?? 0) + (obj.height ?? 150) / 2;
+          ssp({
+            x: viewW / 2 - cx * vScale,
+            y: viewH / 2 - cy * vScale,
+          });
         }
       }
     } else if (toolName === "createConnector") {

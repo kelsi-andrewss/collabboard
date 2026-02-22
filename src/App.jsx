@@ -236,7 +236,7 @@ export function App() {
     createBoard: aiCreateBoard,
     getBoards: () => allBoards,
     createGroup,
-  }, board?.objects, user, isAdmin);
+  }, board?.objects, user, isAdmin, stagePos, stageScale, setStagePos, setStageScale, preferences.aiResponseMode);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
   const [showHomeAI, setShowHomeAI] = useState(false);
