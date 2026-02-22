@@ -607,6 +607,16 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
 
         const masonryItems = allItems;
 
+        // Ghost board for drag-to-root: show when dragging a board from a group to root
+        const ghostBoardForRoot = rootDropActive && draggingBoard && draggingBoard.sourceGroupId !== null
+          ? boards.find(b => b.id === draggingBoard.boardId)
+          : null;
+
+        // Ghost group for drag-to-root: show when dragging a group to root
+        const ghostGroupForRoot = rootDropActive && draggingGroup
+          ? draggingGroup
+          : null;
+
         const onlineForBoard = (boardId) => globalPresence?.[boardId] || [];
 
         const getGroupBreadcrumb = (groupId) => {
@@ -700,7 +710,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   let standaloneCardRef = null;
                   return (
                     <div
-                      key={b.id}
+                      key={`standalone-${b.id}`}
                       className={`board-card standalone-board-card${isDragging ? ' board-card--dragging' : ''}`}
                       ref={el => { standaloneCardRef = el; }}
                       onClick={() => {
@@ -789,6 +799,41 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                     </div>
                   );
                 })}
+                {ghostBoardForRoot && (
+                  <div
+                    key="ghost-board-root"
+                    className="board-card standalone-board-card board-card--ghost"
+                  >
+                    <div className="board-card-thumbnail">
+                      {(() => {
+                        const thumb = darkMode
+                          ? (ghostBoardForRoot.thumbnailDark || ghostBoardForRoot.thumbnailLight || ghostBoardForRoot.thumbnail)
+                          : (ghostBoardForRoot.thumbnailLight || ghostBoardForRoot.thumbnailDark || ghostBoardForRoot.thumbnail);
+                        return thumb
+                          ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
+                          : <div className="board-card-thumbnail-placeholder" />;
+                      })()}
+                    </div>
+                    <div className="board-card-info">
+                      <div className="board-card-row">
+                        <span className="board-card-name">{ghostBoardForRoot.name}</span>
+                      </div>
+                      <div className="board-card-preview-label">Preview</div>
+                    </div>
+                  </div>
+                )}
+                {ghostGroupForRoot && (
+                  <div
+                    key="ghost-group-root"
+                    className="board-card board-card--ghost"
+                    style={{ margin: 0 }}
+                  >
+                    <div style={{ padding: 'var(--md-sys-spacing-md)', display: 'flex', alignItems: 'center' }}>
+                      <Folder size={16} style={{ marginRight: 'var(--md-sys-spacing-sm)', flexShrink: 0, color: 'var(--md-sys-color-primary)' }} />
+                      <span style={{ fontWeight: 500, color: 'var(--md-sys-color-on-surface)' }}>{ghostGroupForRoot.name}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -35,7 +35,7 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
 
   return (
     <div
-      className={`group-card${isDragOver ? ' drag-over' : ''}${depth > 0 ? ' group-card--nested' : ''}`}
+      className={`group-card${isDragOver ? ' drag-over' : ''}${depth > 0 ? ' group-card--nested' : ''}${draggingGroup?.id === group?.id ? ' group-card--dragging' : ''}`}
       data-group-id={groupId}
       style={{ '--depth': depth }}
       onDragOver={onGroupDragOver}
@@ -81,6 +81,14 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
 
       {!isCompact && expanded && (
         <>
+          {isDragOver && draggingGroup && draggingGroup.id !== group?.id && (
+            <div className="board-card board-card--ghost" style={{ margin: 'var(--md-sys-spacing-sm)' }}>
+              <div style={{ padding: 'var(--md-sys-spacing-md)', display: 'flex', alignItems: 'center' }}>
+                <Folder size={16} style={{ marginRight: 'var(--md-sys-spacing-sm)', flexShrink: 0 }} />
+                <span style={{ fontWeight: 500, color: 'var(--md-sys-color-on-surface)' }}>{draggingGroup.name || 'Group'}</span>
+              </div>
+            </div>
+          )}
           {(subgroups.length > 0 || addingSubgroup || (onCreateSubgroup && depth < 3)) && (
             <div className="group-card-subgroup-section">
               {subgroups.map(sub => (

@@ -183,7 +183,12 @@
 }
 
 .board-card--dragging {
-  opacity: 0.4;
+  opacity: 0;
+}
+
+.group-card--dragging {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .board-card-drag-handle {
