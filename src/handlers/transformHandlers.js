@@ -73,7 +73,7 @@ export function makeTransformHandlers({
 
         // Ensure top edge is far enough above children that the title bar doesn't overlap them
         const clampedHeight = bottom - top;
-        const titleBarH = Math.max(32, Math.min(52, clampedHeight * 0.12));
+        const titleBarH = 48;
         const minTopForTitleBar = minChildY - FRAME_MARGIN - titleBarH;
         if (top > minTopForTitleBar) {
           top = minTopForTitleBar;

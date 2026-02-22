@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
-import { darkenHex } from '../utils/colorUtils.js';
+import { darkenHex, getContrastColor } from '../utils/colorUtils.js';
 
 function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
@@ -123,7 +123,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
             align="center"
             fontFamily="sans-serif"
             lineHeight={1.2}
-            fill="#000000"
+            fill={getContrastColor(color)}
             onClick={(e) => {
               e.cancelBubble = true;
               onSelect(id);
@@ -171,7 +171,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
                   padding: '0',
                   margin: '0',
                   pointerEvents: 'auto',
-                  color: '#000000',
+                  color: getContrastColor(color),
                   overflow: 'hidden',
                   display: 'block'
                 }}
