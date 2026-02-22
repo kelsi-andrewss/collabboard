@@ -32,6 +32,45 @@ function getRecentTimestamps(timestamps) {
   return timestamps.filter(ts => ts > cutoff);
 }
 
+function createMutationTracker(rawActions, currentObjects) {
+  const created = [];
+  const updated = [];
+  const deleted = [];
+
+  const addObject = async (data) => {
+    const ref = await rawActions.addObject(data);
+    if (ref) {
+      created.push({ id: ref.id, snapshot: { ...data } });
+    }
+    return ref;
+  };
+
+  const updateObject = async (objectId, updates) => {
+    const current = currentObjects[objectId];
+    if (current) {
+      const rollback = {};
+      for (const key of Object.keys(updates)) {
+        rollback[key] = current[key] !== undefined ? JSON.parse(JSON.stringify(current[key])) : null;
+      }
+      updated.push({ id: objectId, rollback });
+    }
+    return rawActions.updateObject(objectId, updates);
+  };
+
+  const deleteObject = async (objectId) => {
+    const current = currentObjects[objectId];
+    if (current) {
+      const { id, ...snapshot } = JSON.parse(JSON.stringify(current));
+      deleted.push({ id: objectId, snapshot });
+    }
+    return rawActions.deleteObject(objectId);
+  };
+
+  const getMutations = () => ({ created, updated, deleted });
+
+  return { addObject, updateObject, deleteObject, getMutations };
+}
+
 export function useAI(boardId, boardActions, objects, user, isAdmin) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
@@ -149,6 +188,20 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
       }
 
       if (calls && calls.length > 0) {
+        const currentActions = act();
+        const currentObjs = objs();
+        const tracker = createMutationTracker(
+          { addObject: currentActions.addObject, updateObject: currentActions.updateObject, deleteObject: currentActions.deleteObject },
+          currentObjs
+        );
+        const trackedAct = () => ({
+          addObject: tracker.addObject,
+          updateObject: tracker.updateObject,
+          deleteObject: tracker.deleteObject,
+          createBoard: currentActions.createBoard,
+          getBoards: currentActions.getBoards,
+        });
+
         const localFrames = [];
         const frameIndexMap = {}; // frameIndex → { id, x, y, width, height }
 
@@ -251,7 +304,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
             posY = pos.y;
           }
 
-          const ref = await act().addObject({
+          const ref = await trackedAct().addObject({
             type: 'frame', color: '#6366f1',
             ...frameArgs, x: posX, y: posY, width: w, height: h,
             ...(frameId ? { frameId } : {})
@@ -265,7 +318,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
 
         // --- Pass 2: Process all other calls ---
         const sharedContext = {
-          act, objs,
+          act: trackedAct, objs,
           frameIndexMap, itemsByFrame,
           findNonOverlappingPos, findContainingFrame,
           localFrames,
@@ -273,6 +326,11 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
         };
         for (const call of otherCalls) {
           await executeToolCall(call.name, call.args, { ...sharedContext, _call: call });
+        }
+
+        const mutations = tracker.getMutations();
+        if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
+          boardActionsRef.current.pushCompoundEntry(mutations);
         }
       } else {
       }

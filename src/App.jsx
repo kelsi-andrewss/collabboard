@@ -155,6 +155,7 @@ export function App() {
     addObject: rawBoard?.addObject,
     updateObject: rawBoard?.updateObject,
     deleteObject: rawBoard?.deleteObject,
+    pushCompoundEntry: board.pushCompoundEntry,
     createBoard: aiCreateBoard,
     getBoards: () => allBoards
   }, board?.objects, user, isAdmin);

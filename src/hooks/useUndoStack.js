@@ -84,6 +84,10 @@ export function useUndoStack(board) {
     return board.batchWriteAndDelete(updates, deleteIds);
   }, [board.batchWriteAndDelete, board.objects, push]);
 
+  const pushCompoundEntry = useCallback((mutations) => {
+    push({ type: 'compound', mutations });
+  }, [push]);
+
   const undo = useCallback(async () => {
     const current = stackRef.current;
     if (current.length === 0) return;
@@ -119,6 +123,21 @@ export function useUndoStack(board) {
           );
         }
         break;
+      case 'compound': {
+        const { created = [], updated = [], deleted = [] } = entry.mutations;
+        for (let i = created.length - 1; i >= 0; i--) {
+          await board.deleteObject(created[i].id);
+        }
+        if (updated.length > 0) {
+          await board.batchUpdateObjects(
+            updated.map(({ id, rollback }) => ({ id, data: rollback }))
+          );
+        }
+        for (const { snapshot } of deleted) {
+          await board.addObject(snapshot);
+        }
+        break;
+      }
     }
   }, [board.deleteObject, board.updateObject, board.addObject, board.batchUpdateObjects]);
 
@@ -130,6 +149,7 @@ export function useUndoStack(board) {
     deleteObject,
     batchUpdateObjects,
     batchWriteAndDelete,
+    pushCompoundEntry,
     undo,
     canUndo: stack.length > 0,
   };
