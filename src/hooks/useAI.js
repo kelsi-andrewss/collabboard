@@ -87,33 +87,29 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
   const boardActionsRef = useRef(boardActions);
   const objectsRef = useRef(objects);
   const userRef = useRef(user);
-  const chatHistoryRef = useRef(chatHistory);
   useEffect(() => { boardActionsRef.current = boardActions; }, [boardActions]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
   useEffect(() => { userRef.current = user; }, [user]);
-  useEffect(() => { chatHistoryRef.current = chatHistory; }, [chatHistory]);
 
   // Load persisted history on board switch; clear immediately so stale history is never shown
   useEffect(() => {
+    let cancelled = false;
     setChatHistory([]);
-    if (!boardId) return;
+    if (!boardId) return () => { cancelled = true; };
 
-    const historyDocRef = doc(db, 'boards', boardId, 'aiHistory', 'messages');
     setIsHistoryLoading(true);
-    getDoc(historyDocRef)
+    getDoc(doc(db, 'boards', boardId, 'aiHistory', 'messages'))
       .then((snap) => {
+        if (cancelled) return;
         if (snap.exists()) {
-          const data = snap.data();
-          const msgs = Array.isArray(data.messages) ? data.messages : [];
-          setChatHistory(msgs);
+          const msgs = snap.data().messages || [];
+          setChatHistory(msgs.slice(-MAX_CHAT_HISTORY));
         }
       })
-      .catch(() => {
-        // Network error or missing doc — start fresh
-      })
       .finally(() => {
-        setIsHistoryLoading(false);
+        if (!cancelled) setIsHistoryLoading(false);
       });
+    return () => { cancelled = true; };
   }, [boardId]);
 
   // Define tools for the model
@@ -429,23 +425,25 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
         responseText = 'Done.';
       }
       const aiEntry = { role: 'ai', message: responseText, timestamp: Date.now() };
+      let newHistoryAfterAi;
       setChatHistory(prev => {
         const next = [...prev, aiEntry];
-        const capped = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
-        persistHistory(currentBoardId, capped);
-        return capped;
+        newHistoryAfterAi = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        return newHistoryAfterAi;
       });
+      persistHistory(currentBoardId, newHistoryAfterAi);
       return responseText;
     } catch (err) {
       const msg = err?.message || "Unknown error occurred";
       setError(msg);
       const errEntry = { role: 'ai', message: `Error: ${msg}`, timestamp: Date.now() };
+      let newHistoryAfterErr;
       setChatHistory(prev => {
         const next = [...prev, errEntry];
-        const capped = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
-        persistHistory(currentBoardId, capped);
-        return capped;
+        newHistoryAfterErr = next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;
+        return newHistoryAfterErr;
       });
+      persistHistory(currentBoardId, newHistoryAfterErr);
       return `Error: ${msg}`;
     } finally {
       setIsTyping(false);
