@@ -435,6 +435,11 @@ export async function executeToolCall(toolName, toolArgs, context) {
         }
         await act().createBoard(finalName, group || null);
       }
+    } else if (toolName === "createGroup") {
+      const { name } = toolArgs;
+      if (act().createGroup) {
+        await act().createGroup(name);
+      }
     } else if (toolName === "drawCircle") {
       const { cx, cy, radius, color = '#3b82f6' } = toolArgs;
       await act().addObject({

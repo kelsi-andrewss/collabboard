@@ -178,7 +178,8 @@ export function App() {
     deleteObject: rawBoard?.deleteObject,
     pushCompoundEntry: board.pushCompoundEntry,
     createBoard: aiCreateBoard,
-    getBoards: () => allBoards
+    getBoards: () => allBoards,
+    createGroup,
   }, board?.objects, user, isAdmin);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });

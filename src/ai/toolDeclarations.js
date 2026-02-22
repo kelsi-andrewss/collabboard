@@ -211,6 +211,17 @@ export const toolDeclarations = [
     }
   },
   {
+    name: "createGroup",
+    description: "Creates a new group (folder) for organizing boards. Use when the user says 'create a group', 'make a new group', 'set up a folder', or 'create a folder for...'.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING", description: "Name of the new group" }
+      },
+      required: ["name"]
+    }
+  },
+  {
     name: "createTextElement",
     description: "Creates a standalone text element on the board. Use for labels, headings, annotations, or any freeform text that does not need a sticky note background.",
     parameters: {
@@ -385,7 +396,7 @@ export function buildSystemPrompt(aiResponseMode) {
 }
 
 function buildSystemPromptText(responseModeInstruction) {
-  return `You are a whiteboard assistant acting on behalf of the logged-in user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create boards.
+  return `You are a whiteboard assistant acting on behalf of the logged-in user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create boards and groups.
 
 CRITICAL RULE: NEVER ask the user for clarification. ALWAYS use your best judgment and act immediately. When a request is ambiguous, pick the most reasonable interpretation, act on it, and include one brief sentence in your response explaining what you chose to do and why (e.g. "I interpreted 'organize this' as arranging by creation order — let me know if you meant something else"). NEVER include object IDs in your response text — refer to objects by their label, type, color, or position instead.
 
@@ -401,6 +412,8 @@ TOOL SELECTION:
 - "arrange in a grid" → arrangeInGrid (moves existing objects; does NOT create new ones)
 - "space evenly" / "distribute" → spaceEvenly
 - "fit frame to contents" / "resize frame to fit" → fitFrameToContents (not resizeObject + moveObject)
+- "create a board" / "make a new board" → createBoard
+- "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
 - For structured boards (kanban, SWOT, retrospective, sprint planning, etc.): create frames for each section and use frameIndex to place items inside them.
 

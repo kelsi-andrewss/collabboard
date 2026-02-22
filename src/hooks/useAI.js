@@ -286,6 +286,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseM
           deleteObject: tracker.deleteObject,
           createBoard: currentActions.createBoard,
           getBoards: currentActions.getBoards,
+          createGroup: currentActions.createGroup,
         });
 
         const localFrames = [];
