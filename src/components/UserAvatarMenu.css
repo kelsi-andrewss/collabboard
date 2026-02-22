@@ -5,20 +5,20 @@
 .user-avatar-circle {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--md-sys-shape-corner-full);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
   font-weight: bold;
-  color: white;
+  color: var(--md-sys-color-on-primary);
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.15s;
-  border: 2px solid rgba(255,255,255,0.2);
+  transition: transform var(--md-sys-motion-duration-short3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   outline: none;
   box-shadow: none;
-  background-color: var(--bg-tertiary);
+  background-color: var(--md-sys-color-primary);
 }
 
 .user-avatar-menu .user-avatar-circle:focus,
@@ -36,17 +36,17 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
+  border-radius: var(--md-sys-shape-corner-full);
 }
 
 .user-avatar-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  box-shadow: var(--md-sys-elevation-2);
   min-width: 200px;
   z-index: 2000;
   overflow: hidden;
@@ -62,17 +62,17 @@
 .dropdown-user-name {
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .dropdown-user-email {
   font-size: 0.75rem;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .dropdown-divider {
   height: 1px;
-  background: var(--border-color);
+  background: var(--md-sys-color-outline-variant);
 }
 
 .dropdown-item {
@@ -80,15 +80,16 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 16px;
+  min-height: 48px;
+  padding: 12px 16px;
   background: transparent;
   border: none;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--md-sys-motion-duration-short3);
 }
 
 .dropdown-item:hover {
-  background: var(--bg-tertiary);
+  background: rgba(103, 80, 164, var(--md-sys-state-hover-opacity));
 }

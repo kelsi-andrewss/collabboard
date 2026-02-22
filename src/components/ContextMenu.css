@@ -1,10 +1,10 @@
 .context-menu {
   position: fixed;
   z-index: 9999;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--shadow-lg);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  box-shadow: var(--md-sys-elevation-2);
   padding: 4px;
   min-width: 180px;
   animation: context-menu-appear 0.08s ease-out;
@@ -21,6 +21,12 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .context-menu {
+    animation: none;
+  }
+}
+
 .context-menu-item {
   display: flex;
   align-items: center;
@@ -29,8 +35,8 @@
   padding: 7px 12px;
   background: transparent;
   border: none;
-  border-radius: 5px;
-  color: var(--text-primary);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  color: var(--md-sys-color-on-surface);
   font-size: 0.875rem;
   cursor: pointer;
   text-align: left;
@@ -39,25 +45,25 @@
 }
 
 .context-menu-item:hover {
-  background: var(--bg-tertiary);
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .context-menu-item.danger {
-  color: #ef4444;
+  color: var(--md-sys-color-error);
 }
 
 .context-menu-item.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: color-mix(in srgb, var(--md-sys-color-error) 10%, transparent);
 }
 
 .context-menu-shortcut {
   font-size: 0.75rem;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-outline);
   margin-left: auto;
 }
 
 .context-menu-separator {
   height: 1px;
-  background: var(--border-color);
+  background: var(--md-sys-color-outline-variant);
   margin: 4px 0;
 }

@@ -4,23 +4,23 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 6px;
-  border-radius: 10px;
+  border-radius: var(--md-sys-shape-corner-medium);
   z-index: 1000;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .action-fab {
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 22px;
-  background: var(--toolbar-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--md-sys-elevation-1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,20 +29,21 @@
 
 .action-fab:hover {
   transform: scale(1.1);
-  background: var(--accent-primary);
-  color: white;
-  border-color: var(--accent-primary);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
 }
 
 .action-fab.delete-action {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  border-color: var(--md-sys-color-error);
 }
 
 .action-fab.delete-action:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  border-color: var(--md-sys-color-error-container);
 }
 
 .selected-color-picker-wrapper {
@@ -53,10 +54,10 @@
   position: absolute;
   left: 56px;
   top: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
   padding: 10px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--md-sys-elevation-3);
   z-index: 1000;
 }

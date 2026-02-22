@@ -4,12 +4,12 @@
   left: 40px;
   width: 56px;
   height: 56px;
-  border-radius: 28px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--md-sys-elevation-1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,7 +19,7 @@
 
 .theme-fab:hover {
   transform: scale(1.1);
-  background: var(--bg-tertiary);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .recenter-fab {
@@ -28,12 +28,12 @@
   left: 40px;
   width: 56px;
   height: 56px;
-  border-radius: 28px;
-  background: var(--accent-primary);
-  color: white;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   border: none;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--md-sys-elevation-1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,7 +43,8 @@
 
 .recenter-fab:hover {
   transform: scale(1.1);
-  background: var(--accent-hover);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .ai-fab {
@@ -52,12 +53,12 @@
   right: 40px;
   width: 56px;
   height: 56px;
-  border-radius: 28px;
-  background: var(--accent-primary);
-  color: white;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   border: none;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--md-sys-elevation-1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,35 +67,30 @@
 }
 
 .ai-fab:hover {
-  background: var(--accent-hover);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   transform: scale(1.05);
 }
 
 .ai-fab:focus {
   outline: none;
-  background: var(--accent-primary);
+  background: var(--md-sys-color-primary);
 }
 
 .ai-fab:active {
-  background: var(--accent-primary);
+  background: var(--md-sys-color-primary);
 }
 
 .ai-fab:focus-visible {
-  background: var(--accent-primary);
-  outline: 2px solid white;
+  background: var(--md-sys-color-primary);
+  outline: 2px solid var(--md-sys-color-on-primary);
   outline-offset: 3px;
 }
 
 .ai-fab.active {
-  background: var(--accent-primary);
+  background: var(--md-sys-color-primary);
   transform: rotate(90deg);
-  box-shadow: var(--shadow-sm), inset 0 0 0 2px var(--accent-hover);
-}
-
-@media (prefers-color-scheme: dark) {
-  .ai-fab.active {
-    box-shadow: var(--shadow-sm), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
-  }
+  box-shadow: var(--md-sys-elevation-1), inset 0 0 0 2px var(--md-sys-color-primary-container);
 }
 
 @keyframes ai-fab-pulse {
@@ -124,4 +120,16 @@
 
 .ai-fab.active::before {
   animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab.pulse-active::before {
+    animation: none;
+  }
+
+  .theme-fab,
+  .recenter-fab,
+  .ai-fab {
+    transition: none;
+  }
 }

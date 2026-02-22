@@ -3,10 +3,10 @@
   bottom: 85px;
   right: 20px;
   width: 320px;
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface-container);
   border-radius: 12px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-color);
+  box-shadow: var(--md-sys-elevation-3);
+  border: 1px solid var(--md-sys-color-outline-variant);
   overflow: hidden;
   z-index: 100;
   animation: ai-panel-in 0.18s ease;
@@ -19,8 +19,8 @@
 
 .ai-header {
   padding: 10px 15px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  color: white;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -34,22 +34,22 @@
 .ai-input-area input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   border-radius: 6px;
   outline: none;
   font-size: 0.85rem;
 }
 
 .ai-input-area input:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
 }
 
 .ai-input-area button {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   border: none;
   padding: 8px;
   border-radius: 6px;
@@ -60,17 +60,20 @@
 }
 
 .ai-input-area button:hover {
-  background: var(--accent-hover);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .ai-input-area button:disabled {
-  background: #9ca3af;
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: var(--md-sys-state-disabled-opacity);
 }
 
 .ai-status {
   padding: 0 15px 10px;
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   font-style: italic;
 }
 
@@ -78,9 +81,9 @@
   padding: 8px 15px;
   margin: 0 10px 10px;
   font-size: 0.75rem;
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--md-sys-color-on-error-container);
+  background: var(--md-sys-color-error-container);
+  border: 1px solid var(--md-sys-color-error);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -98,7 +101,7 @@
 }
 
 .ai-error:hover {
-  background: rgba(239, 68, 68, 0.15);
+  background: color-mix(in srgb, var(--md-sys-color-error-container) 85%, var(--md-sys-color-error) 15%);
 }
 
 .ai-chat-history {
@@ -108,7 +111,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .ai-message {
@@ -119,16 +122,16 @@
 }
 
 .ai-message--user {
-  background: var(--accent-primary);
-  color: #fff;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   align-self: flex-end;
   max-width: 85%;
 }
 
 .ai-message--ai {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
   align-self: flex-start;
   max-width: 90%;
 }

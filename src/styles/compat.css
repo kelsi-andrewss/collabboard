@@ -1,0 +1,18 @@
+:root {
+  /* Text aliases — still referenced in App.jsx and ColorPickerMenu.jsx */
+  --text-primary: var(--md-sys-color-on-surface);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+
+  /* Background aliases — still referenced in Avatar.jsx */
+  --bg-tertiary: var(--md-sys-color-surface-container-high);
+
+  /* Named spacing aliases — referenced throughout component CSS files.
+     Maps to the 4px-grid numeric tokens defined in tokens/_spacing.css. */
+  --md-sys-spacing-xs: var(--md-sys-spacing-1);   /* 4px */
+  --md-sys-spacing-sm: var(--md-sys-spacing-2);   /* 8px */
+  --md-sys-spacing-md: var(--md-sys-spacing-3);   /* 12px */
+  --md-sys-spacing-lg: var(--md-sys-spacing-4);   /* 16px */
+  --md-sys-spacing-xl: var(--md-sys-spacing-6);   /* 24px */
+  --md-sys-spacing-2xl: var(--md-sys-spacing-8);  /* 32px */
+  --md-sys-spacing-3xl: var(--md-sys-spacing-10); /* 40px */
+}

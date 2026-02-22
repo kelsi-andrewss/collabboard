@@ -6,7 +6,7 @@ import { Shape } from './Shape';
 import { LineShape } from './LineShape';
 import { TextShape } from './TextShape';
 import { Cursors } from './Cursors';
-import { FRAME_MARGIN, getLineBounds } from '../utils/frameUtils.js';
+import { FRAME_MARGIN, getLineBounds, findFrameAtPoint } from '../utils/frameUtils.js';
 import { PORTS, getPortCoords, findSnapTarget } from '../utils/connectorUtils.js';
 
 const PORT_DISPLAY_RADIUS = 8;
@@ -370,6 +370,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   } = handlers;
 
   const [selRect, setSelRect] = useState(null);
+  const [toolHoverFrameId, setToolHoverFrameId] = useState(null);
   const selStartRef = useRef(null);
   const shiftDragRef = useRef(false);
 
@@ -464,6 +465,13 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         node.y(canvasY - 50);
       }
       ghostLayerRef.current?.batchDraw();
+    }
+
+    if (pendingTool && pendingTool !== 'line' && pendingTool !== 'arrow' && pendingTool !== 'frame') {
+      const overFrame = findFrameAtPoint(canvasX, canvasY, objectsRef.current);
+      setToolHoverFrameId(overFrame ? overFrame.id : null);
+    } else {
+      setToolHoverFrameId(null);
     }
 
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
@@ -700,6 +708,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   canEdit={canEdit}
                   onAutoFit={handleFrameAutoFit}
                   pendingTool={pendingTool}
+                  toolHoverFrameId={toolHoverFrameId}
                 />
               );
             }

@@ -140,6 +140,31 @@ Frames are the most complex part of the codebase. Key invariants to preserve:
 
 ---
 
+## Design System -- Material Design 3
+
+All DOM-based UI must follow Material Design 3 specifications unless the user explicitly requests otherwise.
+
+### Token usage
+- Colors: use `--md-sys-color-*` tokens. Never hardcode hex values for UI colors.
+- Typography: use `--md-sys-typescale-*` tokens. Never hardcode font-size/weight/line-height.
+- Elevation: use `--md-sys-elevation-*` for shadows. 6 levels (0-5).
+- Shape: use `--md-sys-shape-corner-*` for border-radius. Never hardcode px values.
+- Spacing: use `--md-sys-spacing-*` (4px grid). Never hardcode padding/margin values.
+- Motion: use `--md-sys-motion-*` for transitions. All animations must respect reduced-motion.
+- State layers: all interactive elements must have hover (8%), focus (12%), pressed (12%) state layers.
+
+### Theme system
+- 6 themes: indigo, teal, rose, amber, violet, sage. Each has light + dark variant.
+- Applied via `data-theme-color` and `data-theme` attributes on `<html>`.
+- Accessibility: `data-high-contrast`, `data-reduced-motion`, `data-large-text` attributes.
+- Preferences stored in Firestore `users/{uid}.preferences`.
+
+### What M3 does NOT apply to
+- Konva canvas components (BoardCanvas, StickyNote, Frame, Shape, LineShape, Cursors) -- these render to canvas, not DOM.
+- Object colors chosen by users (sticky note colors, shape fills) -- these are user content, not UI chrome.
+
+---
+
 ## Common Gotchas
 - **Konva transformer**: Always call `transformer.nodes([])` before deleting a selected object, or Konva will throw on the stale reference.
 - **Frame childIds drift**: If you update `frameId` on an object without atomically updating the parent frame's `childIds`, the frame system will silently break.

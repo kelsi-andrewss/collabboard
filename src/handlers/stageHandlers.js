@@ -47,8 +47,9 @@ export function makeStageHandlers({
   };
 
   const handleStageClick = (e) => {
-    if (e.target === e.target.getStage() || e.target.name() === 'bg-rect') {
-      const tool = pendingToolRef?.current;
+    const tool = pendingToolRef?.current;
+    const isBackground = e.target === e.target.getStage() || e.target.name() === 'bg-rect';
+    if (isBackground || tool) {
 
       if (tool === 'line' || tool === 'arrow') {
         const stage = e.target.getStage();
