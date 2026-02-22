@@ -118,7 +118,18 @@ export function GroupCard({ group, boards, allBoards = [], onNavigateToGroup, on
                   onGroupDragEnd={onGroupDragEnd}
                   draggingGroup={draggingGroup}
                   onGroupDragOver={onGroupDragOverUnbound ? (e) => onGroupDragOverUnbound(e, sub.id) : undefined}
-                  onGroupDrop={onGroupDropUnbound ? (e) => onGroupDropUnbound(e, sub.id) : undefined}
+                  onGroupDrop={onGroupDropUnbound ? (e) => {
+                    const raw = e.dataTransfer.getData('application/json');
+                    if (raw) {
+                      try {
+                        const { sourceGroupId } = JSON.parse(raw);
+                        if ((sourceGroupId || null) === groupId) {
+                          setExpanded(false);
+                        }
+                      } catch { /* ignore malformed drag data */ }
+                    }
+                    onGroupDropUnbound(e, sub.id);
+                  } : undefined}
                   onGroupDragLeave={onGroupDragLeaveUnbound ? (e) => onGroupDragLeaveUnbound(e, sub.id) : undefined}
                   isDragOver={dragOverTargetId === sub.id}
                   dragOverTargetId={dragOverTargetId}
