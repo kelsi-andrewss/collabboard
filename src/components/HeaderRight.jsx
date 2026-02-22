@@ -8,7 +8,8 @@ function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user } = state;
   const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
   const [copied, setCopied] = useState(false);
-  const { dragHandleProps, orientation, toggleOrientation } = useDraggableFloat('toolbar-right', null);
+  const { dragHandleProps, orientation } = useDraggableFloat('toolbar-right', null);
+  const toggleOrientation = dragHandleProps?.onDoubleClick;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
