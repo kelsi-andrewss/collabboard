@@ -356,6 +356,22 @@ export const toolDeclarations = [
       },
       required: ["objectIds", "color"]
     }
+  },
+  {
+    name: "createConnector",
+    description: "Creates a connector (line or arrow) anchored between two existing objects at specific ports. Use this instead of createShape when the user asks to connect, link, or draw an arrow between two objects.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        startObjectId: { type: "STRING", description: "ID of the object to connect from" },
+        startPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the start object" },
+        endObjectId: { type: "STRING", description: "ID of the object to connect to" },
+        endPort: { type: "STRING", enum: ["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"], description: "Anchor port on the end object" },
+        color: { type: "STRING", description: "Hex color code (default '#6366f1')" },
+        arrowhead: { type: "BOOLEAN", description: "Whether to show an arrowhead (default true)" }
+      },
+      required: ["startObjectId", "startPort", "endObjectId", "endPort"]
+    }
   }
 ];
 
@@ -369,7 +385,8 @@ PLACEMENT DEFAULTS: When the user does not specify a board or group for a new ob
 
 TOOLS AVAILABLE:
 - createStickyNote: Create a new sticky note (auto-avoids overlaps)
-- createShape: Create a shape including arrows (auto-avoids overlaps). Use type:'arrow' for arrows with arrowheads.
+- createShape: Create a shape including free-floating lines and arrows (auto-avoids overlaps). Use for shapes with no specific object-to-object connection.
+- createConnector: Create a line or arrow anchored between two existing objects at specific ports. Use this — NOT createShape — whenever the user asks to connect, link, or draw an arrow between two objects. Available ports: top, right, bottom, left, top-left, top-right, bottom-left, bottom-right.
 - createFrame: Create a frame container (auto-avoids overlaps). Frames CAN be moved and resized.
 - moveObject: Move ANY object (sticky, shape, frame, line) to new coordinates
 - resizeObject: Resize ANY object (sticky, shape, frame, line) — works on frames too
