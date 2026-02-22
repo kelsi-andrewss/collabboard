@@ -404,6 +404,8 @@ TOOL SELECTION:
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
 - For structured boards (kanban, SWOT, retrospective, sprint planning, etc.): create frames for each section and use frameIndex to place items inside them.
 
+DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
+
 KEYWORD INTENTS:
 - "connect X to Y" / "link X and Y" → createConnector between those two objects using anchor ports
 - "connect two frames" → createFrame (x2) then createConnector between them

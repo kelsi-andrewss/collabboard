@@ -1,6 +1,11 @@
 import { regularPolygonVertices, perpendicularBisector, angleBisector, tangentLines } from '../utils/geometryUtils.js';
 import { getPortCoords } from '../utils/connectorUtils.js';
 
+async function batchUpdate(act, updates) {
+  if (!updates.length) return;
+  await Promise.all(updates.map(({ id, data }) => act().updateObject(id, data)));
+}
+
 // context shape:
 // {
 //   act,                   () => boardActionsRef.current
@@ -30,7 +35,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
     } = context;
 
     if (toolName === "createStickyNote") {
-      const w = 150, h = 150;
+      const w = 200, h = 200;
       const { frameIndex: fi, ...stickyArgs } = toolArgs;
       let frameId = null;
       let posX = stickyArgs.x, posY = stickyArgs.y;
@@ -95,8 +100,11 @@ export async function executeToolCall(toolName, toolArgs, context) {
         const dy = (updates.y !== undefined ? updates.y - target.y : 0);
         if (dx !== 0 || dy !== 0) {
           const children = Object.values(currentObjs).filter(o => o.frameId === objectId);
-          for (const child of children) {
-            await act().updateObject(child.id, { x: child.x + dx, y: child.y + dy });
+          if (children.length > 0) {
+            await batchUpdate(act, children.map(child => ({
+              id: child.id,
+              data: { x: child.x + dx, y: child.y + dy },
+            })));
           }
         }
       }
@@ -153,6 +161,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       const validIds = objectIds.filter(id => currentObjs[id]);
       if (validIds.length === 0) return { error: "no valid objects found" };
       const numCols = cols || Math.ceil(Math.sqrt(validIds.length));
+      const batchUpdates = [];
       for (let i = 0; i < validIds.length; i++) {
         const obj = currentObjs[validIds[i]];
         const ow = obj.width || 150;
@@ -167,11 +176,14 @@ export async function executeToolCall(toolName, toolArgs, context) {
           if (dx !== 0 || dy !== 0) {
             const children = Object.values(currentObjs).filter(o => o.frameId === obj.id);
             for (const child of children) {
-              await act().updateObject(child.id, { x: child.x + dx, y: child.y + dy });
+              batchUpdates.push({ id: child.id, data: { x: child.x + dx, y: child.y + dy } });
             }
           }
         }
-        await act().updateObject(validIds[i], { x: newX, y: newY });
+        batchUpdates.push({ id: validIds[i], data: { x: newX, y: newY } });
+      }
+      if (batchUpdates.length > 0) {
+        await batchUpdate(act, batchUpdates);
       }
     } else if (toolName === "spaceEvenly") {
       const { objectIds, direction = "horizontal" } = toolArgs;
@@ -180,13 +192,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
       if (items.length === 0) return { error: "no valid objects found" };
       if (items.length < 2) return;
 
-      // Helper: move a frame and all its children by a delta
-      const moveWithChildren = async (obj, dx, dy) => {
+      const collectMoveWithChildren = (batchUpdates, obj, dx, dy) => {
         const updates = {};
         if (dx !== 0) updates.x = obj.x + dx;
         if (dy !== 0) updates.y = obj.y + dy;
         if (Object.keys(updates).length > 0) {
-          await act().updateObject(obj.id, updates);
+          batchUpdates.push({ id: obj.id, data: updates });
         }
         if (obj.type === 'frame') {
           const children = Object.values(currentObjs).filter(o => o.frameId === obj.id);
@@ -195,12 +206,13 @@ export async function executeToolCall(toolName, toolArgs, context) {
             if (dx !== 0) childUpdates.x = child.x + dx;
             if (dy !== 0) childUpdates.y = child.y + dy;
             if (Object.keys(childUpdates).length > 0) {
-              await act().updateObject(child.id, childUpdates);
+              batchUpdates.push({ id: child.id, data: childUpdates });
             }
           }
         }
       };
 
+      const batchUpdates = [];
       if (direction === "horizontal") {
         items.sort((a, b) => a.x - b.x);
         const first = items[0].x;
@@ -214,7 +226,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
         let curX = first;
         for (const o of items) {
           const dx = curX - o.x;
-          await moveWithChildren(o, dx, 0);
+          collectMoveWithChildren(batchUpdates, o, dx, 0);
           curX += (o.width || 150) + gap;
         }
       } else {
@@ -230,9 +242,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
         let curY = first;
         for (const o of items) {
           const dy = curY - o.y;
-          await moveWithChildren(o, 0, dy);
+          collectMoveWithChildren(batchUpdates, o, 0, dy);
           curY += (o.height || 150) + gap;
         }
+      }
+      if (batchUpdates.length > 0) {
+        await batchUpdate(act, batchUpdates);
       }
     } else if (toolName === "deleteObject") {
       const { objectId } = toolArgs;
@@ -280,11 +295,14 @@ export async function executeToolCall(toolName, toolArgs, context) {
         }
         if (!moved) break;
       }
-      for (const item of items) {
-        const orig = currentObjs[item.id];
-        if (orig && (Math.abs(orig.x - item.x) > 1 || Math.abs(orig.y - item.y) > 1)) {
-          await act().updateObject(item.id, { x: Math.round(item.x), y: Math.round(item.y) });
-        }
+      const resolveUpdates = items
+        .filter(item => {
+          const orig = currentObjs[item.id];
+          return orig && (Math.abs(orig.x - item.x) > 1 || Math.abs(orig.y - item.y) > 1);
+        })
+        .map(item => ({ id: item.id, data: { x: Math.round(item.x), y: Math.round(item.y) } }));
+      if (resolveUpdates.length > 0) {
+        await batchUpdate(act, resolveUpdates);
       }
     } else if (toolName === "arrangeByType") {
       const gap = toolArgs.gap || 15;
@@ -304,6 +322,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
         (typeOrder.indexOf(b) === -1 ? 99 : typeOrder.indexOf(b))
       );
       const uniformSizes = { sticky: { w: 150, h: 150 }, rectangle: { w: 120, h: 120 }, circle: { w: 120, h: 120 }, triangle: { w: 120, h: 120 }, frame: null, line: null, arrow: null };
+      const arrangeByTypeBatch = [];
       let groupX = 50;
       for (const type of sortedTypes) {
         const typeItems = groups[type];
@@ -332,21 +351,23 @@ export async function executeToolCall(toolName, toolArgs, context) {
             updates.width = cellW;
             updates.height = cellH;
           }
-          // If moving a frame, move its children by the same delta
           if (o.type === 'frame') {
             const dx = Math.round(nx) - o.x;
             const dy = Math.round(ny) - o.y;
             if (dx !== 0 || dy !== 0) {
               const children = Object.values(currentObjs).filter(ch => ch.frameId === o.id);
               for (const child of children) {
-                await act().updateObject(child.id, { x: child.x + dx, y: child.y + dy });
+                arrangeByTypeBatch.push({ id: child.id, data: { x: child.x + dx, y: child.y + dy } });
               }
             }
           }
-          await act().updateObject(o.id, updates);
+          arrangeByTypeBatch.push({ id: o.id, data: updates });
           maxGroupW = Math.max(maxGroupW, nx + w - groupX);
         }
         groupX += maxGroupW + groupGap;
+      }
+      if (arrangeByTypeBatch.length > 0) {
+        await batchUpdate(act, arrangeByTypeBatch);
       }
     } else if (toolName === "fitFrameToContents") {
       const { frameId, padding = 30 } = toolArgs;
@@ -543,7 +564,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       const currentObjs = objs();
       const validIds = objectIds.filter(id => currentObjs[id]);
       if (validIds.length === 0) return { error: "changeMultipleColors: no valid objects found" };
-      await Promise.all(validIds.map(id => act().updateObject(id, { color })));
+      await batchUpdate(act, validIds.map(id => ({ id, data: { color } })));
       return { success: true, updatedCount: validIds.length };
     } else if (toolName === "createConnector") {
       let { startObjectId, startPort, endObjectId, endPort, color = '#6366f1', arrowhead = true } = toolArgs;
