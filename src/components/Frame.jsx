@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
-function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit, pendingTool }) {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit, pendingTool, toolHoverFrameId }) {
   const groupRef = useRef();
   const trRef = useRef();
   const hitRectRef = useRef();
@@ -49,14 +49,6 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
         rotation={0}
         draggable={canEdit && !isEditing}
         dragDistance={3}
-        onClick={(e) => {
-          e.cancelBubble = true;
-          onSelect(id);
-        }}
-        onTap={(e) => {
-          e.cancelBubble = true;
-          onSelect(id);
-        }}
         onDragStart={() => {
           if (dragLayerRef?.current && groupRef.current) {
             groupRef.current.moveTo(dragLayerRef.current);
@@ -74,13 +66,21 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           onDragEnd(id, pos);
         }}
       >
-        {/* Invisible hit area for the full frame body */}
+        {/* Invisible hit area for the title bar only */}
         <Rect
           ref={hitRectRef}
           width={width}
-          height={height}
+          height={titleBarHeight}
           fill="transparent"
           listening={true}
+          onClick={(e) => {
+            e.cancelBubble = true;
+            onSelect(id);
+          }}
+          onTap={(e) => {
+            e.cancelBubble = true;
+            onSelect(id);
+          }}
           onDblClick={(e) => {
             if (!canEdit || !onAutoFit) return;
             e.cancelBubble = true;
@@ -231,28 +231,37 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
         {(() => {
           const showIllegal = dragState?.draggingId === id && dragState?.illegalDrag;
           const showAction = dragState && dragState.overFrameId === id && dragState.action;
-          if (!showIllegal && !showAction) return null;
+          const showToolHover = !!(pendingTool && pendingTool !== 'line' && pendingTool !== 'arrow' && toolHoverFrameId === id);
+          if (!showIllegal && !showAction && !showToolHover) return null;
+          const overlayFill = showIllegal
+            ? '#ef4444'
+            : (showAction && dragState.action !== 'add')
+              ? '#ef4444'
+              : '#22c55e';
+          const overlayOpacity = showIllegal ? 0.25 : 0.15;
+          const symbolText = showIllegal ? null : (showAction ? (dragState.action === 'add' ? '+' : '-') : '+');
+          const symbolFill = showIllegal ? null : (showAction && dragState.action !== 'add') ? '#ef4444' : '#22c55e';
           return (
             <>
               <Rect
                 width={width}
                 height={height}
-                fill={showIllegal ? '#ef4444' : (dragState.action === 'add' ? '#22c55e' : '#ef4444')}
-                opacity={showIllegal ? 0.25 : 0.15}
+                fill={overlayFill}
+                opacity={overlayOpacity}
                 cornerRadius={4}
                 listening={false}
                 perfectDrawEnabled={false}
               />
-              {!showIllegal && (
+              {symbolText && (
                 <Text
-                  text={dragState.action === 'add' ? '+' : '-'}
+                  text={symbolText}
                   x={0}
                   y={0}
                   width={width}
                   height={height}
                   fontSize={48}
                   fontStyle="bold"
-                  fill={dragState.action === 'add' ? '#22c55e' : '#ef4444'}
+                  fill={symbolFill}
                   opacity={0.6}
                   align="center"
                   verticalAlign="middle"
@@ -310,7 +319,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
             // snap to the new size immediately, before React re-renders
             if (hitRectRef.current) {
               hitRectRef.current.width(finalW);
-              hitRectRef.current.height(finalH);
+              hitRectRef.current.height(titleBarHeight);
             }
             if (bgRectRef.current) {
               bgRectRef.current.width(finalW);
@@ -346,7 +355,7 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
               if (clamped && (clamped.width !== finalW || clamped.height !== finalH || clamped.x !== finalX || clamped.y !== finalY)) {
                 groupRef.current.x(clamped.x);
                 groupRef.current.y(clamped.y);
-                if (hitRectRef.current) { hitRectRef.current.width(clamped.width); hitRectRef.current.height(clamped.height); }
+                if (hitRectRef.current) { hitRectRef.current.width(clamped.width); hitRectRef.current.height(titleBarHeight); }
                 bgRectRef.current.width(clamped.width);
                 bgRectRef.current.height(clamped.height);
                 borderRectRef.current.width(clamped.width);
