@@ -599,6 +599,19 @@ export async function executeToolCall(toolName, toolArgs, context) {
         endConnectedPort: endPort,
         color,
       });
+    } else if (toolName === "narrateBoard") {
+      const { story } = toolArgs;
+      const w = 300, h = 200;
+      const pos = findNonOverlappingPos(50, 50, w, h);
+      await act().addObject({
+        type: 'sticky',
+        text: story,
+        x: pos.x,
+        y: pos.y,
+        width: w,
+        height: h,
+        color: '#fffde7',
+      });
     }
   } catch (error) {
     return { error: error.message };

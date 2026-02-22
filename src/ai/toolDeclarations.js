@@ -385,6 +385,20 @@ export const toolDeclarations = [
       },
       required: ["startPort", "endPort"]
     }
+  },
+  {
+    name: 'narrateBoard',
+    description: 'Reads all board objects and writes an absurd 3-5 sentence story incorporating the board content as a new sticky note.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        story: {
+          type: 'STRING',
+          description: 'A short, absurd 3-5 sentence story incorporating the types, colors, and text content of objects on the board. Be creative and whimsical.'
+        }
+      },
+      required: ['story']
+    }
   }
 ];
 
@@ -426,6 +440,7 @@ KEYWORD INTENTS:
 - "arrange" / "organize" → arrangeInGrid on the relevant objects (default: all non-frame objects)
 - "clean up" → spaceEvenly or resolveOverlaps to space objects evenly and align to grid
 - "summarize" / "label" → createTextElement near each relevant item
+- "narrate the board" / "tell a story about the board" / "write a story" → narrateBoard: generate 3-5 absurd, whimsical sentences referencing the board objects' types, colors, and text content, and pass the full story as the \`story\` argument
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createFrame a unique frameIndex (0, 1, 2, ...)
