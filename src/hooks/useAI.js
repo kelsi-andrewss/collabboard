@@ -1,7 +1,7 @@
 import { getGenerativeModel } from "firebase/ai";
 import { ai } from "../firebase/config";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { toolDeclarations, systemPrompt } from "../ai/toolDeclarations";
+import { toolDeclarations, buildSystemPrompt } from "../ai/toolDeclarations";
 import { executeToolCall } from "../ai/toolExecutors";
 import { findNonOverlappingPosition } from "../utils/frameUtils";
 
@@ -72,7 +72,7 @@ function createMutationTracker(rawActions, currentObjects) {
   return { addObject, updateObject, deleteObject, getMutations };
 }
 
-export function useAI(boardId, boardActions, objects, user, isAdmin) {
+export function useAI(boardId, boardActions, objects, user, isAdmin, aiResponseMode) {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
@@ -104,9 +104,9 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
     return getGenerativeModel(ai, {
       model: "gemini-2.0-flash",
       tools: [tools],
-      systemInstruction: systemPrompt + userIdentityLine,
+      systemInstruction: buildSystemPrompt(aiResponseMode) + userIdentityLine,
     });
-  }, [boardId, tools, userIdentityLine]);
+  }, [boardId, tools, userIdentityLine, aiResponseMode]);
 
   const chat = useMemo(() => {
     if (!model) return null;
@@ -370,10 +370,12 @@ export function useAI(boardId, boardActions, objects, user, isAdmin) {
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
         }
-      } else {
       }
 
-      const responseText = result.response.text();
+      let responseText = result.response.text();
+      if (!responseText && calls && calls.length > 0) {
+        responseText = 'Done.';
+      }
       setChatHistory(prev => {
         const next = [...prev, { role: 'ai', message: responseText, timestamp: Date.now() }];
         return next.length > MAX_CHAT_HISTORY ? next.slice(next.length - MAX_CHAT_HISTORY) : next;

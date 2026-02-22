@@ -176,7 +176,7 @@ export function App() {
     pushCompoundEntry: board.pushCompoundEntry,
     createBoard: aiCreateBoard,
     getBoards: () => allBoards
-  }, board?.objects, user, isAdmin);
+  }, board?.objects, user, isAdmin, preferences.aiResponseMode);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
   const [showHomeAI, setShowHomeAI] = useState(false);

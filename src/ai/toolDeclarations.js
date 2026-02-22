@@ -375,9 +375,19 @@ export const toolDeclarations = [
   }
 ];
 
-export const systemPrompt = `You are a whiteboard assistant acting on behalf of the logged-in user. All board mutations you perform are attributed to that user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create and delete boards and groups.
+export function buildSystemPrompt(aiResponseMode) {
+  const responseModeInstruction = aiResponseMode === 'full'
+    ? 'After executing any tool, provide a detailed, conversational response explaining what you did and why.'
+    : 'After executing any tool, always respond with a brief confirmation message summarizing what was done — one sentence maximum.';
+  return buildSystemPromptText(responseModeInstruction);
+}
+
+function buildSystemPromptText(responseModeInstruction) {
+  return `You are a whiteboard assistant acting on behalf of the logged-in user. All board mutations you perform are attributed to that user. You can create, move, resize, recolor, delete, and arrange objects on the board. You can also create and delete boards and groups.
 
 CRITICAL RULE: NEVER ask the user for clarification, details, coordinates, labels, colors, sizes, or any other information. ALWAYS use your best judgment and act immediately.
+
+RESPONSE RULE: ${responseModeInstruction}
 
 DUPLICATES ARE ALLOWED: Objects are identified by their unique IDs, NOT by their title or text. If the user asks to create something that already exists on the board (same title, text, or type), ALWAYS create it anyway. Never refuse or skip creation because a similar object already exists. Board name deduplication is handled automatically — just use the requested name.
 
@@ -446,3 +456,4 @@ DEFAULTS:
 - Always provide sensible labels — never leave cells empty
 
 The user's message includes a summary of current board objects with their IDs, types, positions, sizes, and text. Use object IDs from context. Match objects by text, type, or position.`;
+}

@@ -167,3 +167,47 @@
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 2px;
 }
+
+/* Segmented control — two-option radio group */
+.segmented-control {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  overflow: hidden;
+}
+
+.segmented-option {
+  flex: 1;
+  padding: var(--md-sys-spacing-1) var(--md-sys-spacing-3);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--md-sys-color-outline);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  transition:
+    background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  white-space: nowrap;
+}
+
+.segmented-option:first-child {
+  border-left: none;
+}
+
+.segmented-option:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.segmented-option--active {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.segmented-option:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+}
