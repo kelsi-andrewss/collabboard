@@ -91,18 +91,48 @@ export function useGroupsList(currentUser, isAdminView = false) {
     await deleteDoc(doc(db, 'groups', groupId));
   };
 
-  const inviteGroupMember = async (groupId, uid, role = 'admin') => {
+  const inviteGroupMember = async (groupId, uid, role = 'admin', allBoards = [], allGroups = []) => {
     await updateDoc(doc(db, 'groups', groupId), {
       [`members.${uid}`]: role,
       updatedAt: serverTimestamp(),
     });
+
+    const descendantIds = getDescendants(groupId, allGroups);
+    const allGroupIds = [groupId, ...descendantIds];
+    const affectedBoards = allBoards.filter(b => allGroupIds.includes(b.groupId));
+
+    for (let i = 0; i < affectedBoards.length; i += 500) {
+      const batch = writeBatch(db);
+      affectedBoards.slice(i, i + 500).forEach(board => {
+        batch.update(doc(db, 'boards', board.id), {
+          [`groupMembers.${uid}`]: role,
+          updatedAt: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
   };
 
-  const removeGroupMember = async (groupId, uid) => {
+  const removeGroupMember = async (groupId, uid, allBoards = [], allGroups = []) => {
     await updateDoc(doc(db, 'groups', groupId), {
       [`members.${uid}`]: deleteField(),
       updatedAt: serverTimestamp(),
     });
+
+    const descendantIds = getDescendants(groupId, allGroups);
+    const allGroupIds = [groupId, ...descendantIds];
+    const affectedBoards = allBoards.filter(b => allGroupIds.includes(b.groupId));
+
+    for (let i = 0; i < affectedBoards.length; i += 500) {
+      const batch = writeBatch(db);
+      affectedBoards.slice(i, i + 500).forEach(board => {
+        batch.update(doc(db, 'boards', board.id), {
+          [`groupMembers.${uid}`]: deleteField(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
   };
 
   const migrateGroupStrings = async () => {
