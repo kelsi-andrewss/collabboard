@@ -8,7 +8,7 @@ function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user } = state;
   const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
   const [copied, setCopied] = useState(false);
-  const { pos, dragHandleProps, orientation, toggleOrientation } = useDraggableFloat('toolbar-right', null);
+  const { dragHandleProps, orientation, toggleOrientation } = useDraggableFloat('toolbar-right', null);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -21,9 +21,9 @@ function HeaderRightInner({ state, handlers }) {
       className="floating-toolbar-chip"
       ref={dragHandleProps.ref}
       data-orient={orientation === 'vertical' ? 'vertical' : undefined}
-      style={pos ? { left: pos.x, top: pos.y } : { right: 16, top: 16 }}
+      style={{ right: 16, top: 16 }}
     >
-      <span className="chip-grip" onMouseDown={dragHandleProps.onMouseDown}>&#10815;</span>
+      <span className="chip-grip" onDoubleClick={toggleOrientation}>&#x28FF;</span>
       <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />
       <span className="header-divider" />
       <div className="header-icon-group">
@@ -53,14 +53,6 @@ function HeaderRightInner({ state, handlers }) {
       </div>
       <span className="header-divider" />
       <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />
-      <button
-        className="chip-orient-btn"
-        onMouseDown={e => e.stopPropagation()}
-        onClick={toggleOrientation}
-        title="Toggle orientation"
-      >
-        &#x2194;
-      </button>
     </div>
   );
 }
