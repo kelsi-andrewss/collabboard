@@ -1,0 +1,169 @@
+.appearance-settings {
+  max-width: 400px;
+  width: 100%;
+}
+
+.appearance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--md-sys-spacing-5);
+}
+
+.appearance-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.appearance-close {
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  padding: var(--md-sys-spacing-1);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  display: flex;
+  align-items: center;
+  transition: color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.appearance-close:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.appearance-section {
+  margin-bottom: var(--md-sys-spacing-6);
+}
+
+.appearance-section h3 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0 0 var(--md-sys-spacing-3) 0;
+}
+
+/* Theme swatch grid */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--md-sys-spacing-3);
+}
+
+.theme-swatch {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--swatch-color);
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition:
+    border-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  justify-self: center;
+}
+
+.theme-swatch:hover {
+  border-color: var(--md-sys-color-outline);
+  transform: scale(1.08);
+}
+
+.theme-swatch--active {
+  border-color: var(--md-sys-color-primary);
+  outline: 2px solid var(--md-sys-color-primary-container);
+  outline-offset: 1px;
+}
+
+.swatch-check {
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Toggle rows */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-4);
+  padding: var(--md-sys-spacing-3) 0;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.toggle-description {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.4;
+}
+
+/* M3-style toggle switch — 52px wide track, 32px tall, 24px thumb */
+.toggle-switch {
+  flex-shrink: 0;
+  width: 52px;
+  height: 32px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-variant);
+  border: 2px solid var(--md-sys-color-outline);
+  cursor: pointer;
+  position: relative;
+  transition:
+    background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch--on {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.toggle-thumb {
+  position: absolute;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-outline);
+  transition:
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-emphasized),
+    width var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    height var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.toggle-switch--on .toggle-thumb {
+  transform: translateX(20px);
+  width: 24px;
+  height: 24px;
+  left: 0px;
+  background-color: var(--md-sys-color-on-primary);
+}
+
+.toggle-switch:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}

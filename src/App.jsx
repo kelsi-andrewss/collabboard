@@ -34,6 +34,7 @@ import { UserAvatarMenu } from './components/UserAvatarMenu.jsx';
 import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
 import { AdminPanel } from './components/AdminPanel.jsx';
+import { AppearanceSettings } from './components/AppearanceSettings.jsx';
 import './App.css';
 
 export function App() {
@@ -208,6 +209,7 @@ export function App() {
   const [contextMenu, setContextMenu] = useState(null); // { screenX, screenY, canvasX, canvasY, targetId }
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
   const [activeTool, setActiveTool] = useState('pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
@@ -670,7 +672,7 @@ export function App() {
               {user && (
                 <>
                   <span className="header-divider" />
-                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} />
+                  <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
                 </>
               )}
             </>
@@ -944,6 +946,13 @@ export function App() {
           </div>
         )}
       </div>
+      {showAppearanceSettings && (
+        <AppearanceSettings
+          preferences={preferences}
+          updatePreference={updatePreference}
+          onClose={() => setShowAppearanceSettings(false)}
+        />
+      )}
     </div>
   );
 }

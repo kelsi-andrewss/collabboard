@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Shield, Palette } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import './UserAvatarMenu.css';
 
-export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView, onOpenAdminPanel }) {
+export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView, onOpenAdminPanel, onOpenAppearance }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -55,6 +55,10 @@ export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggl
             </>
           )}
           <div className="dropdown-divider" />
+          <button className="dropdown-item" onClick={() => { setOpen(false); onOpenAppearance?.(); }}>
+            <Palette size={16} />
+            Appearance
+          </button>
           <button className="dropdown-item" onClick={logout}>
             <LogOut size={16} />
             Sign out
