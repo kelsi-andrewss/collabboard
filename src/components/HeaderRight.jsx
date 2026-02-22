@@ -16,6 +16,37 @@ function HeaderRightInner({ state, handlers }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const iconGroup = (
+    <div className="header-icon-group">
+      <button
+        className="help-btn"
+        onClick={handleCopyLink}
+        title="Copy board link"
+      >
+        {copied ? <Check size={18} /> : <Link size={18} />}
+      </button>
+      {setShowBoardSettings && (
+        <button
+          className="help-btn"
+          onClick={() => setShowBoardSettings(true)}
+          title="Board settings & sharing"
+        >
+          <Settings size={18} />
+        </button>
+      )}
+      <button
+        className="help-btn"
+        onClick={() => setShowTutorial(true)}
+        title="Show Tutorial"
+      >
+        <HelpCircle size={18} />
+      </button>
+    </div>
+  );
+
+  const userMenu = <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />;
+  const presenceAvatars = <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />;
+
   return (
     <div
       className="floating-toolbar-chip"
@@ -26,35 +57,23 @@ function HeaderRightInner({ state, handlers }) {
       <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">
         {orientation === 'vertical' ? '↔' : '↕'}
       </button>
-      <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />
-      <span className="header-divider" />
-      <div className="header-icon-group">
-        <button
-          className="help-btn"
-          onClick={handleCopyLink}
-          title="Copy board link"
-        >
-          {copied ? <Check size={18} /> : <Link size={18} />}
-        </button>
-        {setShowBoardSettings && (
-          <button
-            className="help-btn"
-            onClick={() => setShowBoardSettings(true)}
-            title="Board settings & sharing"
-          >
-            <Settings size={18} />
-          </button>
-        )}
-        <button
-          className="help-btn"
-          onClick={() => setShowTutorial(true)}
-          title="Show Tutorial"
-        >
-          <HelpCircle size={18} />
-        </button>
-      </div>
-      <span className="header-divider" />
-      <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />
+      {orientation === 'vertical' ? (
+        <>
+          {userMenu}
+          <span className="header-divider" />
+          {iconGroup}
+          <span className="header-divider" />
+          {presenceAvatars}
+        </>
+      ) : (
+        <>
+          {presenceAvatars}
+          <span className="header-divider" />
+          {iconGroup}
+          <span className="header-divider" />
+          {userMenu}
+        </>
+      )}
     </div>
   );
 }
