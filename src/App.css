@@ -1,5 +1,5 @@
 :root {
-  --header-height: 60px;
+  --header-height: 0px;
 }
 
 #root {
@@ -21,15 +21,39 @@
 }
 
 .header {
-  height: var(--header-height);
-  background-color: var(--md-sys-color-surface);
-  color: var(--md-sys-color-on-surface);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: transparent;
+  box-shadow: none;
+  border-bottom: none;
+  height: 0;
+  overflow: visible;
+  padding: 0;
+}
+
+.floating-toolbar-chip {
+  position: fixed;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--md-sys-spacing-lg);
-  z-index: 10;
-  box-shadow: var(--md-sys-elevation-0);
+  gap: var(--md-sys-spacing-xs);
+  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
+  background: color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: var(--md-sys-elevation-2);
+  z-index: 100;
+  user-select: none;
+  cursor: grab;
+  overflow: visible;
+}
+
+.floating-toolbar-chip:active {
+  cursor: grabbing;
 }
 
 .header-left {
