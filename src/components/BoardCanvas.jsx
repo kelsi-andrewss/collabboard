@@ -607,9 +607,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const dimColor = darkMode ? '#6b7280' : '#9ca3af';
           const font = 'system-ui, sans-serif';
           const tips = [
-            { key: 'Drag', desc: ' to pan' },
-            { key: 'Scroll', desc: ' to zoom' },
-            { key: 'Click', desc: ' to select' },
+            { key: 'Drag', desc: '\u00a0to pan' },
+            { key: 'Scroll', desc: '\u00a0to zoom' },
+            { key: 'Click', desc: '\u00a0to select' },
           ];
           const mc = document.createElement('canvas').getContext('2d');
           const fontSize = 14;
