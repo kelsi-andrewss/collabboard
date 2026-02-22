@@ -17,6 +17,9 @@ function makeConfig(overrides = {}) {
     pendingToolRef: { current: null },
     pendingToolCountRef: { current: 0 },
     onPendingToolPlace: vi.fn(),
+    connectorFirstPointRef: { current: null },
+    setConnectorFirstPoint: vi.fn(),
+    addObject: vi.fn(),
     ...overrides,
   };
 }
@@ -308,23 +311,33 @@ describe('ghost-placement agreement — click, move, click', () => {
   });
 
   it('line at scale 1.0 — placed coords equal canvas coords', () => {
-    const canvasPos = { x: 200, y: 300 };
+    const connectorFirstPointRef = { current: null };
+    const setConnectorFirstPoint = vi.fn((pt) => {
+      connectorFirstPointRef.current = pt;
+    });
+    const addObject = vi.fn();
     const cfg = makeConfig({
       pendingToolRef: { current: 'line' },
       pendingToolCountRef: { current: 0 },
+      connectorFirstPointRef,
+      setConnectorFirstPoint,
+      addObject,
     });
     const { handleStageClick } = makeStageHandlers(cfg);
 
-    const fakeStage = makeFakeStage(canvasPos);
-    const fakeTarget = { getStage: () => fakeStage, name: () => 'bg-rect' };
-    handleStageClick({ target: fakeTarget });
+    // Click 1 — sets first point
+    const fakeStage1 = makeFakeStage({ x: 100, y: 150 });
+    handleStageClick({ target: fakeStage1 });
+    expect(setConnectorFirstPoint).toHaveBeenCalledWith(
+      expect.objectContaining({ x: 100, y: 150 })
+    );
 
-    const [, placedX, placedY] = cfg.onPendingToolPlace.mock.calls[0];
-    const ghost = ghostPos('line', 200, 300, 1.0);
-    expect(placedX).toBe(ghost.x);
-    expect(placedY).toBe(ghost.y);
-    expect(placedX).toBe(200);
-    expect(placedY).toBe(300);
+    // Click 2 — creates the line
+    const fakeStage2 = makeFakeStage({ x: 200, y: 300 });
+    handleStageClick({ target: fakeStage2 });
+    expect(addObject).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'line', x: 100, y: 150 })
+    );
   });
 
   it('default shape (rectangle) at scale 1.5 — handler passes raw canvas coords', () => {
