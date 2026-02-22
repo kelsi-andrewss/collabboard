@@ -257,6 +257,57 @@ export function sortObjects(a, b) {
   return (a.zIndex || 0) - (b.zIndex || 0);
 }
 
+export function buildRenderOrder(objects) {
+  const objArr = Object.values(objects);
+
+  const rootFrames = objArr
+    .filter(o => o.type === 'frame' && !o.frameId)
+    .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+  const childFrames = {};
+  for (const o of objArr) {
+    if (o.type === 'frame' && o.frameId) {
+      (childFrames[o.frameId] ||= []).push(o);
+    }
+  }
+
+  const nonFramesByParent = {};
+  for (const o of objArr) {
+    if (o.type !== 'frame') {
+      const key = o.frameId || '__root__';
+      (nonFramesByParent[key] ||= []).push(o);
+    }
+  }
+  for (const arr of Object.values(nonFramesByParent)) {
+    arr.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }
+
+  const result = [];
+
+  function visitFrame(frame) {
+    result.push(frame);
+    for (const child of (nonFramesByParent[frame.id] || [])) {
+      result.push(child);
+    }
+    const nested = (childFrames[frame.id] || [])
+      .slice()
+      .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    for (const nf of nested) {
+      visitFrame(nf);
+    }
+  }
+
+  for (const frame of rootFrames) {
+    visitFrame(frame);
+  }
+
+  for (const obj of (nonFramesByParent['__root__'] || [])) {
+    result.push(obj);
+  }
+
+  return result;
+}
+
 export function computeVisibleIds(allObjs, objMap, viewport, selectedId, draggingId) {
   const { vLeft, vTop, vRight, vBottom } = viewport;
   const visibleIds = new Set();
@@ -611,10 +662,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           const allObjs = Object.values(objects);
           const objMap = objects;
           const visibleIds = computeVisibleIds(allObjs, objMap, { vLeft, vTop, vRight, vBottom }, selectedId, dragState?.draggingId);
-          return allObjs
+          return buildRenderOrder(objects)
             .filter(obj => visibleIds.has(obj.id));
         })()
-          .sort(sortObjects)
           .map((obj) => {
             const isMultiSelected = selectedIds?.has(obj.id);
             if (obj.type === 'frame') {
