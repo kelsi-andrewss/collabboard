@@ -48,6 +48,9 @@ function defaultProps(overrides = {}) {
     onInviteMember: vi.fn(),
     onRemoveMember: vi.fn(),
     onClose: vi.fn(),
+    publishTemplate: vi.fn(),
+    updateTemplate: vi.fn(),
+    unpublishTemplate: vi.fn(),
     ...overrides,
   };
 }
@@ -425,7 +428,7 @@ describe('BoardSettings — editor role gets canManage access', () => {
     expect(onRemoveMember).not.toHaveBeenCalled();
   });
 
-  it('renders a template checkbox for a member with editor role', () => {
+  it('renders "Convert to Template" button for a member with editor role when template is false', () => {
     const board = makeBoard({
       ownerId: 'owner-uid',
       members: { 'editor-uid': 'editor' },
@@ -436,7 +439,7 @@ describe('BoardSettings — editor role gets canManage access', () => {
         {...defaultProps({ board, currentUserId: 'editor-uid' })}
       />
     );
-    expect(screen.getByRole('checkbox')).toBeTruthy();
+    expect(screen.getByText('Convert to Template')).toBeTruthy();
   });
 });
 
@@ -445,6 +448,10 @@ describe('BoardSettings — editor role gets canManage access', () => {
 // ---------------------------------------------------------------------------
 
 describe('BoardSettings — template toggle', () => {
+  beforeEach(() => {
+    localStorage.removeItem('templateUpdateWarningDismissed');
+  });
+
   afterEach(() => {
     cleanup();
   });
@@ -454,47 +461,56 @@ describe('BoardSettings — template toggle', () => {
     expect(screen.getByText('Template')).toBeTruthy();
   });
 
-  it('renders a checkbox for managers when board.template is false', () => {
+  it('renders "Convert to Template" button when board.template is false', () => {
     const board = makeBoard({ template: false });
     render(<BoardSettings {...defaultProps({ board })} />);
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).toBeTruthy();
-    expect(checkbox.checked).toBe(false);
+    expect(screen.getByText('Convert to Template')).toBeTruthy();
   });
 
-  it('renders a checked checkbox for managers when board.template is true', () => {
+  it('renders "Convert to Template" button when template field is missing', () => {
+    const board = makeBoard();
+    render(<BoardSettings {...defaultProps({ board })} />);
+    expect(screen.getByText('Convert to Template')).toBeTruthy();
+  });
+
+  it('renders "Update Template" and "Remove from Browse" when board.template is true', () => {
     const board = makeBoard({ template: true });
     render(<BoardSettings {...defaultProps({ board })} />);
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox.checked).toBe(true);
+    expect(screen.getByText('Update Template')).toBeTruthy();
+    expect(screen.getByText('Remove from Browse')).toBeTruthy();
   });
 
-  it('calls onUpdateSettings with { template: true } when checkbox is toggled from off', () => {
-    const onUpdateSettings = vi.fn();
+  it('calls publishTemplate with boardId when "Convert to Template" is clicked', () => {
+    const publishTemplate = vi.fn();
     const board = makeBoard({ template: false });
-    render(<BoardSettings {...defaultProps({ board, onUpdateSettings })} />);
-    const checkbox = screen.getByRole('checkbox');
-    fireEvent.click(checkbox);
-    expect(onUpdateSettings).toHaveBeenCalledWith({ template: true });
+    render(<BoardSettings {...defaultProps({ board, publishTemplate })} />);
+    fireEvent.click(screen.getByText('Convert to Template'));
+    expect(publishTemplate).toHaveBeenCalledWith('board-1');
   });
 
-  it('calls onUpdateSettings with { template: false } when checkbox is toggled from on', () => {
-    const onUpdateSettings = vi.fn();
+  it('calls unpublishTemplate with boardId when "Remove from Browse" is clicked', () => {
+    const unpublishTemplate = vi.fn();
     const board = makeBoard({ template: true });
-    render(<BoardSettings {...defaultProps({ board, onUpdateSettings })} />);
-    const checkbox = screen.getByRole('checkbox');
-    fireEvent.click(checkbox);
-    expect(onUpdateSettings).toHaveBeenCalledWith({ template: false });
+    render(<BoardSettings {...defaultProps({ board, unpublishTemplate })} />);
+    fireEvent.click(screen.getByText('Remove from Browse'));
+    expect(unpublishTemplate).toHaveBeenCalledWith('board-1');
   });
 
-  it('does not render a checkbox for non-managers; shows read-only text instead', () => {
+  it('shows confirmation dialog when "Update Template" is clicked (default behavior)', () => {
+    const board = makeBoard({ template: true });
+    render(<BoardSettings {...defaultProps({ board })} />);
+    fireEvent.click(screen.getByText('Update Template'));
+    expect(screen.getByText('Update template?')).toBeTruthy();
+  });
+
+  it('does not render interactive template controls for non-managers; shows read-only text', () => {
     const board = makeBoard({ ownerId: 'someone-else', template: false });
     render(
       <BoardSettings
         {...defaultProps({ board, currentUserId: 'viewer-uid' })}
       />
     );
-    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByText('Convert to Template')).toBeNull();
     expect(screen.getByText('This board is not a template.')).toBeTruthy();
   });
 
@@ -505,14 +521,7 @@ describe('BoardSettings — template toggle', () => {
         {...defaultProps({ board, currentUserId: 'viewer-uid' })}
       />
     );
-    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByText('Update Template')).toBeNull();
     expect(screen.getByText('This board is a template.')).toBeTruthy();
-  });
-
-  it('treats a missing template field as falsy for the checkbox', () => {
-    const board = makeBoard();
-    render(<BoardSettings {...defaultProps({ board })} />);
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox.checked).toBe(false);
   });
 });

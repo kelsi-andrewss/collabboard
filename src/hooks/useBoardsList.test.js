@@ -432,3 +432,205 @@ describe('useBoardsList — switching isAdminView', () => {
     expect(mockWhere).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// useBoardsList — template functions
+// ---------------------------------------------------------------------------
+
+describe('useBoardsList — publishTemplate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    onSnapshotCallbacks = {};
+    unsubscribers = {};
+  });
+
+  it('reads the objects subcollection and the existing templateSnapshot subcollection', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: vi.fn(),
+      commit: vi.fn().mockResolvedValue(undefined),
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    await act(async () => {
+      await result.current.publishTemplate('board-1');
+    });
+
+    expect(mockGetDocs).toHaveBeenCalledTimes(2);
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls updateDoc with template: true and templateSnapshotAt', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: vi.fn(),
+      commit: vi.fn().mockResolvedValue(undefined),
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    await act(async () => {
+      await result.current.publishTemplate('board-1');
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ template: true, templateSnapshotAt: 'SERVER_TIMESTAMP' })
+    );
+  });
+
+  it('writes snapshot docs to templateSnapshot subcollection preserving IDs', async () => {
+    const fakeDoc = {
+      id: 'obj-1',
+      data: () => ({ type: 'sticky', x: 10, y: 20 }),
+      ref: { __type: 'ref' },
+    };
+    mockGetDocs
+      .mockResolvedValueOnce({ docs: [fakeDoc] })
+      .mockResolvedValueOnce({ docs: [] });
+
+    const mockBatchSet = vi.fn();
+    const mockBatchCommit = vi.fn().mockResolvedValue(undefined);
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: mockBatchSet,
+      commit: mockBatchCommit,
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    await act(async () => {
+      await result.current.publishTemplate('board-1');
+    });
+
+    expect(mockBatchSet).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type: 'sticky', x: 10, y: 20 })
+    );
+  });
+});
+
+describe('useBoardsList — unpublishTemplate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    onSnapshotCallbacks = {};
+    unsubscribers = {};
+  });
+
+  it('calls updateDoc with template: false and deleteField for templateSnapshotAt', async () => {
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    await act(async () => {
+      await result.current.unpublishTemplate('board-1');
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ template: false, templateSnapshotAt: '__DELETE__' })
+    );
+  });
+});
+
+describe('useBoardsList — updateTemplate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    onSnapshotCallbacks = {};
+    unsubscribers = {};
+  });
+
+  it('calls updateDoc with template: true after re-snapshotting', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: vi.fn(),
+      commit: vi.fn().mockResolvedValue(undefined),
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    await act(async () => {
+      await result.current.updateTemplate('board-1');
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ template: true, templateSnapshotAt: 'SERVER_TIMESTAMP' })
+    );
+  });
+});
+
+describe('useBoardsList — createBoardFromTemplate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    onSnapshotCallbacks = {};
+    unsubscribers = {};
+  });
+
+  it('creates a new board and copies snapshot docs into its objects subcollection', async () => {
+    const newBoardRef = { id: 'new-board-id' };
+    mockAddDoc.mockResolvedValue(newBoardRef);
+
+    const fakeSnapshotDoc = {
+      id: 'obj-1',
+      data: () => ({ type: 'rectangle', x: 5, y: 15 }),
+    };
+    mockGetDocs.mockResolvedValue({ docs: [fakeSnapshotDoc] });
+
+    const mockBatchSet = vi.fn();
+    const mockBatchCommit = vi.fn().mockResolvedValue(undefined);
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: mockBatchSet,
+      commit: mockBatchCommit,
+    });
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    let returnedId;
+    await act(async () => {
+      returnedId = await result.current.createBoardFromTemplate('template-board-id', 'My Copy', null, 'private');
+    });
+
+    expect(returnedId).toBe('new-board-id');
+    expect(mockBatchSet).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: 'rectangle',
+        x: 5,
+        y: 15,
+        userId: fakeUser.uid,
+        createdAt: 'SERVER_TIMESTAMP',
+        updatedAt: 'SERVER_TIMESTAMP',
+      })
+    );
+  });
+
+  it('returns the new board ID', async () => {
+    const newBoardRef = { id: 'created-board-999' };
+    mockAddDoc.mockResolvedValue(newBoardRef);
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockWriteBatch.mockReturnValue({
+      delete: vi.fn(),
+      set: vi.fn(),
+      commit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { result } = renderHook(() => useBoardsList(fakeUser));
+
+    let id;
+    await act(async () => {
+      id = await result.current.createBoardFromTemplate('tmpl-id', 'Board Name', null, 'private');
+    });
+
+    expect(id).toBe('created-board-999');
+  });
+});

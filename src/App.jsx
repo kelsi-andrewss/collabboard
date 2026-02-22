@@ -105,7 +105,7 @@ export function App() {
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
   const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup } = useGroupsList(user, effectiveAdminView);
-  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
+  const { boards: allBoards, createBoard: createNewBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, publishTemplate, updateTemplate, unpublishTemplate, createBoardFromTemplate } = useBoardsList(user, { isAdminView: effectiveAdminView, groups });
 
   const currentBoard = boardId ? allBoards.find(b => b.id === boardId) || null : null;
   const boardGroup = currentBoard?.groupId ? groups.find(g => g.id === currentBoard.groupId) : null;
@@ -721,6 +721,7 @@ export function App() {
                 deleteGroupCascade={deleteGroupCascade}
                 setGroupProtected={setGroupProtected}
                 moveGroup={moveGroup}
+                createBoardFromTemplate={createBoardFromTemplate}
               />
             )}
             <FABButtons
@@ -799,6 +800,9 @@ export function App() {
                 onRemoveMember={(uid) => removeMember(boardId, uid)}
                 onClose={() => setShowBoardSettings(false)}
                 isGroupAdmin={isGroupAdmin}
+                publishTemplate={publishTemplate}
+                updateTemplate={updateTemplate}
+                unpublishTemplate={unpublishTemplate}
               />
             )}
             {contextMenu && canEdit && (() => {

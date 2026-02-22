@@ -4,13 +4,22 @@ import { collection, query, where, orderBy, getDocs, limit } from 'firebase/fire
 import { db } from '../firebase/config';
 import './BoardSettings.css';
 
-export function BoardSettings({ board, currentUserId, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false }) {
+function formatTemplateDate(ts) {
+  if (!ts?.toDate) return '';
+  return ts.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function BoardSettings({ board, currentUserId, onUpdateSettings, onInviteMember, onRemoveMember, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [localVisibility, setLocalVisibility] = useState(board?.visibility || 'public');
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(
+    () => localStorage.getItem('templateUpdateWarningDismissed') === 'true'
+  );
   const userSearchTimerRef = useRef(null);
 
   useEffect(() => {
@@ -82,6 +91,27 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
 
   const memberEntries = Object.entries(members).filter(([uid]) => uid !== board.ownerId);
 
+  function handleConvertToTemplate() {
+    publishTemplate(board.id);
+  }
+  function handleUpdateTemplate() {
+    if (dontShowAgain) {
+      updateTemplate(board.id);
+    } else {
+      setShowUpdateConfirm(true);
+    }
+  }
+  function handleConfirmUpdate() {
+    if (dontShowAgain) {
+      localStorage.setItem('templateUpdateWarningDismissed', 'true');
+    }
+    updateTemplate(board.id);
+    setShowUpdateConfirm(false);
+  }
+  function handleRemoveFromBrowse() {
+    unpublishTemplate(board.id);
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card board-settings-card" onClick={e => e.stopPropagation()}>
@@ -149,16 +179,34 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
         <div className="board-settings-section">
           <h3>Template</h3>
           {canManage ? (
-            <label className="template-toggle-row">
-              <input
-                type="checkbox"
-                checked={!!board.template}
-                onChange={() => onUpdateSettings({ template: !board.template })}
-              />
-              <span>Show in Browse gallery</span>
-            </label>
+            <div className="template-section">
+              {!board.template ? (
+                <>
+                  <button className="btn-convert-template" onClick={handleConvertToTemplate}>
+                    Convert to Template
+                  </button>
+                  <p className="template-description">
+                    Make this board available in the Browse gallery. Others can use it as a starting point — they get their own copy; your board is unchanged.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="template-published-label">
+                    Template — published {formatTemplateDate(board.templateSnapshotAt)}
+                  </p>
+                  <div className="template-actions">
+                    <button className="btn-update-template" onClick={handleUpdateTemplate}>
+                      Update Template
+                    </button>
+                    <button className="btn-remove-template" onClick={handleRemoveFromBrowse}>
+                      Remove from Browse
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
-            <p className="visibility-description">
+            <p className="template-readonly-text">
               {board.template ? 'This board is a template.' : 'This board is not a template.'}
             </p>
           )}
@@ -244,6 +292,26 @@ export function BoardSettings({ board, currentUserId, onUpdateSettings, onInvite
           )}
         </div>
       </div>
+      {showUpdateConfirm && (
+        <div className="template-confirm-overlay">
+          <div className="template-confirm-dialog">
+            <h3>Update template?</h3>
+            <p>This will replace the published version with your board's current state. Anyone who uses this template after this point will get the new version. Boards already created from this template are not affected.</p>
+            <label className="template-dont-show">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={e => setDontShowAgain(e.target.checked)}
+              />
+              Don't show again
+            </label>
+            <div className="template-confirm-buttons">
+              <button onClick={() => setShowUpdateConfirm(false)}>Cancel</button>
+              <button className="btn-confirm-update" onClick={handleConfirmUpdate}>Update Template</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -54,13 +54,17 @@ const loadGroupSort = () => {
 const saveGroupSort = (mode, order, asc, view) =>
   localStorage.setItem(SORT_KEY, JSON.stringify({ mode, order, asc, view }));
 
-export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup }) {
+export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBoard, darkMode, setDarkMode, user, logout, groups: groupsProp = [], createGroup, deleteGroupDoc, isAdmin, adminViewActive, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup, createBoardFromTemplate }) {
   const effectiveAdminView = isAdmin && adminViewActive;
   const { boards, loading, createBoard, deleteBoard, deleteGroup, inviteMember, moveBoard, setBoardProtected } = useBoardsList(user, { isAdminView: effectiveAdminView, groups: groupsProp });
   const globalPresence = useGlobalPresence();
   const [showModal, setShowModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [useTemplateDialog, setUseTemplateDialog] = useState(null);
+  const [templateBoardName, setTemplateBoardName] = useState('');
+  const [templateBoardGroup, setTemplateBoardGroup] = useState('');
+  const [templateBoardVisibility, setTemplateBoardVisibility] = useState('private');
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupModalData, setGroupModalData] = useState({ name: '', visibility: 'private' });
   const [groupNameError, setGroupNameError] = useState('');
@@ -476,6 +480,27 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
     setShowModal(true);
   };
 
+  const handleUseTemplate = (board) => {
+    setTemplateBoardName(board.name || '');
+    setTemplateBoardGroup('');
+    setTemplateBoardVisibility('private');
+    setUseTemplateDialog({ id: board.id, name: board.name });
+  };
+
+  const handleCreateFromTemplate = async () => {
+    const templateId = useTemplateDialog.id;
+    const name = templateBoardName;
+    const groupId = templateBoardGroup || null;
+    const vis = templateBoardVisibility;
+    setUseTemplateDialog(null);
+    const newBoardId = await createBoardFromTemplate(templateId, name, groupId, vis);
+    if (onNavigateToBoard) {
+      onNavigateToBoard([], newBoardId, name);
+    } else {
+      onSelectBoard(newBoardId, name);
+    }
+  };
+
   return (
     <div className="board-selector-container">
       <div className="board-selector-inner">
@@ -671,20 +696,29 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                   const thumb = darkMode
                     ? (b.thumbnailDark || b.thumbnailLight || b.thumbnail)
                     : (b.thumbnailLight || b.thumbnailDark || b.thumbnail);
+                  const isBrowseCard = boardView === 'public';
                   let standaloneCardRef = null;
                   return (
                     <div
                       key={b.id}
                       className={`board-card standalone-board-card${isDragging ? ' board-card--dragging' : ''}`}
                       ref={el => { standaloneCardRef = el; }}
-                      onClick={() => onNavigateToBoard ? onNavigateToBoard([], b.id, b.name) : onSelectBoard(b.id, b.name)}
+                      onClick={() => {
+                        if (isBrowseCard) {
+                          handleUseTemplate(b);
+                        } else if (onNavigateToBoard) {
+                          onNavigateToBoard([], b.id, b.name);
+                        } else {
+                          onSelectBoard(b.id, b.name);
+                        }
+                      }}
                     >
                       <div className="board-card-thumbnail">
                         {thumb
                           ? <img src={thumb} alt="" className="board-card-thumbnail-img" />
                           : <div className="board-card-thumbnail-placeholder" />
                         }
-                        {isOwner && (
+                        {isOwner && !isBrowseCard && (
                           <span
                             className="board-card-drag-handle"
                             draggable
@@ -711,14 +745,25 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                           </div>
                         )}
                         <div className="board-card-row">
-                          <span className="board-card-name">{b.name}</span>
-                          {deleteBoard && !b.groupId && (
+                          <span className="board-card-name">
+                            {b.name}
+                            {isBrowseCard && <span className="template-badge">Template</span>}
+                          </span>
+                          {deleteBoard && !b.groupId && !isBrowseCard && (
                             <button
                               className="board-card-delete-btn"
                               title="Delete board"
                               onClick={(e) => { e.stopPropagation(); deleteBoard(b.id); }}
                             >
                               <Trash2 size={12} />
+                            </button>
+                          )}
+                          {isBrowseCard && (
+                            <button
+                              className="btn-use-template"
+                              onClick={(e) => { e.stopPropagation(); handleUseTemplate(b); }}
+                            >
+                              Use Template
                             </button>
                           )}
                         </div>
@@ -1038,6 +1083,37 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
                 <button type="submit" className="primary-btn" disabled={!newBoardName.trim() || (newBoardVisibility === 'open' && !confirmOpenBoard)}>Create Board</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {useTemplateDialog && (
+        <div className="use-template-overlay">
+          <div className="use-template-dialog">
+            <h3>Use "{useTemplateDialog.name}"?</h3>
+            <div className="use-template-field">
+              <label>Board name</label>
+              <input value={templateBoardName} onChange={e => setTemplateBoardName(e.target.value)} />
+            </div>
+            <div className="use-template-field">
+              <label>Group</label>
+              <select value={templateBoardGroup} onChange={e => setTemplateBoardGroup(e.target.value)}>
+                <option value="">None</option>
+                {(groupsProp || []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <div className="use-template-field">
+              <label>Visibility</label>
+              <select value={templateBoardVisibility} onChange={e => setTemplateBoardVisibility(e.target.value)}>
+                <option value="private">Private</option>
+                <option value="public">Public</option>
+                <option value="open">Open</option>
+              </select>
+            </div>
+            <div className="use-template-buttons">
+              <button onClick={() => setUseTemplateDialog(null)}>Cancel</button>
+              <button className="btn-create-from-template" onClick={handleCreateFromTemplate}>Create Board</button>
+            </div>
           </div>
         </div>
       )}

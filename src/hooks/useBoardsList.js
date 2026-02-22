@@ -135,5 +135,87 @@ export function useBoardsList(currentUser, { isAdminView = false, groups = [] } 
     await updateDoc(doc(db, 'boards', boardId), { protected: bool, updatedAt: serverTimestamp() });
   };
 
-  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, setBoardProtected };
+  const publishTemplate = async (boardId) => {
+    const objectsSnap = await getDocs(collection(db, 'boards', boardId, 'objects'));
+    const snapshotSnap = await getDocs(collection(db, 'boards', boardId, 'templateSnapshot'));
+
+    const deleteDocs = snapshotSnap.docs;
+    for (let i = 0; i < deleteDocs.length; i += 500) {
+      const batch = writeBatch(db);
+      deleteDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    const newDocs = objectsSnap.docs;
+    for (let i = 0; i < newDocs.length; i += 500) {
+      const batch = writeBatch(db);
+      newDocs.slice(i, i + 500).forEach(d => {
+        const ref = doc(db, 'boards', boardId, 'templateSnapshot', d.id);
+        batch.set(ref, d.data());
+      });
+      await batch.commit();
+    }
+
+    await updateDoc(doc(db, 'boards', boardId), {
+      template: true,
+      templateSnapshotAt: serverTimestamp(),
+    });
+  };
+
+  const updateTemplate = async (boardId) => {
+    const objectsSnap = await getDocs(collection(db, 'boards', boardId, 'objects'));
+    const snapshotSnap = await getDocs(collection(db, 'boards', boardId, 'templateSnapshot'));
+
+    const deleteDocs = snapshotSnap.docs;
+    for (let i = 0; i < deleteDocs.length; i += 500) {
+      const batch = writeBatch(db);
+      deleteDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    const newDocs = objectsSnap.docs;
+    for (let i = 0; i < newDocs.length; i += 500) {
+      const batch = writeBatch(db);
+      newDocs.slice(i, i + 500).forEach(d => {
+        const ref = doc(db, 'boards', boardId, 'templateSnapshot', d.id);
+        batch.set(ref, d.data());
+      });
+      await batch.commit();
+    }
+
+    await updateDoc(doc(db, 'boards', boardId), {
+      template: true,
+      templateSnapshotAt: serverTimestamp(),
+    });
+  };
+
+  const unpublishTemplate = async (boardId) => {
+    await updateDoc(doc(db, 'boards', boardId), {
+      template: false,
+      templateSnapshotAt: deleteField(),
+    });
+  };
+
+  const createBoardFromTemplate = async (templateBoardId, name, groupId, visibility) => {
+    const ref = await createBoard(name, groupId, visibility);
+    const newBoardId = ref.id;
+    const snapshotSnap = await getDocs(collection(db, 'boards', templateBoardId, 'templateSnapshot'));
+    const snapDocs = snapshotSnap.docs;
+    for (let i = 0; i < snapDocs.length; i += 500) {
+      const batch = writeBatch(db);
+      snapDocs.slice(i, i + 500).forEach(d => {
+        const objRef = doc(db, 'boards', newBoardId, 'objects', d.id);
+        batch.set(objRef, {
+          ...d.data(),
+          userId: currentUser.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
+    return newBoardId;
+  };
+
+  return { boards, loading, createBoard, saveThumbnail, deleteBoard, deleteGroup, updateBoardSettings, inviteMember, removeMember, moveBoard, setBoardProtected, publishTemplate, updateTemplate, unpublishTemplate, createBoardFromTemplate };
 }
