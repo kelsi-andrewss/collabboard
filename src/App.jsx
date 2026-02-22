@@ -20,7 +20,7 @@ import { makeObjectCreationHandlers } from './handlers/objectCreationHandlers.js
 import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
 import { makeStageHandlers, MIN_SCALE, MAX_SCALE } from './handlers/stageHandlers.js';
-import { getContentBounds } from './utils/frameUtils.js';
+import { getContentBounds, findOverlappingFrame, computeAncestorExpansions, FRAME_MARGIN } from './utils/frameUtils.js';
 import { AIPanel } from './components/AIPanel.jsx';
 import { FABButtons } from './components/FABButtons.jsx';
 import { ResizeTooltip } from './components/ResizeTooltip.jsx';
@@ -574,13 +574,10 @@ export function App() {
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
 
-  const onPendingToolPlace = (toolType, canvasX, canvasY) => {
+  const onPendingToolPlace = async (toolType, canvasX, canvasY) => {
     if (!canEditRef.current) return;
     const defaults = { userId: user.uid };
-    if (toolType === 'sticky') {
-      const sz = Math.round(200 / stageScale);
-      board.addObject({ type: 'sticky', text: 'New Sticky Note', x: canvasX - sz / 2, y: canvasY - sz / 2, width: sz, height: sz, color: shapeColors.sticky.active, ...defaults });
-    } else if (toolType === 'line') {
+    if (toolType === 'line') {
       const len = Math.round(200 / stageScale);
       board.addObject({ type: 'line', x: canvasX, y: canvasY, points: [0, 0, len, 0], color: shapeColors.shapes.active, strokeWidth: 3, ...defaults });
     } else if (toolType === 'arrow') {
@@ -593,7 +590,34 @@ export function App() {
       const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
       board.addObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
-      board.addObject({ type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults });
+      let objData;
+      if (toolType === 'sticky') {
+        const sz = Math.round(200 / stageScale);
+        objData = { type: 'sticky', text: 'New Sticky Note', x: canvasX - sz / 2, y: canvasY - sz / 2, width: sz, height: sz, color: shapeColors.sticky.active, ...defaults };
+      } else if (toolType === 'text') {
+        objData = { type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: '#1a1a1a', rotation: 0, frameId: null, childIds: [], ...defaults };
+      } else {
+        objData = { type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults };
+      }
+      const ref = await board.addObject(objData);
+      const objId = ref.id;
+      const overFrame = findOverlappingFrame(
+        { id: objId, x: objData.x, y: objData.y, width: objData.width || 100, height: objData.height || 100 },
+        board.objects
+      );
+      if (overFrame) {
+        const expansions = computeAncestorExpansions(
+          objData.x, objData.y, objData.width || 100, objData.height || 100,
+          overFrame.id,
+          board.objects,
+          FRAME_MARGIN
+        );
+        const allUpdates = [
+          { id: objId, data: { frameId: overFrame.id } },
+          ...expansions,
+        ];
+        await board.batchUpdateObjects(allUpdates);
+      }
     }
     setPendingToolCount(c => c + 1);
   };
