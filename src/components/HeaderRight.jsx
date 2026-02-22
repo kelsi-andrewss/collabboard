@@ -17,8 +17,10 @@ function HeaderRightInner({ state, handlers }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const isVertical = orientation === 'vertical';
+
   const iconGroup = (
-    <div className="header-icon-group">
+    <div className="header-icon-group" style={isVertical ? { flexDirection: 'column-reverse' } : undefined}>
       <button
         className="help-btn"
         onClick={handleCopyLink}
@@ -47,29 +49,32 @@ function HeaderRightInner({ state, handlers }) {
 
   const userMenu = <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />;
   const presenceAvatars = <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />;
+  const orientBtn = (
+    <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">
+      <ArrowLeftRight size={16} />
+    </button>
+  );
 
   return (
     <div
       className="floating-toolbar-chip"
       ref={dragHandleProps.ref}
-      data-orient={orientation === 'vertical' ? 'vertical' : undefined}
+      data-orient={isVertical ? 'vertical' : undefined}
       style={{ right: 16, top: 16 }}
     >
-      <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">
-        <ArrowLeftRight size={16} />
-      </button>
-      {orientation === 'vertical' ? (
+      {isVertical ? (
         <>
           {userMenu}
           <span className="header-divider" />
           {iconGroup}
           <span className="header-divider" />
           {presenceAvatars}
+          {orientBtn}
         </>
       ) : (
         <>
+          {orientBtn}
           {presenceAvatars}
-          <span className="header-divider" />
           {iconGroup}
           <span className="header-divider" />
           {userMenu}
