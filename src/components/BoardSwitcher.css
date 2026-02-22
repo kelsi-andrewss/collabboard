@@ -151,7 +151,7 @@
   display: flex;
   align-items: center;
   background: transparent;
-  border-radius: var(--md-sys-shape-corner-extra-small);
+  border-radius: var(--md-sys-shape-corner-small);
   border: none;
   overflow: hidden;
 }
@@ -159,7 +159,7 @@
 .tool-split-button button {
   background: transparent;
   border: none;
-  border-radius: 0;
+  border-radius: var(--md-sys-shape-corner-small);
   padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
@@ -196,7 +196,6 @@
 }
 
 .tool-split-button .dropdown-arrow {
-  border-left: 1px solid var(--md-sys-color-outline-variant);
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-xs);
 }
 
