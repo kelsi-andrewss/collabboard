@@ -4,7 +4,7 @@ import { findSnapTarget, getPortCoords, SNAP_DISTANCE, PORTS } from '../utils/co
 
 const PORT_RADIUS = 5;
 
-function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort }) {
+function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], color = '#3b82f6', strokeWidth = 3, rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, canEdit = true, objects, onUpdate, startConnectedId, startConnectedPort, endConnectedId, endConnectedPort, stageScale = 1 }) {
   const lineRef = useRef();
   const groupRef = useRef();
   const [draggingEndpoint, setDraggingEndpoint] = useState(null);
@@ -118,8 +118,8 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           ref={lineRef}
           points={effectivePts}
           stroke={isMultiSelected ? '#6366f1' : color}
-          strokeWidth={isMultiSelected ? strokeWidth + 2 : strokeWidth}
-          hitStrokeWidth={20}
+          strokeWidth={(isMultiSelected ? strokeWidth + 2 : strokeWidth) / stageScale}
+          hitStrokeWidth={Math.max(strokeWidth, 10) / stageScale}
           lineCap="round"
           lineJoin="round"
           perfectDrawEnabled={false}
@@ -133,13 +133,12 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           const endY = pts[pts.length - 1];
           return (
             <>
+              {/* Start endpoint: transparent hit circle behind visible dot */}
               <Circle
                 x={startX}
                 y={startY}
-                radius={6}
-                fill="#3b82f6"
-                stroke="#ffffff"
-                strokeWidth={2}
+                radius={14}
+                fill="transparent"
                 draggable
                 onDragStart={() => { setDraggingEndpoint('start'); }}
                 onDragMove={(e) => {
@@ -199,12 +198,21 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                 }}
               />
               <Circle
-                x={endX}
-                y={endY}
+                x={startX}
+                y={startY}
                 radius={6}
-                fill="#3b82f6"
+                fill="#6366f1"
                 stroke="#ffffff"
                 strokeWidth={2}
+                listening={false}
+                perfectDrawEnabled={false}
+              />
+              {/* End endpoint: transparent hit circle behind visible dot */}
+              <Circle
+                x={endX}
+                y={endY}
+                radius={14}
+                fill="transparent"
                 draggable
                 onDragStart={() => { setDraggingEndpoint('end'); }}
                 onDragMove={(e) => {
@@ -263,6 +271,16 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
                   }
                 }}
               />
+              <Circle
+                x={endX}
+                y={endY}
+                radius={6}
+                fill="#6366f1"
+                stroke="#ffffff"
+                strokeWidth={2}
+                listening={false}
+                perfectDrawEnabled={false}
+              />
             </>
           );
         })()}
@@ -288,8 +306,8 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
           x={p.x}
           y={p.y}
           radius={PORT_RADIUS}
-          fill={p.isSnapped ? '#3b82f6' : 'transparent'}
-          stroke={p.isSnapped ? '#3b82f6' : '#64748b'}
+          fill={p.isSnapped ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.15)'}
+          stroke="#6366f1"
           strokeWidth={1.5}
           listening={false}
           perfectDrawEnabled={false}

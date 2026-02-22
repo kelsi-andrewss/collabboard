@@ -1,4 +1,5 @@
 import { regularPolygonVertices, perpendicularBisector, angleBisector, tangentLines } from '../utils/geometryUtils.js';
+import { getPortCoords } from '../utils/connectorUtils.js';
 
 // context shape:
 // {
@@ -544,6 +545,28 @@ export async function executeToolCall(toolName, toolArgs, context) {
       if (validIds.length === 0) return { error: "changeMultipleColors: no valid objects found" };
       await Promise.all(validIds.map(id => act().updateObject(id, { color })));
       return { success: true, updatedCount: validIds.length };
+    } else if (toolName === "createConnector") {
+      const { startObjectId, startPort, endObjectId, endPort, color = '#6366f1', arrowhead = true } = toolArgs;
+      const currentObjs = objs();
+      const startValidation = validateObjectExists(startObjectId, currentObjs, 'createConnector');
+      if (startValidation) return startValidation;
+      const endValidation = validateObjectExists(endObjectId, currentObjs, 'createConnector');
+      if (endValidation) return endValidation;
+      const startObj = currentObjs[startObjectId];
+      const endObj = currentObjs[endObjectId];
+      const startCoords = getPortCoords(startObj, startPort);
+      const endCoords = getPortCoords(endObj, endPort);
+      await act().addObject({
+        type: arrowhead ? 'arrow' : 'line',
+        x: startCoords.x,
+        y: startCoords.y,
+        points: [0, 0, endCoords.x - startCoords.x, endCoords.y - startCoords.y],
+        startConnectedId: startObjectId,
+        startConnectedPort: startPort,
+        endConnectedId: endObjectId,
+        endConnectedPort: endPort,
+        color,
+      });
     }
   } catch (error) {
     return { error: error.message };
