@@ -60,32 +60,6 @@ export function AppearanceSettings({ preferences, updatePreference, onClose }) {
         </div>
 
         <div className="appearance-section">
-          <h3>Canvas Behavior</h3>
-          <div className="toggle-row">
-            <div className="toggle-label-group">
-              <span className="toggle-label">Default drag behavior</span>
-              <span className="toggle-description">What happens when you drag on empty canvas</span>
-            </div>
-            <div className="drag-mode-picker" role="group" aria-label="Default drag behavior">
-              <button
-                className={`drag-mode-option${preferences.dragMode === 'pan' ? ' drag-mode-option--active' : ''}`}
-                aria-pressed={preferences.dragMode === 'pan'}
-                onClick={() => updatePreference('dragMode', 'pan')}
-              >
-                Pan
-              </button>
-              <button
-                className={`drag-mode-option${preferences.dragMode === 'select' ? ' drag-mode-option--active' : ''}`}
-                aria-pressed={preferences.dragMode === 'select'}
-                onClick={() => updatePreference('dragMode', 'select')}
-              >
-                Select
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="appearance-section">
           <h3>Accessibility</h3>
           <div className="toggle-row">
             <div className="toggle-label-group">
