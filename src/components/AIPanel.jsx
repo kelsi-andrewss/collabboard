@@ -11,6 +11,12 @@ function AIPanelInner({ state, handlers }) {
   const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading } = state;
   const { handleAISubmit, setAiPrompt, clearError } = handlers;
   const historyEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  async function handleSubmitAndRefocus(e) {
+    await handleAISubmit(e);
+    inputRef.current?.focus();
+  }
 
   useEffect(() => {
     if (showAI && historyEndRef.current) {
@@ -39,8 +45,9 @@ function AIPanelInner({ state, handlers }) {
           </div>
         )
       )}
-      <form onSubmit={handleAISubmit} className="ai-input-area">
+      <form onSubmit={handleSubmitAndRefocus} className="ai-input-area">
         <input
+          ref={inputRef}
           type="text"
           placeholder="Ask AI to draw something..."
           value={aiPrompt}
