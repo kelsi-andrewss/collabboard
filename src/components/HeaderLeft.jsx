@@ -6,6 +6,8 @@ import { darkenHex } from '../utils/colorUtils.js';
 import './BoardSwitcher.css';
 import { buildSlugChain } from '../utils/slugUtils.js';
 
+const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
+
 function HeaderLeftInner({ state, handlers }) {
   const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale } = state;
   const {
@@ -19,6 +21,9 @@ function HeaderLeftInner({ state, handlers }) {
   const switcherRef = useRef(null);
   const [activeConnectorType, setActiveConnectorType] = useState('line');
   const connectorRef = useRef(null);
+  const [zoomEditing, setZoomEditing] = useState(false);
+  const [zoomInputVal, setZoomInputVal] = useState('');
+  const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!showBoardSwitcher) return;
@@ -116,6 +121,15 @@ function HeaderLeftInner({ state, handlers }) {
       x: centerX - ((centerX - prev.x) / oldScale) * newScale,
       y: centerY - ((centerY - prev.y) / oldScale) * newScale,
     }));
+  };
+
+  const commitZoomInput = () => {
+    const parsed = parseInt(zoomInputVal, 10);
+    if (!isNaN(parsed)) {
+      const clamped = Math.min(500, Math.max(10, parsed));
+      applyZoom(clamped / 100);
+    }
+    setZoomEditing(false);
   };
 
   return (
@@ -328,13 +342,56 @@ function HeaderLeftInner({ state, handlers }) {
               >
                 &minus;
               </button>
-              <button
-                className="zoom-pct"
-                onClick={() => applyZoom(1)}
-                title="Reset to 100% (Ctrl+0)"
-              >
-                {Math.round((stageScale || 1) * 100)}%
-              </button>
+              <div className="zoom-control">
+                {zoomEditing ? (
+                  <input
+                    className="zoom-pct-input"
+                    type="text"
+                    value={zoomInputVal}
+                    onChange={e => setZoomInputVal(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') commitZoomInput();
+                      if (e.key === 'Escape') setZoomEditing(false);
+                    }}
+                    onBlur={commitZoomInput}
+                    autoFocus
+                  />
+                ) : (
+                  <button className="zoom-pct" onClick={() => {
+                    setZoomInputVal(String(Math.round((stageScale || 1) * 100)));
+                    setZoomEditing(true);
+                    setZoomDropdownOpen(false);
+                  }} title="Click to set zoom level">
+                    {Math.round((stageScale || 1) * 100)}%
+                  </button>
+                )}
+                <div
+                  className="zoom-dropdown-container"
+                  onBlur={e => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      setZoomDropdownOpen(false);
+                    }
+                  }}
+                  tabIndex={-1}
+                >
+                  <button
+                    className="zoom-dropdown-btn"
+                    onClick={() => setZoomDropdownOpen(v => !v)}
+                    title="Zoom presets"
+                  >&#9662;</button>
+                  {zoomDropdownOpen && (
+                    <ul className="zoom-dropdown">
+                      {ZOOM_PRESETS.map(pct => (
+                        <li key={pct}>
+                          <button onClick={() => { applyZoom(pct / 100); setZoomDropdownOpen(false); }}>
+                            {pct}%{pct === Math.round((stageScale || 1) * 100) ? ' \u2713' : ''}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
               <button
                 className="zoom-btn"
                 onClick={() => applyZoom(Math.min(5, (stageScale || 1) * 1.15))}

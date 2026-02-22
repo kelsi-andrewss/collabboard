@@ -257,3 +257,75 @@
   background: var(--toolbar-bg);
   color: white;
 }
+
+.zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoom-pct-input {
+  width: 52px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-family: inherit;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.zoom-dropdown-container {
+  position: relative;
+}
+
+.zoom-dropdown-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.zoom-dropdown-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.zoom-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  z-index: 200;
+  min-width: 80px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.zoom-dropdown li button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 12px;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.zoom-dropdown li button:hover {
+  background: var(--bg-tertiary);
+}
