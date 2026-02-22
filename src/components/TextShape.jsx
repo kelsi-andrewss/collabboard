@@ -7,7 +7,7 @@ function TextShapeInner({
   rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd,
   onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false,
   gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos,
-  onTypingChange, canEdit = true,
+  onTypingChange, canEdit = true, pendingTool,
 }) {
   const groupRef = useRef();
   const textRef = useRef();
@@ -192,16 +192,21 @@ function TextShapeInner({
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && canEdit && (
+      {isSelected && !isEditing && canEdit && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['middle-left', 'middle-right']}
           anchorSize={10}
-          anchorStrokeWidth={2}
           anchorCornerRadius={2}
           anchorHitStrokeWidth={12}
+          borderStroke="#6366f1"
+          borderStrokeWidth={1.5}
+          borderDash={[4, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#6366f1"
+          anchorStrokeWidth={1.5}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 40) return oldBox;
             return newBox;

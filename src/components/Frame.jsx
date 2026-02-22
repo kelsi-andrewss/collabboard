@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 
 
-function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit }) {
+function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', color = '#6366f1', rotation = 0, isSelected, onSelect, onDragEnd, onDragMove, onTransformEnd, onUpdate, onDelete, onResizeClamped, dragState, snapToGrid = false, gridSize = 50, minWidth = 100, minHeight = 80, dragLayerRef, mainLayerRef, dragPos, canEdit = true, onAutoFit, pendingTool }) {
   const groupRef = useRef();
   const trRef = useRef();
   const hitRectRef = useRef();
@@ -231,15 +231,20 @@ function FrameInner({ id, x, y, width = 400, height = 300, title = 'Frame', colo
           );
         })()}
       </Group>
-      {isSelected && !isEditing && canEdit && (
+      {isSelected && !isEditing && canEdit && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <Transformer
           ref={trRef}
           rotateEnabled={false}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           anchorSize={10}
-          anchorStrokeWidth={2}
           anchorCornerRadius={2}
           anchorHitStrokeWidth={12}
+          borderStroke="#6366f1"
+          borderStrokeWidth={1.5}
+          borderDash={[4, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#6366f1"
+          anchorStrokeWidth={1.5}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 50 || newBox.height < 40) return oldBox;
             return newBox;

@@ -3,7 +3,7 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { darkenHex } from '../utils/colorUtils.js';
 
-function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true }) {
+function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -191,16 +191,21 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
           </Html>
         )}
       </Group>
-      {isSelected && !isEditing && canEdit && (
+      {isSelected && !isEditing && canEdit && pendingTool !== 'line' && pendingTool !== 'arrow' && (
         <Transformer
           ref={trRef}
           rotateEnabled={true}
           rotationSnaps={snapToGrid ? [0, 45, 90, 135, 180, 225, 270, 315] : []}
           enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
           anchorSize={10}
-          anchorStrokeWidth={2}
           anchorCornerRadius={2}
           anchorHitStrokeWidth={12}
+          borderStroke="#6366f1"
+          borderStrokeWidth={1.5}
+          borderDash={[4, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#6366f1"
+          anchorStrokeWidth={1.5}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 50 || newBox.height < 50) return oldBox;
             return newBox;

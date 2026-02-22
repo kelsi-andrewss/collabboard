@@ -649,6 +649,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   canEdit={canEdit}
                   onAutoFit={handleFrameAutoFit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -673,6 +674,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -696,6 +698,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   mainLayerRef={mainLayerRef}
                   dragPos={dragPos}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }
@@ -744,6 +747,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
+                  pendingTool={pendingTool}
                 />
               );
             }

@@ -65,6 +65,7 @@ export function makeFrameDragHandlers({
     const droppedRect = { x: pos.x, y: pos.y, width: frame.width || 400, height: frame.height || 300 };
     const illegalDrag = hasDisallowedSiblingOverlap(id, 'frame', droppedRect, overFrameId || null, candidates, FRAME_MARGIN);
     setDragState({ draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag });
+    if (setDragPos) setDragPos({ id, x: pos.x, y: pos.y });
   };
 
   const handleFrameDragEnd = (id, updates) => {
