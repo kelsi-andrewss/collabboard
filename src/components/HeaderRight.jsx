@@ -23,7 +23,9 @@ function HeaderRightInner({ state, handlers }) {
       data-orient={orientation === 'vertical' ? 'vertical' : undefined}
       style={{ right: 16, top: 16 }}
     >
-      <span className="chip-grip" onDoubleClick={toggleOrientation}>&#x28FF;</span>
+      <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">
+        {orientation === 'vertical' ? '↔' : '↕'}
+      </button>
       <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />
       <span className="header-divider" />
       <div className="header-icon-group">

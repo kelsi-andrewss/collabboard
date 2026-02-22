@@ -141,7 +141,6 @@ function HeaderLeftInner({ state, handlers }) {
         className="floating-toolbar-chip"
         style={{ left: 16, top: 16 }}
       >
-        <span className="chip-grip">⠿</span>
         <span
           className="logo-text home-link"
           onClick={() => { setBoardId(null); setBoardName(''); }}
