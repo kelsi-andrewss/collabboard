@@ -242,15 +242,13 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
             }
             trRef.current?.nodes([group]);
             group.getLayer()?.batchDraw();
-            if (onTransformEnd) {
-              onTransformEnd(id, {
+            onTransformEnd(id, {
                 x: finalX,
                 y: finalY,
                 rotation: group.rotation(),
                 width: finalW,
                 height: finalH,
               });
-            }
           }}
         />
       )}
