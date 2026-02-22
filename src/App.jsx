@@ -35,6 +35,7 @@ import { ContextMenu } from './components/ContextMenu.jsx';
 import { BoardSettings } from './components/BoardSettings.jsx';
 import { AdminPanel } from './components/AdminPanel.jsx';
 import { AppearanceSettings } from './components/AppearanceSettings.jsx';
+import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
 import './App.css';
 
 export function App() {
@@ -103,7 +104,9 @@ export function App() {
 
   // Conditionally call hooks only when boardId is present
   const presence = usePresence(boardId, user);
+  const { cursorSyncLatencyRef } = presence;
   const rawBoard = useBoard(boardId, user);
+  const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
   const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup: deleteGroupDoc, inviteGroupMember, removeGroupMember, migrateGroupStrings, createSubgroup, deleteGroupCascade, setGroupProtected, moveGroup } = useGroupsList(user, effectiveAdminView);
@@ -877,6 +880,15 @@ export function App() {
                 publishTemplate={publishTemplate}
                 updateTemplate={updateTemplate}
                 unpublishTemplate={unpublishTemplate}
+                preferences={preferences}
+                onUpdatePreference={updatePreference}
+              />
+            )}
+            {preferences.showPerfOverlay && boardId && (
+              <PerformanceOverlay
+                objects={Object.values(board.objects)}
+                lastObjectSyncLatencyRef={lastObjectSyncLatencyRef}
+                cursorSyncLatencyRef={cursorSyncLatencyRef}
               />
             )}
             {contextMenu && canEdit && (() => {

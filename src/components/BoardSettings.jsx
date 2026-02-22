@@ -10,7 +10,7 @@ function formatTemplateDate(ts) {
   return ts.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function BoardSettings({ board, currentUserId, currentUser, onUpdateSettings, onInviteMember, onRemoveMember, onTransferOwner, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate }) {
+export function BoardSettings({ board, currentUserId, currentUser, onUpdateSettings, onInviteMember, onRemoveMember, onTransferOwner, onClose, isGroupAdmin: isGroupAdminProp = false, publishTemplate, updateTemplate, unpublishTemplate, preferences, onUpdatePreference }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
@@ -336,6 +336,27 @@ export function BoardSettings({ board, currentUserId, currentUser, onUpdateSetti
             </div>
           )}
         </div>
+
+        {preferences && onUpdatePreference && (
+          <div className="board-settings-section">
+            <h3>Developer</h3>
+            <div className="toggle-row">
+              <div className="toggle-label-group">
+                <span className="toggle-label">Performance overlay</span>
+                <span className="toggle-description">Show live FPS, object count, and sync latency</span>
+              </div>
+              <button
+                className={`toggle-switch${preferences.showPerfOverlay ? ' toggle-switch--on' : ''}`}
+                role="switch"
+                aria-checked={preferences.showPerfOverlay}
+                aria-label="Performance overlay"
+                onClick={() => onUpdatePreference('showPerfOverlay', !preferences.showPerfOverlay)}
+              >
+                <span className="toggle-thumb" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {showUpdateConfirm && (
         <div className="template-confirm-overlay">

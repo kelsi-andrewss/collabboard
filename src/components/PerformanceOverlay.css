@@ -1,0 +1,27 @@
+.perf-overlay-chip {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-3);
+  min-width: 140px;
+  cursor: grab;
+  user-select: none;
+}
+
+.perf-overlay-chip:active {
+  cursor: grabbing;
+}
+
+.perf-metric-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.perf-metric-label {
+  color: var(--md-sys-color-on-surface-variant);
+  margin-right: var(--md-sys-spacing-2);
+}

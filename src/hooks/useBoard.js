@@ -18,6 +18,8 @@ export function useBoard(boardId, user) {
   const [objects, setObjects] = useState({});
   const [loading, setLoading] = useState(true);
   const hydrationRef = useRef(false);
+  const pendingWritesRef = useRef(new Map());
+  const lastObjectSyncLatencyRef = useRef(null);
 
   useEffect(() => {
     if (!boardId || !user) return;
@@ -32,6 +34,18 @@ export function useBoard(boardId, user) {
       snapshot.forEach((doc) => {
         newObjects[doc.id] = { id: doc.id, ...doc.data() };
       });
+
+      const now = Date.now();
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added' || change.type === 'modified') {
+          const docId = change.doc.id;
+          if (pendingWritesRef.current.has(docId)) {
+            lastObjectSyncLatencyRef.current = now - pendingWritesRef.current.get(docId);
+            pendingWritesRef.current.delete(docId);
+          }
+        }
+      });
+
       setObjects(newObjects);
       setLoading(false);
 
@@ -64,11 +78,13 @@ export function useBoard(boardId, user) {
   const addObject = async (objectData) => {
     if (!boardId) return;
     const objectsRef = collection(db, 'boards', boardId, 'objects');
+    const writeTs = Date.now();
     const ref = await addDoc(objectsRef, {
       ...objectData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    pendingWritesRef.current.set(ref.id, writeTs);
     return ref;
   };
 
@@ -90,12 +106,14 @@ export function useBoard(boardId, user) {
           batch.update(doc(db, 'boards', boardId, 'objects', newFrameId),
             { childIds: arrayUnion(objectId), updatedAt: serverTimestamp() });
         }
+        pendingWritesRef.current.set(objectId, Date.now());
         await batch.commit();
         return;
       }
     }
     // No frameId change — single-doc write
     const objectRef = doc(db, 'boards', boardId, 'objects', objectId);
+    pendingWritesRef.current.set(objectId, Date.now());
     await updateDoc(objectRef, { ...updates, updatedAt: serverTimestamp() });
   };
 
@@ -180,5 +198,5 @@ export function useBoard(boardId, user) {
     await batch.commit();
   };
 
-  return { objects, loading, addObject, updateObject, deleteObject, batchUpdateObjects, batchWriteAndDelete };
+  return { objects, loading, addObject, updateObject, deleteObject, batchUpdateObjects, batchWriteAndDelete, lastObjectSyncLatencyRef };
 }
