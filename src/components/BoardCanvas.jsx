@@ -357,6 +357,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const portCircleRefsRef = useRef({});
   const objectsRef = useRef({});
   const connectorFirstPointRef = useRef(null);
+  const [shiftHeld, setShiftHeld] = useState(false);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
@@ -380,8 +381,19 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
   const isSelectMode = activeTool === 'select';
 
+  React.useEffect(() => {
+    const onKeyDown = (e) => { if (e.key === 'Shift') setShiftHeld(true); };
+    const onKeyUp = (e) => { if (e.key === 'Shift') setShiftHeld(false); };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
   const handleMouseDown = (e) => {
-    const isShiftDrag = e.evt.shiftKey;
+    const isShiftDrag = e.evt.shiftKey && !pendingTool;
     if (!isSelectMode && !isShiftDrag) return;
     const target = e.target;
     const stage = target.getStage();
@@ -491,6 +503,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const handleMouseUp = () => {
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const rect = selRect;
+    const wasShiftDrag = shiftDragRef.current;
     selStartRef.current = null;
     shiftDragRef.current = false;
     setSelRect(null);
@@ -499,7 +512,15 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     for (const obj of Object.values(objects)) {
       if (multiSelectHit(obj, rect)) hit.add(obj.id);
     }
-    if (setSelectedIds) setSelectedIds(hit);
+    if (setSelectedIds) {
+      if (wasShiftDrag) {
+        const next = new Set(selectedIds);
+        for (const id of hit) next.add(id);
+        setSelectedIds(next);
+      } else {
+        setSelectedIds(hit);
+      }
+    }
   };
 
   const handleStageClickWrapped = (e) => {
@@ -532,7 +553,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onClick={handleStageClickWrapped}
-      draggable={activeTool === 'pan' && !selectedId}
+      draggable={activeTool === 'pan' && !selectedId && !(shiftHeld && !pendingTool)}
       x={stagePos.x}
       y={stagePos.y}
       scaleX={stageScale}
