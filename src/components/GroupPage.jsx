@@ -71,6 +71,7 @@ export function GroupPage({
   const [draggingGroup, setDraggingGroup] = useState(null);
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
   const [rootDropActive, setRootDropActive] = useState(false);
+  const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const frozenItemsRef = useRef(null);
@@ -531,7 +532,7 @@ export function GroupPage({
                           <button
                             className="board-card-delete-btn"
                             title="Delete board"
-                            onClick={(e) => { e.stopPropagation(); deleteBoard(b.id); }}
+                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteBoard(b); }}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -576,6 +577,19 @@ export function GroupPage({
           onDeleteGroup={() => { onDeleteGroupCascade && onDeleteGroupCascade(groupId, groups, allBoards); onBack(); }}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {confirmDeleteBoard && (
+        <div className="modal-overlay" onClick={(e) => { e.stopPropagation(); setConfirmDeleteBoard(null); }}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h2>Delete Board</h2>
+            <p>Delete &ldquo;{confirmDeleteBoard.name}&rdquo;? This cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="secondary-btn" onClick={(e) => { e.stopPropagation(); setConfirmDeleteBoard(null); }}>Cancel</button>
+              <button className="danger-btn" onClick={() => { deleteBoard(confirmDeleteBoard.id); setConfirmDeleteBoard(null); }}>Delete</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
