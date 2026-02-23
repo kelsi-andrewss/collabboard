@@ -62,7 +62,10 @@ function makeSnap(objectsMap) {
     id,
     data: () => data,
   }));
-  return { forEach: (fn) => docs.forEach(fn) };
+  return {
+    forEach: (fn) => docs.forEach(fn),
+    docChanges: () => docs.map(doc => ({ type: 'added', doc })),
+  };
 }
 
 function renderBoard(initialObjects = {}) {
