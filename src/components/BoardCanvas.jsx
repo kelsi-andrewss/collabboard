@@ -220,7 +220,7 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
 }
 
 const GRID_SIZE = 50;
-const HEADER_HEIGHT = 60;
+const HEADER_HEIGHT = 0;
 
 export const GRID_CELL_LIMIT = 5000;
 export function computeGridDimensions(stagePos, stageScale, windowWidth, windowHeight) {
