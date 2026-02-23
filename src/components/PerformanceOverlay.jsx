@@ -35,8 +35,9 @@ export function PerformanceOverlay({ objects, lastObjectSyncLatencyRef, cursorSy
     <div
       className="floating-toolbar-chip perf-overlay-chip"
       style={style}
-      {...dragHandleProps}
+      ref={dragHandleProps?.ref}
     >
+      <span className="chip-grip" onMouseDown={dragHandleProps?.onMouseDown} onDoubleClick={dragHandleProps?.onDoubleClick}>&#x2837;</span>
       <div className="perf-metric-row">
         <span className="perf-metric-label">FPS</span>
         <span>{displayValues.fps}</span>

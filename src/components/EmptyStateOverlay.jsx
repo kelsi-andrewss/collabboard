@@ -20,6 +20,7 @@ const ghostBoardStyle = {
   position: 'relative',
   width: 560,
   height: 360,
+  marginTop: 32,
   pointerEvents: 'none',
 };
 
@@ -243,7 +244,7 @@ export function EmptyStateOverlay({ isEmpty, canEdit = true }) {
         <div
           style={{
             position: 'absolute',
-            bottom: -52,
+            bottom: -72,
             left: 0,
             right: 0,
             textAlign: 'center',

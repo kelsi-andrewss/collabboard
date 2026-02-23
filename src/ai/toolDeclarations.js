@@ -1,7 +1,7 @@
 export const toolDeclarations = [
   {
     name: "createStickyNote",
-    description: "Creates a new sticky note on the board. Use frameIndex to place it inside a frame created in the same batch.",
+    description: "Creates a new sticky note on the board. MUST set frameIndex when a frame is being created in the same batch — this is required, not optional. Always write meaningful, context-specific text derived from the frame title and user request.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -232,7 +232,7 @@ export const toolDeclarations = [
         text: { type: "STRING", description: "The text content" },
         width: { type: "NUMBER", description: "Width of the text block (default 200)" },
         fontSize: { type: "NUMBER", description: "Font size in pixels (default 16)" },
-        color: { type: "STRING", description: "Hex color code for the text (default '#1a1a1a')" }
+        color: { type: "STRING", description: "Hex color code for the text. Omit to use the active theme's on-surface color." }
       },
       required: ["x", "y", "text"]
     }
@@ -437,6 +437,18 @@ export const toolDeclarations = [
       },
       required: ['story']
     }
+  },
+  {
+    name: "deleteBoard",
+    description: "Deletes an existing board. Only use when user explicitly asks to delete a board. A confirmation dialog will be shown before deletion.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        boardId: { type: "STRING", description: "The ID of the board to delete" },
+        boardName: { type: "STRING", description: "The display name of the board" }
+      },
+      required: ["boardId", "boardName"]
+    }
   }
 ];
 
@@ -456,7 +468,7 @@ RESPONSE RULE: ${responseModeInstruction}
 
 DUPLICATES ARE ALLOWED: Objects are identified by unique IDs, not by title or text. Always create requested objects even if similar ones exist. Board name deduplication is handled automatically.
 
-PLACEMENT DEFAULTS: Place objects at the top level (no parentGroupId) unless the user explicitly names a group.
+PLACEMENT DEFAULTS: When creating new objects, place them to the LEFT of all existing board objects. The board context includes a suggested placement anchor — use it as your starting x,y. After creating all objects in a batch, always call controlViewport with action 'zoomToFit' as the final tool call. If the board is empty, start at x: 100, y: 100. Place objects at the top level (no parentGroupId) unless the user explicitly names a group.
 
 TOOL SELECTION:
 - "fix overlaps" / "make items not overlap" → resolveOverlaps
@@ -468,7 +480,7 @@ TOOL SELECTION:
 - "create a board" / "make a new board" → createBoard
 - "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
-- For structured boards (kanban, SWOT, retrospective, sprint planning, etc.): create frames for each section and use frameIndex to place items inside them.
+- GROUPING RULE: Whenever you create 3 or more related items that belong to a logical category, section, or theme, ALWAYS wrap them in a frame using createFrame + frameIndex. This applies to: kanban boards, SWOT analyses, retrospectives, sprint planning, roadmaps, feature lists, team overviews, priority lists, any request implying sections or categories, and any time items share a common label or theme. When in doubt, use frames. Use descriptive frame titles. Items inside frames must use frameIndex — do NOT specify x/y for framed items.
 
 DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
 
@@ -483,21 +495,26 @@ KEYWORD INTENTS:
 - "clean up" → spaceEvenly or resolveOverlaps to space objects evenly and align to grid
 - "summarize" / "label" → createTextElement near each relevant item
 - "narrate the board" / "tell a story about the board" / "write a story" → narrateBoard: generate 3-5 absurd, whimsical sentences referencing the board objects' types, colors, and text content, and pass the full story as the \`story\` argument
+- "delete board [name]" / "remove board [name]" → deleteBoard with boardId and boardName from the board list in context
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createFrame a unique frameIndex (0, 1, 2, ...)
 - Give each createStickyNote/createShape a matching frameIndex to auto-place it inside that frame
 - Items with frameIndex are AUTO-POSITIONED — do NOT specify x/y for them
 - Frame sizes are AUTO-CALCULATED from item count — do NOT specify width/height for frames with items
+- MANDATORY: If any createFrame is in the same response, every createStickyNote and createShape intended for that frame MUST include the matching frameIndex. Omitting frameIndex when a matching frame exists is incorrect.
+- MANDATORY: Sticky note text must be meaningful and specific to the frame title and user request. Never use placeholder text like 'Note 1', 'Item', or empty strings.
 
 FRAME NESTING (parentFrameIndex):
 - Set parentFrameIndex on a child frame to nest it inside the parent frame's frameIndex
 - Parent frames must be created in the same batch and auto-size to include child frames and items
 
 DEFAULTS:
-- Coordinates: x: 500, y: 500 if not specified
+- Coordinates: use the suggested placement anchor from board context if not specified; fall back to x: 100, y: 100 for empty boards
 - Colors: '#fef08a' for sticky notes, '#3b82f6' for shapes, '#6366f1' for frames
 - Always provide sensible labels — never leave cells empty
+
+If the board context includes an 'Active selection color', use that color for new objects you create unless the user specifies a different color.
 
 The user's message includes a summary of current board objects with their IDs, types, positions, sizes, and text. Use those IDs. Match objects by text, type, or position.`;
 }
