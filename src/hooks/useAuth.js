@@ -18,6 +18,7 @@ export function useAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -27,7 +28,8 @@ export function useAuth() {
     });
 
     getRedirectResult(auth).catch((error) => {
-      alert("Redirect login failed: " + error.message);
+      console.error("Redirect login failed: " + error.message);
+      setAuthError("Redirect login failed: " + error.message);
     });
 
     return unsubscribe;
@@ -49,12 +51,15 @@ export function useAuth() {
         try {
           await signInWithRedirect(auth, googleProvider);
         } catch (redirectError) {
-          alert("Redirect failed: " + redirectError.message);
+          console.error("Redirect failed: " + redirectError.message);
+          setAuthError("Redirect failed: " + redirectError.message);
         }
       } else if (error.code === 'auth/operation-not-allowed') {
-        alert("Google Sign-In is not enabled in the Firebase Console. Go to Authentication -> Sign-in method.");
+        console.error("Google Sign-In is not enabled in the Firebase Console. Go to Authentication -> Sign-in method.");
+        setAuthError("Google Sign-In is not enabled in the Firebase Console. Go to Authentication -> Sign-in method.");
       } else {
-        alert("Login failed: " + error.message);
+        console.error("Login failed: " + error.message);
+        setAuthError("Login failed: " + error.message);
       }
     }
   };
@@ -68,5 +73,5 @@ export function useAuth() {
 
   const isAdmin = userRole === 'admin';
 
-  return { user, loading, login, logout, isAdmin };
+  return { user, loading, login, logout, isAdmin, authError };
 }
