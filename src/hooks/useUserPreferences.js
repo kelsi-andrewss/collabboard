@@ -9,6 +9,11 @@ const DEFAULT_PREFERENCES = {
   reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   largeText: false,
   showPerfOverlay: false,
+  enableConfetti: true,
+  enableReactions: true,
+  enableFollowMode: true,
+  enableVibeCheck: true,
+  defaultToolMode: 'pan',
 };
 
 const LS_KEY = 'collabboard-preferences';

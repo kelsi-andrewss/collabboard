@@ -241,8 +241,8 @@ export function App() {
   }, [canEdit]);
 
   // Reset activeTool to the preferred default whenever a board is loaded
-  const dragModeRef = useRef(preferences.dragMode);
-  dragModeRef.current = preferences.dragMode;
+  const dragModeRef = useRef(preferences.defaultToolMode);
+  dragModeRef.current = preferences.defaultToolMode;
   useEffect(() => {
     if (boardId) {
       setActiveTool(dragModeRef.current || 'pan');
@@ -273,7 +273,7 @@ export function App() {
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
+  const [activeTool, setActiveTool] = useState(() => preferences.defaultToolMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
   selectedIdsRef.current = selectedIds;
@@ -410,7 +410,11 @@ export function App() {
   const objectsRef = useRef(board.objects);
   objectsRef.current = board.objects;
 
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
+
   const triggerConfettiAtCenter = () => {
+    if (!preferencesRef.current.enableConfetti) return;
     setConfettiPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     unlockAchievementRef.current?.('confetti_collector', {
       title: 'Confetti Collector',
@@ -585,11 +589,15 @@ export function App() {
     };
   }, [boardId]);
 
+  const enableReactionsRef = useRef(preferences.enableReactions);
+  enableReactionsRef.current = preferences.enableReactions;
+
   useEffect(() => {
     if (!boardId) return;
     const stage = stageRef.current;
     if (!stage) return;
     const onDblClick = (e) => {
+      if (!enableReactionsRef.current) return;
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
       const screenX = pointer.x;
@@ -632,13 +640,13 @@ export function App() {
       {user && (
         <div className="header">
           <HeaderLeft
-            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.dragMode, currentUserId: user?.uid }}
+            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.defaultToolMode, currentUserId: user?.uid }}
             handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
           />
           <div className="header-right">
             {user && boardId && (
               <HeaderRight
-                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user, objects: board.objects }}
+                state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user, objects: board.objects, preferences }}
                 handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true), onOpenAchievements: () => setShowAchievements(true) }}
               />
             )}
@@ -761,7 +769,7 @@ export function App() {
             )}
             <BoardCanvas
               stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: handleFollowUser }}
+              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: preferences.enableFollowMode ? handleFollowUser : null }}
               handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
             />
             {scribblePreview.length >= 4 && (() => {
@@ -794,7 +802,7 @@ export function App() {
               handlers={{ setShowAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter }}
             />
             <ResizeTooltip state={{ resizeTooltip }} />
-            {isFollowing && followedUserPresence && (
+            {preferences.enableFollowMode && isFollowing && followedUserPresence && (
               <FollowModeIndicator
                 name={followedUserPresence.name}
                 onExit={handleExitFollow}
@@ -814,8 +822,8 @@ export function App() {
             {confettiPos && (
               <Confetti x={confettiPos.x} y={confettiPos.y} onDone={() => setConfettiPos(null)} />
             )}
-            <ReactionOverlay reactions={reactions} />
-            {reactionPicker && (
+            {preferences.enableReactions && <ReactionOverlay reactions={reactions} />}
+            {preferences.enableReactions && reactionPicker && (
               <ReactionPicker
                 x={reactionPicker.screenX}
                 y={reactionPicker.screenY}

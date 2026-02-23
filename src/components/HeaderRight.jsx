@@ -7,7 +7,7 @@ import { useVibeCheck } from '../hooks/useVibeCheck';
 import { VibeToast } from './VibeToast.jsx';
 
 function HeaderRightInner({ state, handlers }) {
-  const { presentUsers, currentUserId, user, objects } = state;
+  const { presentUsers, currentUserId, user, objects, preferences } = state;
   const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance, onOpenAchievements } = handlers;
   const { checkVibe, vibeResult, isChecking } = useVibeCheck();
   const objectsRef = useRef(objects);
@@ -42,15 +42,17 @@ function HeaderRightInner({ state, handlers }) {
           <Settings size={18} />
         </button>
       )}
-      <button
-        className="help-btn"
-        onClick={() => checkVibe(objectsRef.current)}
-        title="Vibe check"
-        disabled={isChecking}
-        style={{ opacity: isChecking ? 0.5 : 1 }}
-      >
-        <Sparkles size={18} />
-      </button>
+      {(preferences?.enableVibeCheck !== false) && (
+        <button
+          className="help-btn"
+          onClick={() => checkVibe(objectsRef.current)}
+          title="Vibe check"
+          disabled={isChecking}
+          style={{ opacity: isChecking ? 0.5 : 1 }}
+        >
+          <Sparkles size={18} />
+        </button>
+      )}
       <button
         className="help-btn"
         onClick={() => setShowTutorial(true)}
@@ -106,6 +108,7 @@ function areEqual(prev, next) {
   const ps = prev.state, ns = next.state;
   if (ps.currentUserId !== ns.currentUserId) return false;
   if (prev.state.user !== next.state.user) return false;
+  if (ps.preferences?.enableVibeCheck !== ns.preferences?.enableVibeCheck) return false;
   const pu = ps.presentUsers, nu = ns.presentUsers;
   const pk = Object.keys(pu), nk = Object.keys(nu);
   if (pk.length !== nk.length) return false;

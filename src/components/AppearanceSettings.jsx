@@ -122,6 +122,92 @@ export function AppearanceSettings({ preferences, updatePreference, onClose }) {
             </button>
           </div>
         </div>
+
+        <div className="appearance-section">
+          <h3>Features</h3>
+          <div className="toggle-row">
+            <div className="toggle-label-group">
+              <span className="toggle-label">Confetti &amp; Achievements</span>
+              <span className="toggle-description">Show confetti and unlock achievements on the board</span>
+            </div>
+            <button
+              className={`toggle-switch${preferences.enableConfetti ? ' toggle-switch--on' : ''}`}
+              role="switch"
+              aria-checked={preferences.enableConfetti}
+              aria-label="Confetti and achievements"
+              onClick={() => updatePreference('enableConfetti', !preferences.enableConfetti)}
+            >
+              <span className="toggle-thumb" />
+            </button>
+          </div>
+          <div className="toggle-row">
+            <div className="toggle-label-group">
+              <span className="toggle-label">Emoji Reactions</span>
+              <span className="toggle-description">Double-click the canvas to send emoji reactions</span>
+            </div>
+            <button
+              className={`toggle-switch${preferences.enableReactions ? ' toggle-switch--on' : ''}`}
+              role="switch"
+              aria-checked={preferences.enableReactions}
+              aria-label="Emoji reactions"
+              onClick={() => updatePreference('enableReactions', !preferences.enableReactions)}
+            >
+              <span className="toggle-thumb" />
+            </button>
+          </div>
+          <div className="toggle-row">
+            <div className="toggle-label-group">
+              <span className="toggle-label">Follow Mode</span>
+              <span className="toggle-description">Follow another user's viewport by clicking their avatar</span>
+            </div>
+            <button
+              className={`toggle-switch${preferences.enableFollowMode ? ' toggle-switch--on' : ''}`}
+              role="switch"
+              aria-checked={preferences.enableFollowMode}
+              aria-label="Follow mode"
+              onClick={() => updatePreference('enableFollowMode', !preferences.enableFollowMode)}
+            >
+              <span className="toggle-thumb" />
+            </button>
+          </div>
+          <div className="toggle-row">
+            <div className="toggle-label-group">
+              <span className="toggle-label">Vibe Check</span>
+              <span className="toggle-description">AI-powered mood analysis of your board</span>
+            </div>
+            <button
+              className={`toggle-switch${preferences.enableVibeCheck ? ' toggle-switch--on' : ''}`}
+              role="switch"
+              aria-checked={preferences.enableVibeCheck}
+              aria-label="Vibe check"
+              onClick={() => updatePreference('enableVibeCheck', !preferences.enableVibeCheck)}
+            >
+              <span className="toggle-thumb" />
+            </button>
+          </div>
+          <div className="toggle-row">
+            <div className="toggle-label-group">
+              <span className="toggle-label">Default Tool</span>
+              <span className="toggle-description">Tool selected when opening a board</span>
+            </div>
+            <div className="segmented-control" role="group" aria-label="Default tool">
+              <button
+                className={`segmented-btn${preferences.defaultToolMode === 'pan' ? ' segmented-btn--active' : ''}`}
+                aria-pressed={preferences.defaultToolMode === 'pan'}
+                onClick={() => updatePreference('defaultToolMode', 'pan')}
+              >
+                Pan
+              </button>
+              <button
+                className={`segmented-btn${preferences.defaultToolMode === 'select' ? ' segmented-btn--active' : ''}`}
+                aria-pressed={preferences.defaultToolMode === 'select'}
+                onClick={() => updatePreference('defaultToolMode', 'select')}
+              >
+                Select
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
