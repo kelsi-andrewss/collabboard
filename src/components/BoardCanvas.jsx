@@ -480,7 +480,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const selectedIdsRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
-    objects, dragState, presentUsers, currentUserId, dragPos,
+    objects, dragState, presentUsers, currentUserId,
     activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint,
     onFollowUser,
   } = state;
@@ -958,7 +958,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onResizeClamped={handleResizeClamped}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   onAutoFit={handleFrameAutoFit}
                   pendingTool={pendingTool}
@@ -984,7 +983,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
@@ -1011,7 +1009,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
                   shadowsEnabled={shadowsEnabled}
@@ -1036,7 +1033,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   objects={objects}
                   stageScale={stageScale}
@@ -1061,7 +1057,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
@@ -1178,9 +1173,6 @@ export function areEqual(prev, next) {
     ps.dragState?.action === ns.dragState?.action &&
     ps.dragState?.draggingId === ns.dragState?.draggingId &&
     ps.dragState?.illegalDrag === ns.dragState?.illegalDrag &&
-    ps.dragPos?.id === ns.dragPos?.id &&
-    ps.dragPos?.x === ns.dragPos?.x &&
-    ps.dragPos?.y === ns.dragPos?.y &&
     ps.activeTool === ns.activeTool &&
     ps.selectedIds === ns.selectedIds &&
     ps.canEdit === ns.canEdit &&

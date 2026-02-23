@@ -36,6 +36,7 @@ import { HeaderRight } from './components/HeaderRight.jsx';
 import { SelectedActionBar } from './components/SelectedActionBar.jsx';
 import { HeaderLeft } from './components/HeaderLeft.jsx';
 import { BoardCanvas } from './components/BoardCanvas.jsx';
+import { DragPosContext } from './contexts/DragPosContext.js';
 import { EmptyStateOverlay } from './components/EmptyStateOverlay.jsx';
 import { ReactionPicker } from './components/ReactionPicker.jsx';
 import { ReactionOverlay } from './components/ReactionOverlay.jsx';
@@ -67,6 +68,8 @@ export function App() {
           navigateHome, navigateToGroup, navigateToBoard } = useRouting();
   const stageRef = useRef(null);
   const frameDragRef = useRef({ frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 });
+  const dragFrameRef = useRef(null);
+  const descendantCacheRef = useRef(null);
   const handleRecenterRef = useRef(null);
   const konamiSequenceRef = useRef([]);
   const canvasWrapperRef = useRef(null);
@@ -375,6 +378,7 @@ export function App() {
     stagePos, stageScale, setShapeColors,
     setDragPos, updateColorHistory,
     setResizeTooltip, resizeTooltipTimer,
+    dragStateRef, dragFrameRef, descendantCacheRef,
   });
   handleDeleteRef.current = handleDeleteWithCleanup;
   handleDeleteMultipleRef.current = handleDeleteMultiple;
@@ -397,6 +401,7 @@ export function App() {
   const { handleFrameDragMove, handleFrameDragEnd } = makeFrameDragHandlers({
     board, stageRef, snap, frameDragRef, setDragState: updateDragState, handleDragMove, stagePos, stageScale,
     setResizeTooltip, resizeTooltipTimer, setDragPos,
+    dragStateRef, dragFrameRef, descendantCacheRef,
   });
 
   const { handleTransformEnd, handleResizeClamped } = makeTransformHandlers({
@@ -763,11 +768,13 @@ export function App() {
                 <div className="board-loading-spinner" />
               </div>
             )}
-            <BoardCanvas
-              stageRef={stageRef}
-              state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, dragPos, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: preferences.enableFollowMode ? handleFollowUser : null }}
-              handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
-            />
+            <DragPosContext.Provider value={dragPos}>
+              <BoardCanvas
+                stageRef={stageRef}
+                state={{ selectedId, stagePos, stageScale, darkMode: preferences.darkMode, snapToGrid, objects: board.objects, dragState, dragStateRef, presentUsers: presence.presentUsers, currentUserId: user.uid, activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint, onFollowUser: preferences.enableFollowMode ? handleFollowUser : null }}
+                handlers={{ handleMouseMove, handleStageClick, setStagePos, handleWheel, handleFrameDragEnd, handleFrameDragMove, handleTransformEnd, updateObject: board.updateObject, handleDeleteWithCleanup, handleContainedDragEnd, handleDragMove, handleResizeClamped, setSelectedId: handleSelectAndRaise, onContextMenu: setContextMenu, onTypingChange: presence.setTyping, setSelectedIds, handleFrameAutoFit }}
+              />
+            </DragPosContext.Provider>
             {scribblePreview.length >= 4 && (() => {
               const pts = scribblePreview;
               const pairs = [];

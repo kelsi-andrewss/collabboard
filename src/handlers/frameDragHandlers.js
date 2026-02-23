@@ -6,12 +6,12 @@ import {
   getDescendantIds,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
-import { showErrorTooltip } from '../utils/tooltipUtils.js';
 import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeFrameDragHandlers({
   board, stageRef, snap, frameDragRef, setDragState, handleDragMove, stagePos, stageScale,
   setResizeTooltip, resizeTooltipTimer, setDragPos,
+  dragStateRef, dragFrameRef, descendantCacheRef,
 }) {
   const handleFrameDragMove = (id, pos) => {
     const frame = board.objects[id];
@@ -26,8 +26,11 @@ export function makeFrameDragHandlers({
     };
     const stage = stageRef.current;
     if (!stage) return;
-    // Recursively move all descendants
-    const descendants = getDescendantIds(id, board.objects);
+    // Use cached descendants for Konva node repositioning
+    if (!descendantCacheRef.current || descendantCacheRef.current.id !== id) {
+      descendantCacheRef.current = { id, descendants: getDescendantIds(id, board.objects) };
+    }
+    const descendants = descendantCacheRef.current.descendants;
     for (const childId of descendants) {
       const child = board.objects[childId];
       if (!child) continue;
@@ -38,30 +41,41 @@ export function makeFrameDragHandlers({
       }
     }
     stage.getLayers()[0]?.batchDraw();
-    // Show drag indicator for frame-in-frame (cursor-based)
-    const pointer = stage.getPointerPosition();
-    const cursorCanvas = pointer
-      ? { x: (pointer.x - stagePos.x) / stageScale, y: (pointer.y - stagePos.y) / stageScale }
-      : null;
-    const currentFrameId = frame.frameId || null;
-    const excluded = getDescendantIds(id, board.objects);
-    excluded.add(id);
-    const candidates = Object.fromEntries(
-      Object.entries(board.objects).filter(([k]) => !excluded.has(k))
-    );
-    const overFrame = cursorCanvas
-      ? findFrameAtPoint(cursorCanvas.x, cursorCanvas.y, candidates)
-      : null;
-    const overFrameId = overFrame ? overFrame.id : null;
-    let action = null;
-    let dragOverFrameId = overFrameId;
-    if (overFrame && currentFrameId !== overFrame.id) action = 'add';
-    else if (!overFrame && currentFrameId) {
-      action = 'remove';
-      dragOverFrameId = currentFrameId;  // Point to parent so highlight renders
-    }
-    setDragState({ draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag: false });
     if (setDragPos) setDragPos({ id, x: pos.x, y: pos.y });
+    if (dragFrameRef && dragFrameRef.current !== null) return;
+    if (dragFrameRef) {
+      dragFrameRef.current = requestAnimationFrame(() => {
+        const frameInner = board.objects[id];
+        if (!frameInner) { dragFrameRef.current = null; return; }
+        const pointer = stage.getPointerPosition();
+        const cursorCanvas = pointer
+          ? { x: (pointer.x - stagePos.x) / stageScale, y: (pointer.y - stagePos.y) / stageScale }
+          : null;
+        const currentFrameId = frameInner.frameId || null;
+        const excluded = new Set(descendantCacheRef.current ? descendantCacheRef.current.descendants : getDescendantIds(id, board.objects));
+        excluded.add(id);
+        const candidates = Object.fromEntries(
+          Object.entries(board.objects).filter(([k]) => !excluded.has(k))
+        );
+        const overFrame = cursorCanvas
+          ? findFrameAtPoint(cursorCanvas.x, cursorCanvas.y, candidates)
+          : null;
+        const overFrameId = overFrame ? overFrame.id : null;
+        let action = null;
+        let dragOverFrameId = overFrameId;
+        if (overFrame && currentFrameId !== overFrame.id) action = 'add';
+        else if (!overFrame && currentFrameId) {
+          action = 'remove';
+          dragOverFrameId = currentFrameId;
+        }
+        const next = { draggingId: id, overFrameId: dragOverFrameId, action, illegalDrag: false };
+        const cur = dragStateRef.current;
+        if (cur.draggingId !== next.draggingId || cur.overFrameId !== next.overFrameId || cur.action !== next.action) {
+          setDragState(next);
+        }
+        dragFrameRef.current = null;
+      });
+    }
   };
 
   const handleFrameDragEnd = (id, updates) => {
@@ -106,9 +120,7 @@ export function makeFrameDragHandlers({
           else if (minOverlap === overlapR) snapped.x = snap(oldParent.x + oldParent.width + FRAME_MARGIN);
           else if (minOverlap === overlapT) snapped.y = snap(oldParent.y - childH - FRAME_MARGIN);
           else snapped.y = snap(oldParent.y + oldParent.height + FRAME_MARGIN);
-          // Sibling overlap check below will reject and revert if the snapped position conflicts
         }
-        // If !stillOverlaps: leave snapped.x/y as-is, sibling overlap check runs below
       }
     }
 
@@ -166,6 +178,11 @@ export function makeFrameDragHandlers({
       }
     }
 
+    if (dragFrameRef && dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    if (descendantCacheRef) descendantCacheRef.current = null;
     // Set dragPos override so the frame holds its drop position while Firestore catches up
     if (setDragPos) setDragPos({ id, x: snapped.x, y: snapped.y });
     // Imperatively position Konva node at snapped coords
