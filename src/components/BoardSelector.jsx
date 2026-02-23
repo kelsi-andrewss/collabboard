@@ -90,7 +90,8 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
   const [sortAsc, setSortAsc] = useState(() => loadGroupSort().asc ?? false);
   const [boardView, setBoardView] = useState(() => {
     const v = loadGroupSort().view;
-    return ['my', 'public', 'all'].includes(v) ? v : 'my';
+    const allowed = isAdmin ? ['my', 'public', 'all'] : ['my', 'public'];
+    return allowed.includes(v) ? v : 'my';
   });
   const groupDropdownRef = useRef(null);
   const groupInputRef = useRef(null);
@@ -521,7 +522,7 @@ export function BoardSelector({ onSelectBoard, onNavigateToGroup, onNavigateToBo
         <div className="controls-bar-center">
           {user && (
             <div className="filter-pill-group">
-              {['my', 'public', 'all'].map(view => (
+              {['my', 'public', ...(isAdmin ? ['all'] : [])].map(view => (
                 <button
                   key={view}
                   className={`sort-btn${boardView === view ? ' sort-btn--active' : ''}`}
