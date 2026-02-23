@@ -232,8 +232,8 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
       timestamp: m.timestamp,
     }));
     const historyDocRef = doc(db, 'boards', currentBoardId, 'aiHistory', 'messages');
-    setDoc(historyDocRef, { messages: serialized }, { merge: false }).catch(() => {
-      // fire-and-forget; non-critical
+    setDoc(historyDocRef, { messages: serialized }, { merge: false }).catch((err) => {
+      console.warn('[useAI] Failed to persist chat history:', err.message);
     });
   };
 

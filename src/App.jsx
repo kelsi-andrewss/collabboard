@@ -14,6 +14,9 @@ import { useHomeAI } from './hooks/useHomeAI';
 import { useRouting } from './hooks/useRouting';
 import { useCanvasViewport } from './hooks/useCanvasViewport';
 import { useShapeColors } from './hooks/useShapeColors';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useClipboard } from './hooks/useClipboard';
+import { useThumbnailCapture } from './hooks/useThumbnailCapture';
 import { GroupPage } from './components/GroupPage.jsx';
 import { FollowModeIndicator } from './components/FollowModeIndicator.jsx';
 import { buildSlugChain } from './utils/slugUtils.js';
@@ -23,7 +26,7 @@ import { makeObjectHandlers } from './handlers/objectHandlers.js';
 import { makeObjectCreationHandlers } from './handlers/objectCreationHandlers.js';
 import { makeFrameDragHandlers } from './handlers/frameDragHandlers.js';
 import { makeTransformHandlers } from './handlers/transformHandlers.js';
-import { makeStageHandlers, MIN_SCALE, MAX_SCALE } from './handlers/stageHandlers.js';
+import { makeStageHandlers } from './handlers/stageHandlers.js';
 import { getContentBounds, findOverlappingFrame, computeAncestorExpansions, FRAME_MARGIN } from './utils/frameUtils.js';
 import { Confetti } from './components/Confetti.jsx';
 import { AIPanel } from './components/AIPanel.jsx';
@@ -44,6 +47,7 @@ import { AppearanceSettings } from './components/AppearanceSettings.jsx';
 import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
 import { AchievementsPanel } from './components/AchievementsPanel.jsx';
 import { useAchievements } from './hooks/useAchievements.js';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal.jsx';
 import './App.css';
 
 const HOME_AI_SUGGESTED_PROMPTS = [
@@ -66,37 +70,6 @@ export function App() {
   const handleRecenterRef = useRef(null);
   const konamiSequenceRef = useRef([]);
   const canvasWrapperRef = useRef(null);
-
-  const captureThumbnail = (bId) => {
-    if (document.visibilityState !== 'visible') return;
-    const stage = stageRef.current;
-    if (!stage || !bId) return;
-    const bgRect = stage.findOne('.bg-rect');
-    const originalFill = bgRect ? bgRect.fill() : null;
-    const html = document.documentElement;
-    const origTheme = html.getAttribute('data-theme');
-    try {
-      const captureOpts = { pixelRatio: Math.min(window.devicePixelRatio || 1, 2), mimeType: 'image/jpeg', quality: 0.7 };
-
-      // Light capture with actual theme surface color
-      html.setAttribute('data-theme', 'light');
-      const lightSurface = getComputedStyle(html).getPropertyValue('--md-sys-color-surface').trim();
-      if (bgRect) bgRect.fill(lightSurface);
-      const lightUrl = stage.toDataURL(captureOpts);
-
-      // Dark capture with actual theme surface color
-      html.setAttribute('data-theme', 'dark');
-      const darkSurface = getComputedStyle(html).getPropertyValue('--md-sys-color-surface').trim();
-      if (bgRect) bgRect.fill(darkSurface);
-      const darkUrl = stage.toDataURL(captureOpts);
-
-      saveThumbnail(bId, lightUrl, darkUrl).catch(() => {});
-    } catch {
-    } finally {
-      if (bgRect) bgRect.fill(originalFill);
-      html.setAttribute('data-theme', origTheme);
-    }
-  };
 
   const prevUserRef = useRef(null);
   useEffect(() => {
@@ -190,30 +163,7 @@ export function App() {
     }
   }, [setFollowUserId, setStagePos, setStageScale]);
 
-  // Thumbnail: 5-minute interval capture while on a board
-  const boardIdRef = useRef(boardId);
-  boardIdRef.current = boardId;
-  useEffect(() => {
-    if (!boardId) return;
-    const interval = setInterval(() => captureThumbnail(boardIdRef.current), 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [boardId]);
-
-  // Thumbnail: capture when navigating away from a board
-  const prevBoardIdRef = useRef(null);
-  useEffect(() => {
-    const prev = prevBoardIdRef.current;
-    if (prev && !boardId) {
-      captureThumbnail(prev);
-    }
-    prevBoardIdRef.current = boardId;
-  }, [boardId]);
-
-  // Thumbnail: re-capture when theme or dark mode preference changes
-  useEffect(() => {
-    if (!boardId) return;
-    captureThumbnail(boardId);
-  }, [preferences.themeColor, preferences.darkMode, boardId]);
+  useThumbnailCapture({ boardId, stageRef, saveThumbnail, themeColor: preferences.themeColor, darkMode: preferences.darkMode });
 
   useEffect(() => {
     if (boardId && (!boardName || groupSlugs.length === 0) && allBoards.length > 0) {
@@ -319,6 +269,7 @@ export function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
@@ -392,254 +343,8 @@ export function App() {
   const handleDeleteMultipleRef = useRef(null);
   const handleDuplicateRef = useRef(null);
   const handleDuplicateMultipleRef = useRef(null);
-  const clipboardRef = useRef([]);
-
   const handleExitFollowRef = useRef(handleExitFollow);
   handleExitFollowRef.current = handleExitFollow;
-
-  // Keyboard shortcuts — registered once; reads via refs
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const tag = document.activeElement?.tagName;
-      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
-
-      const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-      const seq = konamiSequenceRef.current;
-      seq.push(e.key);
-      if (seq.length > 10) seq.splice(0, seq.length - 10);
-      if (seq.length === 10 && seq.every((k, i) => k === KONAMI[i])) {
-        konamiSequenceRef.current = [];
-        const wrapper = canvasWrapperRef.current;
-        if (wrapper) {
-          wrapper.classList.add('konami-spin');
-          setTimeout(() => wrapper.classList.remove('konami-spin'), 700);
-        }
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        if (!canEditRef.current) return;
-        e.preventDefault();
-        const b = boardRef.current;
-        if (b.canUndo) b.undo();
-        return;
-      }
-
-      if (isEditing) return;
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (!canEditRef.current) return;
-        const ids = selectedIdsRef.current;
-        if (ids.size > 0) {
-          e.preventDefault();
-          handleDeleteMultipleRef.current?.(ids);
-          setSelectedIds(new Set());
-          return;
-        }
-        const id = selectedIdRef.current;
-        if (id) {
-          e.preventDefault();
-          handleDeleteRef.current?.(id);
-        }
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        if (isFollowingRef.current) {
-          e.preventDefault();
-          handleExitFollowRef.current();
-          return;
-        }
-        if (connectorFirstPointRef.current !== null) {
-          e.preventDefault();
-          setConnectorFirstPoint(null);
-          return;
-        }
-        if (pendingToolRef.current) {
-          e.preventDefault();
-          setPendingTool(null);
-          setPendingToolCount(0);
-          return;
-        }
-        if (selectedIdsRef.current.size > 0) {
-          e.preventDefault();
-          setSelectedIds(new Set());
-          return;
-        }
-        const id = selectedIdRef.current;
-        if (id) {
-          e.preventDefault();
-          setSelectedId(null);
-          const stage = stageRef.current;
-          stage?.findOne('Transformer')?.nodes([]);
-          stage?.batchDraw();
-        }
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        if (!canEditRef.current) return;
-        e.preventDefault();
-        const ids = selectedIdsRef.current;
-        const snapshots = [];
-        if (ids.size > 0) {
-          for (const id of ids) {
-            const obj = objectsRef.current[id];
-            if (!obj) continue;
-            const { id: _id, createdAt, updatedAt, ...rest } = obj;
-            snapshots.push(rest);
-          }
-        } else {
-          const id = selectedIdRef.current;
-          if (id) {
-            const obj = objectsRef.current[id];
-            if (obj) {
-              const { id: _id, createdAt, updatedAt, ...rest } = obj;
-              snapshots.push(rest);
-            }
-          }
-        }
-        clipboardRef.current = snapshots;
-        if (snapshots.length > 0 && navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
-        }
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-        if (!canEditRef.current) return;
-        e.preventDefault();
-        const ids = selectedIdsRef.current;
-        const snapshots = [];
-        if (ids.size > 0) {
-          for (const id of ids) {
-            const obj = objectsRef.current[id];
-            if (!obj) continue;
-            const { id: _id, createdAt, updatedAt, ...rest } = obj;
-            snapshots.push(rest);
-          }
-          clipboardRef.current = snapshots;
-          if (snapshots.length > 0 && navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
-          }
-          handleDeleteMultipleRef.current?.(ids);
-          setSelectedIds(new Set());
-        } else {
-          const id = selectedIdRef.current;
-          if (id) {
-            const obj = objectsRef.current[id];
-            if (obj) {
-              const { id: _id, createdAt, updatedAt, ...rest } = obj;
-              snapshots.push(rest);
-            }
-            clipboardRef.current = snapshots;
-            if (snapshots.length > 0 && navigator.clipboard?.writeText) {
-              navigator.clipboard.writeText(JSON.stringify({ collabboard: true, objects: snapshots })).catch(() => {});
-            }
-            handleDeleteRef.current?.(id);
-          }
-        }
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        if (!canEditRef.current) return;
-        e.preventDefault();
-        const doPaste = async () => {
-          let items = clipboardRef.current;
-          if (navigator.clipboard?.readText) {
-            try {
-              const text = await navigator.clipboard.readText();
-              const parsed = JSON.parse(text);
-              if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
-                items = parsed.objects;
-                clipboardRef.current = items;
-              }
-            } catch {
-              // not valid board JSON — fall back to in-memory clipboard
-            }
-          }
-          if (items.length === 0) return;
-          const OFFSET = 20;
-          const refs = await Promise.all(
-            items.map((snapshot, i) =>
-              trackedAddObjectRef.current({ ...snapshot, x: snapshot.x + (i + 1) * OFFSET, y: snapshot.y + (i + 1) * OFFSET })
-            )
-          );
-          const newIds = refs.map(r => r.id);
-          setSelectedIds(new Set(newIds));
-        };
-        doPaste();
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        if (!canEditRef.current) return;
-        e.preventDefault();
-        const ids = selectedIdsRef.current;
-        if (ids.size > 1) {
-          handleDuplicateMultipleRef.current?.(ids);
-        } else {
-          const id = selectedIdRef.current;
-          if (id) handleDuplicateRef.current?.(id);
-        }
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        e.preventDefault();
-        const allIds = new Set(Object.keys(objectsRef.current));
-        setSelectedIds(allIds);
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
-        e.preventDefault();
-        const stage = stageRef.current;
-        if (!stage) return;
-        const oldScale = stage.scaleX();
-        const newScale = Math.min(MAX_SCALE, oldScale * 1.15);
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const pointX = (centerX - stage.x()) / oldScale;
-        const pointY = (centerY - stage.y()) / oldScale;
-        setStageScale(newScale);
-        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-        e.preventDefault();
-        const stage = stageRef.current;
-        if (!stage) return;
-        const oldScale = stage.scaleX();
-        const newScale = Math.max(MIN_SCALE, oldScale / 1.15);
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const pointX = (centerX - stage.x()) / oldScale;
-        const pointY = (centerY - stage.y()) / oldScale;
-        setStageScale(newScale);
-        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-        e.preventDefault();
-        const stage = stageRef.current;
-        if (!stage) return;
-        const oldScale = stage.scaleX();
-        const newScale = 1;
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const pointX = (centerX - stage.x()) / oldScale;
-        const pointY = (centerY - stage.y()) / oldScale;
-        setStageScale(newScale);
-        setStagePos({ x: centerX - pointX * newScale, y: centerY - pointY * newScale });
-        return;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Auto-clear dragPos once Firestore confirms the new position.
   // IMPORTANT: Do NOT call setDragPos(null) in drag-end handlers (objectHandlers or
@@ -723,6 +428,44 @@ export function App() {
     return ref;
   };
   trackedAddObjectRef.current = trackedAddObject;
+
+  const { clipboardRef } = useClipboard({
+    objectsRef,
+    selectedIdRef,
+    selectedIdsRef,
+    canEditRef,
+    trackedAddObjectRef,
+    setSelectedIds,
+  });
+
+  useKeyboardShortcuts({
+    canEditRef,
+    boardRef,
+    selectedIdRef,
+    selectedIdsRef,
+    objectsRef,
+    konamiSequenceRef,
+    canvasWrapperRef,
+    stageRef,
+    isFollowingRef,
+    handleExitFollowRef,
+    connectorFirstPointRef,
+    pendingToolRef,
+    clipboardRef,
+    trackedAddObjectRef,
+    handleDeleteRef,
+    handleDeleteMultipleRef,
+    handleDuplicateRef,
+    handleDuplicateMultipleRef,
+    setSelectedId,
+    setSelectedIds,
+    setConnectorFirstPoint,
+    setPendingTool,
+    setPendingToolCount,
+    setStageScale,
+    setStagePos,
+    setShowShortcutsModal,
+  });
 
   const onPendingToolPlace = async (toolType, canvasX, canvasY) => {
     if (!canEditRef.current) return;
@@ -1250,6 +993,10 @@ export function App() {
           onClose={() => setShowAchievements(false)}
         />
       )}
+      <KeyboardShortcutsModal
+        open={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   );
 }

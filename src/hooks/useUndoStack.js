@@ -1,6 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
+import { Timestamp } from 'firebase/firestore';
 
 const MAX_STACK = 50;
+
+function cloneWithTimestamps(obj) {
+  if (obj instanceof Timestamp) return new Timestamp(obj.seconds, obj.nanoseconds);
+  if (Array.isArray(obj)) return obj.map(cloneWithTimestamps);
+  if (obj && typeof obj === 'object') return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, cloneWithTimestamps(v)])
+  );
+  return obj;
+}
 
 export function useUndoStack(board) {
   const [stack, setStack] = useState([]);
@@ -25,7 +35,7 @@ export function useUndoStack(board) {
     if (current) {
       const rollback = {};
       for (const key of Object.keys(updates)) {
-        rollback[key] = current[key] !== undefined ? current[key] : null;
+        rollback[key] = current[key] !== undefined ? cloneWithTimestamps(current[key]) : null;
       }
       push({ type: 'update', objectId, rollback });
     }
@@ -35,7 +45,8 @@ export function useUndoStack(board) {
   const deleteObject = useCallback(async (objectId) => {
     const current = board.objects[objectId];
     if (current) {
-      const { id, ...snapshot } = current;
+      const { id, ...rawSnapshot } = current;
+      const snapshot = cloneWithTimestamps(rawSnapshot);
       push({ type: 'delete', objectId, snapshot });
     }
     return board.deleteObject(objectId);
@@ -48,7 +59,7 @@ export function useUndoStack(board) {
       if (!current) return null;
       const rollback = {};
       for (const key of Object.keys(data)) {
-        rollback[key] = current[key] !== undefined ? current[key] : null;
+        rollback[key] = current[key] !== undefined ? cloneWithTimestamps(current[key]) : null;
       }
       return { id, rollback };
     }).filter(Boolean);
@@ -63,8 +74,8 @@ export function useUndoStack(board) {
     const deletedSnapshots = deleteIds.map(id => {
       const current = board.objects[id];
       if (!current) return null;
-      const { id: _id, ...snapshot } = current;
-      return { id, snapshot };
+      const { id: _id, ...rawSnapshot } = current;
+      return { id, snapshot: cloneWithTimestamps(rawSnapshot) };
     }).filter(Boolean);
 
     // Snapshot updated objects for rollback
@@ -73,7 +84,7 @@ export function useUndoStack(board) {
       if (!current) return null;
       const rollback = {};
       for (const key of Object.keys(data)) {
-        rollback[key] = current[key] !== undefined ? current[key] : null;
+        rollback[key] = current[key] !== undefined ? cloneWithTimestamps(current[key]) : null;
       }
       return { id, rollback };
     }).filter(Boolean);

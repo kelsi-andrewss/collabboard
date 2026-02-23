@@ -133,6 +133,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
       await act().updateObject(objectId, { color });
     } else if (toolName === "createGrid") {
       const { objectType, rows, columns, startX = 100, startY = 100, cellWidth = 150, cellHeight = 150, gapX = 20, gapY = 20, color, labels } = toolArgs;
+      if (!Number.isInteger(rows) || rows < 1 || rows > 20) {
+        return { error: `createGrid: rows must be an integer between 1 and 20` };
+      }
+      if (!Number.isInteger(columns) || columns < 1 || columns > 20) {
+        return { error: `createGrid: columns must be an integer between 1 and 20` };
+      }
       if (rows * columns > 500) {
         return { error: `createGrid: rows * columns (${rows * columns}) exceeds maximum of 500` };
       }
@@ -452,6 +458,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       }
     } else if (toolName === "drawCircle") {
       const { cx, cy, radius, color = '#3b82f6' } = toolArgs;
+      if (radius <= 0) throw new Error('drawCircle: radius must be > 0');
       await act().addObject({
         type: 'circle',
         x: cx - radius,
@@ -463,7 +470,11 @@ export async function executeToolCall(toolName, toolArgs, context) {
       });
     } else if (toolName === "drawRegularPolygon") {
       const { cx, cy, radius, color = '#333333' } = toolArgs;
-      const sides = Math.min(12, Math.max(3, Math.round(toolArgs.sides)));
+      if (radius <= 0) throw new Error('drawRegularPolygon: radius must be > 0');
+      if (!Number.isInteger(toolArgs.sides) || toolArgs.sides < 3 || toolArgs.sides > 100) {
+        throw new Error('Invalid sides');
+      }
+      const sides = toolArgs.sides;
       const pts = regularPolygonVertices(cx, cy, radius, sides);
       const lineObjects = pts.map((a, i) => {
         const b = pts[(i + 1) % pts.length];
@@ -483,6 +494,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       await Promise.all(lineObjects.map(obj => act().addObject(obj)));
     } else if (toolName === "drawPerpendicularBisector") {
       const { x1, y1, x2, y2, length, color = '#333333' } = toolArgs;
+      if (length <= 0) throw new Error('drawPerpendicularBisector: length must be > 0');
       const seg = perpendicularBisector(x1, y1, x2, y2, length);
       const ox = Math.min(seg.x1, seg.x2);
       const oy = Math.min(seg.y1, seg.y2);
@@ -498,6 +510,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       });
     } else if (toolName === "drawAngleBisector") {
       const { vx, vy, ax, ay, bx, by, length, color = '#333333' } = toolArgs;
+      if (length <= 0) throw new Error('drawAngleBisector: length must be > 0');
       const seg = angleBisector(vx, vy, ax, ay, bx, by, length);
       const ox = Math.min(seg.x1, seg.x2);
       const oy = Math.min(seg.y1, seg.y2);
@@ -513,6 +526,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
       });
     } else if (toolName === "drawTangentLine") {
       const { cx, cy, radius, px, py, color = '#333333' } = toolArgs;
+      if (radius <= 0) throw new Error('drawTangentLine: radius must be > 0');
       const dist = Math.hypot(px - cx, py - cy);
       if (dist < radius) {
         return { error: "drawTangentLine: external point is inside the circle" };

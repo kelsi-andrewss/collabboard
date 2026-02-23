@@ -108,9 +108,9 @@ export function makeObjectHandlers({
 
     // Overlap check: objects cannot overlap sibling frames
     // Exclude old parent frame when reparenting (to root or to an ancestor frame)
-    const objectsForOverlapCheck = (oldFrameId && oldFrameId !== newFrameId)
-      ? Object.fromEntries(Object.entries(board.objects).filter(([k]) => k !== oldFrameId))
-      : board.objects;
+    const objectsForOverlapCheck = Object.fromEntries(
+      Object.entries(board.objects).filter(([k]) => k !== id)
+    );
     const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
     if (hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, newFrameId || null, objectsForOverlapCheck, FRAME_MARGIN)) {
       // Reject: snap back to pre-drag position
@@ -188,6 +188,7 @@ export function makeObjectHandlers({
   };
 
   const handleDeleteWithCleanup = (id) => {
+    stageRef.current?.findOne('Transformer')?.nodes([]);
     const obj = board.objects[id];
     if (obj && obj.type === 'frame') {
       const children = Object.values(board.objects).filter(o => o.frameId === id);
@@ -240,6 +241,7 @@ export function makeObjectHandlers({
   };
 
   const handleDeleteMultiple = (ids) => {
+    stageRef.current?.findOne('Transformer')?.nodes([]);
     const idsSet = ids instanceof Set ? ids : new Set(ids);
     const allUpdates = [];
     const allDeleteIds = [];
