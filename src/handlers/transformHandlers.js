@@ -45,8 +45,8 @@ export function makeTransformHandlers({
         let minChildX = Infinity, minChildY = Infinity;
         let maxChildX = -Infinity, maxChildY = -Infinity;
         for (const child of children) {
-          const cw = child.width ?? 150;
-          const ch = child.height ?? 150;
+          const cw = child.width ?? (child.type === 'sticky' ? 200 : 150);
+          const ch = child.height ?? (child.type === 'sticky' ? 200 : 150);
           minChildX = Math.min(minChildX, child.x);
           minChildY = Math.min(minChildY, child.y);
           maxChildX = Math.max(maxChildX, child.x + cw);
@@ -99,8 +99,8 @@ export function makeTransformHandlers({
     }
     const childX = u.x ?? obj.x;
     const childY = u.y ?? obj.y;
-    const childW = u.width ?? obj.width ?? 150;
-    const childH = u.height ?? obj.height ?? 150;
+    const childW = u.width ?? obj.width ?? (obj.type === 'sticky' ? 200 : 150);
+    const childH = u.height ?? obj.height ?? (obj.type === 'sticky' ? 200 : 150);
     const expansions = computeAncestorExpansions(
       childX, childY, childW, childH, obj.frameId, board.objects, FRAME_MARGIN
     );

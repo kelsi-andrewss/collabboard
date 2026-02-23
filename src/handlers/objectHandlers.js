@@ -70,7 +70,7 @@ export function makeObjectHandlers({
     const newFrameIdForCheck = overFrame ? overFrame.id : null;
     const bounds = (obj.type === 'line' || obj.type === 'arrow')
       ? getLineBounds({ ...obj, x: pos.x, y: pos.y })
-      : { x: pos.x, y: pos.y, width: obj.width || 150, height: obj.height || 150 };
+      : { x: pos.x, y: pos.y, width: obj.width || (obj.type === 'sticky' ? 200 : 150), height: obj.height || (obj.type === 'sticky' ? 200 : 150) };
     illegalDrag = hasDisallowedSiblingOverlap(id, obj.type, bounds, newFrameIdForCheck, board.objects, FRAME_MARGIN);
     setDragState({ draggingId: id, overFrameId, action, illegalDrag });
     setDragPos({ id, x: pos.x, y: pos.y });
@@ -103,8 +103,8 @@ export function makeObjectHandlers({
 
     // Compute bounding box (lines/arrows use points array, others use width/height)
     const lineBounds = (obj.type === 'line' || obj.type === 'arrow') ? getLineBounds({ ...obj, x: snapped.x, y: snapped.y }) : null;
-    const ow = lineBounds ? lineBounds.width : (obj.width || 150);
-    const oh = lineBounds ? lineBounds.height : (obj.height || 150);
+    const ow = lineBounds ? lineBounds.width : (obj.width || (obj.type === 'sticky' ? 200 : 150));
+    const oh = lineBounds ? lineBounds.height : (obj.height || (obj.type === 'sticky' ? 200 : 150));
 
     // Overlap check: objects cannot overlap sibling frames
     // Exclude old parent frame when reparenting (to root or to an ancestor frame)

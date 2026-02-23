@@ -725,7 +725,7 @@ export function App() {
         const sz = Math.round(200 / stageScale);
         objData = { type: 'sticky', text: 'New Sticky Note', x: canvasX - sz / 2, y: canvasY - sz / 2, width: sz, height: sz, color: shapeColors.sticky.active, ...defaults };
       } else if (toolType === 'text') {
-        objData = { type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: '#1a1a1a', rotation: 0, frameId: null, childIds: [], ...defaults };
+        objData = { type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults };
       } else {
         objData = { type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults };
       }
