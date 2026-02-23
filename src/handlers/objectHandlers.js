@@ -188,6 +188,7 @@ export function makeObjectHandlers({
   };
 
   const handleDeleteWithCleanup = (id) => {
+    stageRef.current?.findOne('Transformer')?.nodes([]);
     const obj = board.objects[id];
     if (obj && obj.type === 'frame') {
       const children = Object.values(board.objects).filter(o => o.frameId === id);
@@ -240,6 +241,7 @@ export function makeObjectHandlers({
   };
 
   const handleDeleteMultiple = (ids) => {
+    stageRef.current?.findOne('Transformer')?.nodes([]);
     const idsSet = ids instanceof Set ? ids : new Set(ids);
     const allUpdates = [];
     const allDeleteIds = [];
