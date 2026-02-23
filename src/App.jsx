@@ -352,11 +352,25 @@ export function App() {
   // before Firestore confirms causes a flash to the old position. To prevent phantom
   // onDragStart events on clicks from re-setting dragPos, all draggable Konva nodes
   // must use dragDistance={3} (see StickyNote, Shape, Frame, LineShape).
+  // The clear is deferred to the next RAF so Konva draws the confirmed position first.
   useEffect(() => {
     if (!dragPos) return;
     const obj = board.objects[dragPos.id];
     if (obj && obj.x === dragPos.x && obj.y === dragPos.y) {
-      setDragPos(null);
+      // Defer clear to next animation frame so Konva has drawn the confirmed
+      // position before React removes the dragPos override. This prevents a
+      // single-frame flash to the stale Firestore position.
+      const rafId = requestAnimationFrame(() => {
+        setDragPos((current) => {
+          if (!current) return null;
+          const latestObj = board.objects[current.id];
+          if (latestObj && latestObj.x === current.x && latestObj.y === current.y) {
+            return null;
+          }
+          return current;
+        });
+      });
+      return () => cancelAnimationFrame(rafId);
     }
   }, [board.objects, dragPos]);
 
