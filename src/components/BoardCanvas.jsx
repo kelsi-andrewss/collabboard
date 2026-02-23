@@ -1095,7 +1095,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           tooltipGroupRef={tooltipGroupKonvaRef}
         />
       )}
-      {pendingTool && pendingTool !== 'line' && pendingTool !== 'arrow' && (
+      {pendingTool && pendingTool !== 'line' && pendingTool !== 'arrow' && pendingTool !== 'scribble' && (
         <GhostLayer
           pendingTool={pendingTool}
           stageScale={stageScale}
