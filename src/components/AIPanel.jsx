@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
 import './AIPanel.css';
 
@@ -12,6 +12,8 @@ function AIPanelInner({ state, handlers }) {
   const { handleAISubmit, setAiPrompt, clearError, confirmDeletions, cancelDeletions, confirmBoardDeletion, cancelBoardDeletion } = handlers;
   const historyEndRef = useRef(null);
   const inputRef = useRef(null);
+  const [isExiting, setIsExiting] = useState(false);
+  const prevShowAI = useRef(showAI);
 
   async function handleSubmitAndRefocus(e) {
     await handleAISubmit(e);
@@ -24,13 +26,27 @@ function AIPanelInner({ state, handlers }) {
     }
   }, [chatHistory, showAI]);
 
-  if (!showAI) return null;
+  useEffect(() => {
+    if (prevShowAI.current && !showAI) {
+      setIsExiting(true);
+    }
+    prevShowAI.current = showAI;
+  }, [showAI]);
+
+  if (!showAI && !isExiting) return null;
 
   const hasPendingDeletions = pendingDeletions && pendingDeletions.length > 0;
   const hasPendingBoardDeletion = !!pendingBoardDeletion;
 
   return (
-    <div className="ai-panel">
+    <div
+      className={`ai-panel${isExiting ? ' is-exiting' : ''}`}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && isExiting) {
+          setIsExiting(false);
+        }
+      }}
+    >
       <div className="ai-header">AI Board Agent</div>
       {isHistoryLoading ? (
         <div className="ai-history-loading">Loading history...</div>

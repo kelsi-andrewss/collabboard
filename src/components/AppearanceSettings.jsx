@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Check, Palette } from 'lucide-react';
 import './AppearanceSettings.css';
 
@@ -12,12 +12,27 @@ const THEME_COLORS = [
 ];
 
 export function AppearanceSettings({ preferences, updatePreference, onClose }) {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleClose = () => {
+    setIsExiting(true);
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className={`modal-overlay${isExiting ? ' is-exiting' : ''}`}
+      onClick={handleClose}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && isExiting) {
+          setIsExiting(false);
+          onClose();
+        }
+      }}
+    >
       <div className="modal-card appearance-settings" onClick={e => e.stopPropagation()}>
         <div className="appearance-header">
           <h2>Appearance</h2>
-          <button className="appearance-close" onClick={onClose} aria-label="Close">
+          <button className="appearance-close" onClick={handleClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>

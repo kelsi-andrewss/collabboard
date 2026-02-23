@@ -13,6 +13,18 @@
   z-index: 1000;
   box-shadow: var(--md-sys-elevation-3);
   min-width: 180px;
+  transform-origin: top left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .color-dropdown {
+    animation: color-dropdown-in var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-emphasized-decelerate);
+  }
+}
+
+@keyframes color-dropdown-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .picker-row {

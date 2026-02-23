@@ -11,6 +11,26 @@
   box-shadow: var(--md-sys-elevation-2);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .selected-actions {
+    animation: action-bar-in var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-emphasized-decelerate);
+  }
+
+  html:not([data-reduced-motion]) .selected-actions.is-exiting {
+    animation: action-bar-out var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards;
+  }
+}
+
+@keyframes action-bar-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes action-bar-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}
+
 .action-fab {
   width: 32px;
   height: 32px;

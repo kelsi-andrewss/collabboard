@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Konva from 'konva';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { getContrastColor } from '../utils/colorUtils.js';
+import { useObjectAnimationContext } from '../contexts/ObjectAnimationContext.js';
 
 function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
@@ -10,6 +12,18 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   const trRef = useRef();
   const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
+  const animCtx = useObjectAnimationContext();
+  const xRef = useRef(x);
+  const yRef = useRef(y);
+  const widthRef = useRef(width);
+  const heightRef = useRef(height);
+  const dragPosRef = useRef(dragPos);
+  const prevIsSelectedRef = useRef(isSelected);
+  xRef.current = x;
+  yRef.current = y;
+  widthRef.current = width;
+  heightRef.current = height;
+  dragPosRef.current = dragPos;
 
   // Keep size ref in sync with props
   useEffect(() => {
@@ -35,6 +49,104 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete]);
+
+  // Spawn / die animations. Re-runs when the registry version bumps.
+  useEffect(() => {
+    if (!animCtx) return;
+    const animState = animCtx.getAnimationState(id);
+    const node = groupRef.current;
+    if (!node || animState === 'idle') return;
+
+    const w = widthRef.current;
+    const h = heightRef.current;
+    const dp = dragPosRef.current;
+    const baseX = dp?.id === id ? dp.x : xRef.current;
+    const baseY = dp?.id === id ? dp.y : yRef.current;
+
+    if (animState === 'spawning') {
+      node.opacity(0);
+      node.scaleX(0.7);
+      node.scaleY(0.7);
+      node.offsetX(w / 2);
+      node.offsetY(h / 2);
+      node.x(baseX + w / 2);
+      node.y(baseY + h / 2);
+      const tween = new Konva.Tween({
+        node,
+        duration: 0.2,
+        opacity: 1,
+        scaleX: 1,
+        scaleY: 1,
+        easing: Konva.Easings.EaseOut,
+        onFinish: () => {
+          tween.destroy();
+          node.offsetX(0);
+          node.offsetY(0);
+          node.x(dragPosRef.current?.id === id ? dragPosRef.current.x : xRef.current);
+          node.y(dragPosRef.current?.id === id ? dragPosRef.current.y : yRef.current);
+          animCtx.clearAnimation(id);
+        },
+      });
+      tween.play();
+      return () => tween.destroy();
+    }
+
+    if (animState === 'dying') {
+      const onComplete = animCtx.getOnComplete(id);
+      node.offsetX(w / 2);
+      node.offsetY(h / 2);
+      node.x(baseX + w / 2);
+      node.y(baseY + h / 2);
+      const tween = new Konva.Tween({
+        node,
+        duration: 0.15,
+        opacity: 0,
+        scaleX: 0.7,
+        scaleY: 0.7,
+        easing: Konva.Easings.EaseIn,
+        onFinish: () => {
+          tween.destroy();
+          onComplete?.();
+        },
+      });
+      tween.play();
+      return () => tween.destroy();
+    }
+  }, [animCtx?.version]);
+
+  useEffect(() => {
+    const wasSelected = prevIsSelectedRef.current;
+    prevIsSelectedRef.current = isSelected;
+    if (!isSelected || wasSelected) return;
+    if (document.documentElement.dataset.reducedMotion !== undefined) return;
+    const node = groupRef.current;
+    if (!node) return;
+    if (animCtx) {
+      const animState = animCtx.getAnimationState(id);
+      if (animState === 'spawning' || animState === 'dying') return;
+    }
+    const tween1 = new Konva.Tween({
+      node,
+      duration: 0.08,
+      scaleX: 1.04,
+      scaleY: 1.04,
+      easing: Konva.Easings.EaseOut,
+      onFinish: () => {
+        tween1.destroy();
+        const tween2 = new Konva.Tween({
+          node,
+          duration: 0.08,
+          scaleX: 1,
+          scaleY: 1,
+          easing: Konva.Easings.EaseIn,
+          onFinish: () => tween2.destroy(),
+        });
+        tween2.play();
+      },
+    });
+    tween1.play();
+    return () => tween1.destroy();
+  }, [isSelected]);
 
   const handleTextChange = (e) => {
     onUpdate(id, { text: e.target.value });
@@ -100,12 +212,39 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
           if (onDragMove) onDragMove(id, { x: e.target.x(), y: e.target.y() });
         }}
         onDragEnd={(e) => {
-          const pos = { x: e.target.x(), y: e.target.y() };
+          const finalX = e.target.x();
+          const finalY = e.target.y();
+          const pos = { x: finalX, y: finalY };
           if (mainLayerRef?.current && groupRef.current) {
             groupRef.current.moveTo(mainLayerRef.current);
             mainLayerRef.current.batchDraw();
           }
           onDragEnd(id, pos);
+          if (document.documentElement.dataset.reducedMotion === undefined) {
+            const node = groupRef.current;
+            if (node) {
+              const spring1 = new Konva.Tween({
+                node,
+                duration: 0.04,
+                x: finalX - 3,
+                y: finalY - 3,
+                easing: Konva.Easings.EaseOut,
+                onFinish: () => {
+                  spring1.destroy();
+                  const spring2 = new Konva.Tween({
+                    node,
+                    duration: 0.08,
+                    x: finalX,
+                    y: finalY,
+                    easing: Konva.Easings.EaseIn,
+                    onFinish: () => spring2.destroy(),
+                  });
+                  spring2.play();
+                },
+              });
+              spring1.play();
+            }
+          }
         }}
       >
         {type === 'rectangle' && (
