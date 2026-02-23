@@ -17,7 +17,6 @@ export function makeObjectHandlers({
   stagePos, stageScale, setShapeColors,
   setDragPos, updateColorHistory,
   setResizeTooltip, resizeTooltipTimer,
-  markDying,
 }) {
   const updateActiveColor = (type, color) => {
     setShapeColors(prev => {
@@ -194,30 +193,16 @@ export function makeObjectHandlers({
     if (obj && obj.type === 'frame') {
       const children = Object.values(board.objects).filter(o => o.frameId === id);
       if (children.length > 0) {
-        const doDelete = () => {
-          board.batchWriteAndDelete(
-            children.map(c => ({ id: c.id, data: { frameId: null } })),
-            [id]
-          );
-          setSelectedId(null);
-        };
-        if (markDying) {
-          markDying(id, doDelete);
-        } else {
-          doDelete();
-        }
+        board.batchWriteAndDelete(
+          children.map(c => ({ id: c.id, data: { frameId: null } })),
+          [id]
+        );
+        setSelectedId(null);
         return;
       }
     }
-    const doDelete = () => {
-      board.deleteObject(id);
-      setSelectedId(null);
-    };
-    if (markDying) {
-      markDying(id, doDelete);
-    } else {
-      doDelete();
-    }
+    board.deleteObject(id);
+    setSelectedId(null);
   };
 
   const handleBringToFront = (id) => {
