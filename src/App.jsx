@@ -551,7 +551,12 @@ export function App() {
               const text = await navigator.clipboard.readText();
               const parsed = JSON.parse(text);
               if (parsed?.collabboard === true && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
-                items = parsed.objects;
+                const VALID_TYPES = ['sticky', 'rectangle', 'circle', 'triangle', 'line', 'frame', 'text', 'scribble', 'arrow'];
+                const validObjects = parsed.objects.filter(o =>
+                  VALID_TYPES.includes(o.type) &&
+                  typeof o.x === 'number' && typeof o.y === 'number'
+                );
+                items = validObjects;
                 clipboardRef.current = items;
               }
             } catch {
