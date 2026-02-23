@@ -108,9 +108,9 @@ export function makeObjectHandlers({
 
     // Overlap check: objects cannot overlap sibling frames
     // Exclude old parent frame when reparenting (to root or to an ancestor frame)
-    const objectsForOverlapCheck = (oldFrameId && oldFrameId !== newFrameId)
-      ? Object.fromEntries(Object.entries(board.objects).filter(([k]) => k !== oldFrameId))
-      : board.objects;
+    const objectsForOverlapCheck = Object.fromEntries(
+      Object.entries(board.objects).filter(([k]) => k !== id)
+    );
     const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
     if (hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, newFrameId || null, objectsForOverlapCheck, FRAME_MARGIN)) {
       // Reject: snap back to pre-drag position
