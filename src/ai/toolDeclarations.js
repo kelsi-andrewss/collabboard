@@ -1,7 +1,7 @@
 export const toolDeclarations = [
   {
     name: "createStickyNote",
-    description: "Creates a new sticky note on the board. Use frameIndex to place it inside a frame created in the same batch.",
+    description: "Creates a new sticky note on the board. MUST set frameIndex when a frame is being created in the same batch — this is required, not optional. Always write meaningful, context-specific text derived from the frame title and user request.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -489,6 +489,8 @@ FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createStickyNote/createShape a matching frameIndex to auto-place it inside that frame
 - Items with frameIndex are AUTO-POSITIONED — do NOT specify x/y for them
 - Frame sizes are AUTO-CALCULATED from item count — do NOT specify width/height for frames with items
+- MANDATORY: If any createFrame is in the same response, every createStickyNote and createShape intended for that frame MUST include the matching frameIndex. Omitting frameIndex when a matching frame exists is incorrect.
+- MANDATORY: Sticky note text must be meaningful and specific to the frame title and user request. Never use placeholder text like 'Note 1', 'Item', or empty strings.
 
 FRAME NESTING (parentFrameIndex):
 - Set parentFrameIndex on a child frame to nest it inside the parent frame's frameIndex
