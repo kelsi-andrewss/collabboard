@@ -451,6 +451,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const objectsRef = useRef({});
   const connectorFirstPointRef = useRef(null);
   const stageScaleRef = useRef(1);
+  const isMiddlePanningRef = useRef(false);
+  const middlePanStartRef = useRef({ clientX: 0, clientY: 0 });
+  const middlePanStagePosRef = useRef({ x: 0, y: 0 });
   const [shiftHeld, setShiftHeld] = useState(false);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
@@ -490,6 +493,13 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   }, []);
 
   const handleMouseDown = (e) => {
+    if (e.evt.button === 1) {
+      e.evt.preventDefault();
+      isMiddlePanningRef.current = true;
+      middlePanStartRef.current = { clientX: e.evt.clientX, clientY: e.evt.clientY };
+      middlePanStagePosRef.current = { x: stagePos.x, y: stagePos.y };
+      return;
+    }
     const isShiftDrag = e.evt.shiftKey && !pendingTool;
     if (!isSelectMode && !isShiftDrag) return;
     const target = e.target;
@@ -507,6 +517,19 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   };
 
   const handleMouseMoveWrapped = (e) => {
+    if (isMiddlePanningRef.current) {
+      const dx = e.evt.clientX - middlePanStartRef.current.clientX;
+      const dy = e.evt.clientY - middlePanStartRef.current.clientY;
+      const newPos = {
+        x: middlePanStagePosRef.current.x + dx,
+        y: middlePanStagePosRef.current.y + dy,
+      };
+      const stage = e.target.getStage();
+      stage.position(newPos);
+      stage.batchDraw();
+      setStagePos(newPos);
+      return;
+    }
     handleMouseMove(e);
     const stage = e.target.getStage();
     const pos = stage.getRelativePointerPosition();
@@ -612,7 +635,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     setSelRect(updatedRect);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e) => {
+    if (e.evt.button === 1) {
+      isMiddlePanningRef.current = false;
+      return;
+    }
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const rect = selRectRef.current;
     const wasShiftDrag = shiftDragRef.current;
@@ -637,6 +664,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   };
 
   const handleStageClickWrapped = (e) => {
+    if (e.evt.button === 1) return;
     if (e.evt.shiftKey && activeTool === 'select') {
       const target = e.target;
       const stage = target.getStage();
