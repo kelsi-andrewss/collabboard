@@ -55,6 +55,14 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
+        if (!canEditRef.current) return;
+        e.preventDefault();
+        const b = boardRef.current;
+        if (b.canRedo) b.redo();
+        return;
+      }
+
       if (isEditing) return;
 
       if (e.key === '?') {
