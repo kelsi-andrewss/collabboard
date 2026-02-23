@@ -2,6 +2,11 @@ import { regularPolygonVertices, perpendicularBisector, angleBisector, tangentLi
 import { getPortCoords } from '../utils/connectorUtils.js';
 import { computeMoodboardLayout } from '../utils/moodboardUtils.js';
 
+function getThemeOnSurface() {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue('--md-sys-color-on-surface').trim() || '#1a1a1a';
+}
+
 async function batchUpdate(act, updates) {
   if (!updates.length) return;
   await Promise.all(updates.map(({ id, data }) => act().updateObject(id, data)));
@@ -409,7 +414,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
         });
       }
     } else if (toolName === "createTextElement") {
-      const { x, y, text, width = 200, fontSize = 16, color = '#1a1a1a' } = toolArgs;
+      const { x, y, text, width = 200, fontSize = 16, color = undefined } = toolArgs;
       const w = width, h = 600;
       const pos = findNonOverlappingPos(x, y, w, h);
       const frameId = findContainingFrame(pos.x, pos.y, w, h);
@@ -420,7 +425,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
         text,
         width,
         fontSize,
-        color,
+        color: color ?? getThemeOnSurface(),
         ...(frameId ? { frameId } : {})
       });
     } else if (toolName === "createBoard") {
@@ -535,7 +540,7 @@ export async function executeToolCall(toolName, toolArgs, context) {
         text,
         width: 200,
         fontSize: 16,
-        color: '#1a1a1a',
+        color: getThemeOnSurface(),
       });
     } else if (toolName === "editText") {
       const { objectId, text } = toolArgs;

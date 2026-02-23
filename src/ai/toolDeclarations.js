@@ -232,7 +232,7 @@ export const toolDeclarations = [
         text: { type: "STRING", description: "The text content" },
         width: { type: "NUMBER", description: "Width of the text block (default 200)" },
         fontSize: { type: "NUMBER", description: "Font size in pixels (default 16)" },
-        color: { type: "STRING", description: "Hex color code for the text (default '#1a1a1a')" }
+        color: { type: "STRING", description: "Hex color code for the text. Omit to use the active theme's on-surface color." }
       },
       required: ["x", "y", "text"]
     }
