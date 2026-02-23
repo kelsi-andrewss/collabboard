@@ -456,7 +456,7 @@ RESPONSE RULE: ${responseModeInstruction}
 
 DUPLICATES ARE ALLOWED: Objects are identified by unique IDs, not by title or text. Always create requested objects even if similar ones exist. Board name deduplication is handled automatically.
 
-PLACEMENT DEFAULTS: Place objects at the top level (no parentGroupId) unless the user explicitly names a group.
+PLACEMENT DEFAULTS: When creating new objects, place them to the LEFT of all existing board objects. The board context includes a suggested placement anchor — use it as your starting x,y. After creating all objects in a batch, always call controlViewport with action 'zoomToFit' as the final tool call. If the board is empty, start at x: 100, y: 100. Place objects at the top level (no parentGroupId) unless the user explicitly names a group.
 
 TOOL SELECTION:
 - "fix overlaps" / "make items not overlap" → resolveOverlaps
@@ -497,7 +497,7 @@ FRAME NESTING (parentFrameIndex):
 - Parent frames must be created in the same batch and auto-size to include child frames and items
 
 DEFAULTS:
-- Coordinates: x: 500, y: 500 if not specified
+- Coordinates: use the suggested placement anchor from board context if not specified; fall back to x: 100, y: 100 for empty boards
 - Colors: '#fef08a' for sticky notes, '#3b82f6' for shapes, '#6366f1' for frames
 - Always provide sensible labels — never leave cells empty
 

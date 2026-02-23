@@ -145,6 +145,9 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
     if (!objects || Object.keys(objects).length === 0) return '';
     const allObjs = Object.values(objects);
     const total = allObjs.length;
+    const minX = allObjs.length > 0 ? Math.min(...allObjs.map(o => o.x ?? 0)) : 0;
+    const leftAnchor = allObjs.length > 0 ? Math.max(0, minX - 600) : 100;
+    const anchorLine = `Suggested placement anchor for new items: x=${leftAnchor}, y=100 (left of existing content).\n`;
 
     const typeCounts = {};
     for (const obj of allObjs) {
@@ -192,7 +195,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
       return `id:${obj.id}, type:${obj.type}, pos:(${Math.round(obj.x || 0)},${Math.round(obj.y || 0)})`;
     });
 
-    return `[${summaryLine}${truncationNote} Objects: ${summaries.join(' | ')}]\n\n`;
+    return `${anchorLine}[${summaryLine}${truncationNote} Objects: ${summaries.join(' | ')}]\n\n`;
   };
 
   // Wrapper: find non-overlapping position using the latest objects snapshot.
