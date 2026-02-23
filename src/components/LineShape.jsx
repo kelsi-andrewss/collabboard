@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Konva from 'konva';
 import { Line, Arrow, Group, Rect, Circle } from 'react-konva';
 import { findSnapTarget, getPortCoords, SNAP_DISTANCE, PORTS } from '../utils/connectorUtils.js';
+import { useObjectAnimationContext } from '../contexts/ObjectAnimationContext.js';
 
 const PORT_RADIUS = 5;
 
@@ -9,6 +11,13 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
   const groupRef = useRef();
   const [draggingEndpoint, setDraggingEndpoint] = useState(null);
   const pointsRef = useRef(points);
+  const animCtx = useObjectAnimationContext();
+  const xRef = useRef(x);
+  const yRef = useRef(y);
+  const pointsRefForAnim = useRef(points);
+  xRef.current = x;
+  yRef.current = y;
+  pointsRefForAnim.current = points;
 
   useEffect(() => {
     pointsRef.current = points;
@@ -23,6 +32,75 @@ function LineShapeInner({ id, type = 'line', x, y, points = [0, 0, 200, 0], colo
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, onDelete, id]);
+
+  // Spawn / die animations. Re-runs when the registry version bumps.
+  useEffect(() => {
+    if (!animCtx) return;
+    const animState = animCtx.getAnimationState(id);
+    const node = groupRef.current;
+    if (!node || animState === 'idle') return;
+
+    const pts = pointsRefForAnim.current;
+    let minPx = Infinity, minPy = Infinity, maxPx = -Infinity, maxPy = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      if (pts[i] < minPx) minPx = pts[i];
+      if (pts[i] > maxPx) maxPx = pts[i];
+      if (pts[i + 1] < minPy) minPy = pts[i + 1];
+      if (pts[i + 1] > maxPy) maxPy = pts[i + 1];
+    }
+    const cx = xRef.current + (minPx + maxPx) / 2;
+    const cy = yRef.current + (minPy + maxPy) / 2;
+
+    if (animState === 'spawning') {
+      node.opacity(0);
+      node.scaleX(0.7);
+      node.scaleY(0.7);
+      node.offsetX(cx - xRef.current);
+      node.offsetY(cy - yRef.current);
+      node.x(cx);
+      node.y(cy);
+      const tween = new Konva.Tween({
+        node,
+        duration: 0.2,
+        opacity: 1,
+        scaleX: 1,
+        scaleY: 1,
+        easing: Konva.Easings.EaseOut,
+        onFinish: () => {
+          tween.destroy();
+          node.offsetX(0);
+          node.offsetY(0);
+          node.x(xRef.current);
+          node.y(yRef.current);
+          animCtx.clearAnimation(id);
+        },
+      });
+      tween.play();
+      return () => tween.destroy();
+    }
+
+    if (animState === 'dying') {
+      const onComplete = animCtx.getOnComplete(id);
+      node.offsetX(cx - xRef.current);
+      node.offsetY(cy - yRef.current);
+      node.x(cx);
+      node.y(cy);
+      const tween = new Konva.Tween({
+        node,
+        duration: 0.15,
+        opacity: 0,
+        scaleX: 0.7,
+        scaleY: 0.7,
+        easing: Konva.Easings.EaseIn,
+        onFinish: () => {
+          tween.destroy();
+          onComplete?.();
+        },
+      });
+      tween.play();
+      return () => tween.destroy();
+    }
+  }, [animCtx?.version]);
 
   const isArrow = type === 'arrow';
   const ShapeComponent = isArrow ? Arrow : Line;

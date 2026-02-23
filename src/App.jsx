@@ -48,6 +48,8 @@ import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
 import { AchievementsPanel } from './components/AchievementsPanel.jsx';
 import { useAchievements } from './hooks/useAchievements.js';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal.jsx';
+import { useObjectAnimations } from './hooks/useObjectAnimations.js';
+import { ObjectAnimationContext } from './contexts/ObjectAnimationContext.js';
 import './App.css';
 
 const HOME_AI_SUGGESTED_PROMPTS = [
@@ -101,7 +103,8 @@ export function App() {
   const { followUserId, setFollowUserId, followedUserPresence, isFollowing } = useFollowMode(presence.presentUsers);
   const isFollowingRef = useRef(false);
   isFollowingRef.current = isFollowing;
-  const rawBoard = useBoard(boardId, user);
+  const objectAnimations = useObjectAnimations();
+  const rawBoard = useBoard(boardId, user, { markSpawning: objectAnimations.markSpawning });
   const { lastObjectSyncLatencyRef } = rawBoard;
   const board = useUndoStack(rawBoard);
   const effectiveAdminView = isAdmin && adminViewActive;
@@ -375,6 +378,7 @@ export function App() {
     stagePos, stageScale, setShapeColors,
     setDragPos, updateColorHistory,
     setResizeTooltip, resizeTooltipTimer,
+    markDying: objectAnimations.markDying,
   });
   handleDeleteRef.current = handleDeleteWithCleanup;
   handleDeleteMultipleRef.current = handleDeleteMultiple;
@@ -623,6 +627,7 @@ export function App() {
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
+    <ObjectAnimationContext.Provider value={objectAnimations}>
     <div className="app-container">
       {user && (
         <div className="header">
@@ -998,6 +1003,7 @@ export function App() {
         onClose={() => setShowShortcutsModal(false)}
       />
     </div>
+    </ObjectAnimationContext.Provider>
   );
 }
 
