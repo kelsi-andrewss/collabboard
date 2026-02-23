@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Trophy } from 'lucide-react';
 import './AchievementsPanel.css';
 
@@ -8,15 +8,30 @@ function formatDate(ts) {
 }
 
 export function AchievementsPanel({ achievements, onClose }) {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleClose = () => {
+    setIsExiting(true);
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className={`modal-overlay${isExiting ? ' is-exiting' : ''}`}
+      onClick={handleClose}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && isExiting) {
+          setIsExiting(false);
+          onClose();
+        }
+      }}
+    >
       <div className="modal-card achievements-panel" onClick={e => e.stopPropagation()}>
         <div className="achievements-header">
           <div className="achievements-title">
             <Trophy size={20} className="achievements-title-icon" />
             <h2>Achievements</h2>
           </div>
-          <button className="achievements-close" onClick={onClose} aria-label="Close">
+          <button className="achievements-close" onClick={handleClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>

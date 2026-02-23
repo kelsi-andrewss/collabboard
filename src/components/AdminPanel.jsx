@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { collection, doc, getDocs, setDoc, updateDoc, serverTimestamp, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import './AdminPanel.css';
 
 export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStrings, createBoard, deleteBoard }) {
+  const [isExiting, setIsExiting] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,12 +39,19 @@ export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStr
     });
   }, [isOpen]);
 
+  const handleClose = useCallback(() => {
+    setIsExiting(true);
+  }, []);
+
   useEffect(() => {
-    if (!isOpen) return;
-    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    if (!isOpen) {
+      setIsExiting(false);
+      return;
+    }
+    const handleEsc = (e) => { if (e.key === 'Escape') handleClose(); };
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   const handleSearch = (term) => {
     setSearchQuery(term);
@@ -155,7 +163,7 @@ export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStr
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isExiting) return null;
 
   const currentAdmins = allUsers.filter(u => u.role === 'admin');
   const boardCount = allBoards?.length ?? 0;
@@ -163,11 +171,20 @@ export function AdminPanel({ isOpen, onClose, allBoards, groups, migrateGroupStr
   const userCount = usersLoaded ? allUsers.length : '...';
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className={`modal-overlay${isExiting ? ' is-exiting' : ''}`}
+      onClick={handleClose}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && isExiting) {
+          setIsExiting(false);
+          onClose();
+        }
+      }}
+    >
       <div className="modal-card admin-panel-card" onClick={e => e.stopPropagation()}>
         <div className="admin-panel-header">
           <h2>Admin Panel</h2>
-          <button className="admin-panel-close" onClick={onClose}><X size={18} /></button>
+          <button className="admin-panel-close" onClick={handleClose}><X size={18} /></button>
         </div>
 
         <div className="admin-panel-body">

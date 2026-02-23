@@ -578,6 +578,44 @@
   box-shadow: 0 20px 25px -5px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .modal-overlay {
+    animation: modal-overlay-in var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard-decelerate);
+  }
+
+  html:not([data-reduced-motion]) .modal-overlay.is-exiting {
+    animation: modal-overlay-out var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard-accelerate) forwards;
+  }
+
+  html:not([data-reduced-motion]) .modal-overlay .modal-card {
+    animation: modal-card-in var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-emphasized-decelerate);
+  }
+
+  html:not([data-reduced-motion]) .modal-overlay.is-exiting .modal-card {
+    animation: modal-card-out var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards;
+  }
+}
+
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-overlay-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes modal-card-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modal-card-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
+}
+
 .modal-card h2 {
   margin: 0 0 20px 0;
   font-size: var(--md-sys-typescale-headline-small-size);
@@ -815,6 +853,17 @@
 @keyframes konami-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-reduced-motion]) .reaction-picker {
+    animation: reaction-picker-in var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-emphasized-decelerate);
+  }
+}
+
+@keyframes reaction-picker-in {
+  from { opacity: 0; transform: translate(-50%, -110%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -110%) scale(1); }
 }
 
 .konami-spin {
