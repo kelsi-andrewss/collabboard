@@ -93,18 +93,3 @@
 .dropdown-item:hover {
   background: rgba(103, 80, 164, var(--md-sys-state-hover-opacity));
 }
-
-.dropdown-item-badge {
-  margin-left: auto;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  font-size: 0.7rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
