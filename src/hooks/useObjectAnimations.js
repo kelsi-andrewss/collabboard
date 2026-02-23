@@ -41,5 +41,62 @@ export function useObjectAnimations() {
     registryRef.current.set(id, { state: 'idle' });
   }, []);
 
-  return { markSpawning, markDying, getAnimationState, getOnComplete, clearAnimation, registryRef, version };
+  // markAISpawning orchestrates a wave entrance for AI batch-created objects.
+  // frameIds: array of IDs for Pass-1 frames (animate immediately).
+  // childrenByFrame: { [frameId]: [childId, ...] } for Pass-2 objects.
+  // Top-level non-frame objects from Pass 2 should be passed with a null/undefined key:
+  //   childrenByFrame[null] = [id, id, ...]  — they stagger after all frame-children.
+  const markAISpawning = useCallback((frameIds, childrenByFrame) => {
+    if (isReducedMotion()) {
+      for (const id of frameIds) {
+        registryRef.current.set(id, { state: 'spawning' });
+      }
+      const allChildren = Object.values(childrenByFrame).flat();
+      for (const id of allChildren) {
+        registryRef.current.set(id, { state: 'spawning' });
+      }
+      bumpVersion();
+      return;
+    }
+
+    // Mark all frames immediately
+    for (const id of frameIds) {
+      registryRef.current.set(id, { state: 'spawning' });
+    }
+    if (frameIds.length > 0) {
+      bumpVersion();
+    }
+
+    // Flatten all children into a single stagger sequence:
+    // iterate through each frame's children in order, then any top-level children (null key).
+    const childSequence = [];
+    for (const id of frameIds) {
+      const children = childrenByFrame[id];
+      if (children && children.length > 0) {
+        childSequence.push(...children);
+      }
+    }
+    // Top-level non-frame objects (keyed by null or undefined)
+    const topLevel = childrenByFrame[null] ?? childrenByFrame[undefined] ?? [];
+    childSequence.push(...topLevel);
+
+    if (childSequence.length === 0) return;
+
+    // Stagger children: first child fires after 250ms, each subsequent child 80ms later.
+    // Uses setTimeout chains so each fires relative to the previous markSpawning call.
+    const scheduleChild = (index, delay) => {
+      setTimeout(() => {
+        const id = childSequence[index];
+        registryRef.current.set(id, { state: 'spawning' });
+        bumpVersion();
+        if (index + 1 < childSequence.length) {
+          scheduleChild(index + 1, 80);
+        }
+      }, delay);
+    };
+
+    scheduleChild(0, 250);
+  }, []);
+
+  return { markSpawning, markDying, getAnimationState, getOnComplete, clearAnimation, registryRef, version, markAISpawning };
 }

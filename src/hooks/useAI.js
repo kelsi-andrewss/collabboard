@@ -5,6 +5,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { toolDeclarations, buildSystemPrompt } from "../ai/toolDeclarations";
 import { executeToolCall } from "../ai/toolExecutors";
 import { findNonOverlappingPosition } from "../utils/frameUtils";
+import { useObjectAnimationContext } from "../contexts/ObjectAnimationContext";
 
 const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -76,6 +77,10 @@ function createMutationTracker(rawActions, currentObjects) {
 }
 
 export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, stageScale, setStagePos, setStageScale, aiResponseMode) {
+  const animationContext = useObjectAnimationContext();
+  const markAISpawningRef = useRef(null);
+  markAISpawningRef.current = animationContext?.markAISpawning ?? null;
+
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
@@ -447,6 +452,31 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
         }
 
         const mutations = tracker.getMutations();
+
+        // Trigger wave entrance animation for AI-batch-created objects.
+        // Pass-1 frame IDs are those in frameIndexMap values; Pass-2 child IDs are
+        // all created IDs that are not frames (determined by cross-referencing localFrames).
+        const markAISpawning = markAISpawningRef.current;
+        if (markAISpawning && mutations.created.length > 0) {
+          const frameIdSet = new Set(localFrames.map(f => f.id));
+          const createdFrameIds = mutations.created
+            .filter(c => frameIdSet.has(c.id))
+            .map(c => c.id);
+
+          // Group non-frame created objects by their parent frame.
+          // We use the snapshot's frameId field recorded at creation time.
+          const childrenByFrame = {};
+          for (const c of mutations.created) {
+            if (frameIdSet.has(c.id)) continue;
+            const parentFrameId = c.snapshot?.frameId ?? null;
+            const key = parentFrameId ?? null;
+            if (!childrenByFrame[key]) childrenByFrame[key] = [];
+            childrenByFrame[key].push(c.id);
+          }
+
+          markAISpawning(createdFrameIds, childrenByFrame);
+        }
+
         if (mutations.created.length > 0 || mutations.updated.length > 0 || mutations.deleted.length > 0) {
           boardActionsRef.current.pushCompoundEntry(mutations);
           boardActionsRef.current.onAIToolSuccess?.();
