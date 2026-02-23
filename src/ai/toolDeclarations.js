@@ -468,7 +468,7 @@ TOOL SELECTION:
 - "create a board" / "make a new board" → createBoard
 - "create a group" / "make a folder" / "set up a group" → createGroup
 - Frames are fully transformable: moveObject and resizeObject both work on frames.
-- For structured boards (kanban, SWOT, retrospective, sprint planning, etc.): create frames for each section and use frameIndex to place items inside them.
+- GROUPING RULE: Whenever you create 3 or more related items that belong to a logical category, section, or theme, ALWAYS wrap them in a frame using createFrame + frameIndex. This applies to: kanban boards, SWOT analyses, retrospectives, sprint planning, roadmaps, feature lists, team overviews, priority lists, any request implying sections or categories, and any time items share a common label or theme. When in doubt, use frames. Use descriptive frame titles. Items inside frames must use frameIndex — do NOT specify x/y for framed items.
 
 DRAWING REQUESTS: When a user says "draw [something]", interpret it as a request to compose a recognizable representation using available tools — never say you cannot draw. Use shapes, lines, text labels, and connectors to build the composition. Examples: "draw a house" → rectangle body + triangle (drawRegularPolygon, 3 sides) for roof + small rectangle door + text label; "draw a person" → circle head + rectangle body + lines for arms and legs; "draw a sun" → circle center + short lines radiating outward; "draw a flowchart" → rectangles connected by arrows with text labels. Be creative and act immediately.
 
