@@ -486,7 +486,7 @@ export function App() {
       trackedAddObject({ type: 'text', text: '', x: canvasX, y: canvasY, width: textWidth, fontSize: textFontSize, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults });
     } else if (toolType === 'frame') {
       const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-      const fh = Math.round(window.innerHeight * 0.55 / stageScale);
+      const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
       trackedAddObject({ type: 'frame', x: canvasX - fw / 2, y: canvasY - fh / 2, width: fw, height: fh, title: 'Frame', color: shapeColors.frame.active, ...defaults });
     } else {
       let objData;
@@ -496,7 +496,8 @@ export function App() {
       } else if (toolType === 'text') {
         objData = { type: 'text', text: '', x: canvasX, y: canvasY, width: 200, fontSize: 16, color: shapeColors.text.active, rotation: 0, frameId: null, childIds: [], ...defaults };
       } else {
-        objData = { type: toolType, x: canvasX - 50, y: canvasY - 50, width: 100, height: 100, color: shapeColors.shapes.active, ...defaults };
+        const sz = Math.round(100 / stageScale);
+        objData = { type: toolType, x: canvasX - sz / 2, y: canvasY - sz / 2, width: sz, height: sz, color: shapeColors.shapes.active, ...defaults };
       }
       const ref = await trackedAddObject(objData);
       const objId = ref.id;
