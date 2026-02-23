@@ -8,7 +8,7 @@ import { VibeToast } from './VibeToast.jsx';
 
 function HeaderRightInner({ state, handlers }) {
   const { presentUsers, currentUserId, user, objects } = state;
-  const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance } = handlers;
+  const { setShowTutorial, logout, setShowBoardSettings, onOpenAppearance, onOpenAchievements } = handlers;
   const { checkVibe, vibeResult, isChecking } = useVibeCheck();
   const objectsRef = useRef(objects);
   objectsRef.current = objects;
@@ -61,7 +61,7 @@ function HeaderRightInner({ state, handlers }) {
     </div>
   );
 
-  const userMenu = <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} />;
+  const userMenu = <UserAvatarMenu user={user} logout={logout} onOpenAppearance={onOpenAppearance} onOpenAchievements={onOpenAchievements} />;
   const presenceAvatars = <PresenceAvatars presentUsers={presentUsers} currentUserId={currentUserId} currentUserPhotoURL={user?.photoURL || null} />;
   const orientBtn = (
     <button className="chip-orient-btn" onClick={toggleOrientation} title="Toggle orientation">

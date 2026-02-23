@@ -639,7 +639,7 @@ export function App() {
             {user && boardId && (
               <HeaderRight
                 state={{ presentUsers: presence.presentUsers, currentUserId: user?.uid, user, objects: board.objects }}
-                handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true) }}
+                handlers={{ setShowTutorial, logout, setShowBoardSettings, onOpenAppearance: () => setShowAppearanceSettings(true), onOpenAchievements: () => setShowAchievements(true) }}
               />
             )}
             {(!boardId) && user && (
