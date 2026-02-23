@@ -44,6 +44,7 @@ import { AppearanceSettings } from './components/AppearanceSettings.jsx';
 import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
 import { AchievementsPanel } from './components/AchievementsPanel.jsx';
 import { useAchievements } from './hooks/useAchievements.js';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal.jsx';
 import './App.css';
 
 const HOME_AI_SUGGESTED_PROMPTS = [
@@ -319,6 +320,7 @@ export function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
@@ -425,6 +427,12 @@ export function App() {
       }
 
       if (isEditing) return;
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcutsModal(v => !v);
+        return;
+      }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!canEditRef.current) return;
@@ -1255,6 +1263,10 @@ export function App() {
           onClose={() => setShowAchievements(false)}
         />
       )}
+      <KeyboardShortcutsModal
+        open={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   );
 }
