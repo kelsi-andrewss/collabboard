@@ -89,7 +89,7 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
 
   if (pendingTool === 'frame') {
     const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-    const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+    const fh = Math.round(window.innerHeight * 0.55 / stageScale);
     return (
       <Layer ref={layerRef}>
         <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
@@ -357,6 +357,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const portCircleRefsRef = useRef({});
   const objectsRef = useRef({});
   const connectorFirstPointRef = useRef(null);
+  const stageScaleRef = useRef(1);
   const [shiftHeld, setShiftHeld] = useState(false);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
@@ -367,6 +368,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
   objectsRef.current = objects;
   connectorFirstPointRef.current = connectorFirstPoint;
+  stageScaleRef.current = stageScale;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
@@ -474,12 +476,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
         node.x(canvasX);
         node.y(canvasY);
       } else if (tool === 'frame') {
-        const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-        const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
+        const scale = stageScaleRef.current;
+        const fw = Math.round(window.innerWidth * 0.55 / scale);
+        const fh = Math.round(window.innerHeight * 0.55 / scale);
         node.x(canvasX - fw / 2);
         node.y(canvasY - fh / 2);
-        node.width(fw);
-        node.height(fh);
       } else {
         node.x(canvasX - 50);
         node.y(canvasY - 50);
