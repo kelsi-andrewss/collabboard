@@ -15,6 +15,9 @@ const mockLimit = vi.fn((n) => ({ type: 'limit', n }));
 const mockQuery = vi.fn((...args) => ({ type: 'query', args }));
 const mockGetDocs = vi.fn();
 
+const mockDoc = vi.fn((db, ...path) => ({ __type: 'doc', path: path.join('/') }));
+const mockGetDoc = vi.fn().mockResolvedValue({ exists: () => false, data: () => ({}) });
+
 vi.mock('firebase/firestore', () => ({
   collection: (...args) => mockCollection(...args),
   query: (...args) => mockQuery(...args),
@@ -22,6 +25,8 @@ vi.mock('firebase/firestore', () => ({
   orderBy: (...args) => mockOrderBy(...args),
   limit: (...args) => mockLimit(...args),
   getDocs: (...args) => mockGetDocs(...args),
+  getDoc: (...args) => mockGetDoc(...args),
+  doc: (...args) => mockDoc(...args),
 }));
 
 import { GroupSettings } from './GroupSettings.jsx';

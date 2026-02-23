@@ -147,9 +147,13 @@ describe('getConnectedEndpointUpdates', () => {
     const updates = getConnectedEndpointUpdates('rect1', objects);
     expect(updates).toHaveLength(1);
     expect(updates[0].id).toBe('line1');
-    // bottom port of rect at (200,100,100,80) = center-x=250, y+h=180
-    expect(updates[0].data.points[0]).toBe(250 - 0); // p.x - obj.x
-    expect(updates[0].data.points[1]).toBe(180 - 0); // p.y - obj.y
+    // bottom port absolute x=250, normalized: 250-minX(100)=150
+    expect(updates[0].data.points[0]).toBe(150); // 250 - minX(100)
+    expect(updates[0].data.points[1]).toBe(80);  // 180 - minY(100)
+    expect(updates[0].data.x).toBe(100);
+    expect(updates[0].data.y).toBe(100);
+    expect(updates[0].data.width).toBe(150);
+    expect(updates[0].data.height).toBe(80);
   });
 
   it('returns empty array when no connectors reference the moved object', () => {
