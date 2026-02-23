@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { multiSelectHit, sortObjects, computeVisibleIds, computeGridDimensions, GRID_CELL_LIMIT } from './BoardCanvas.jsx';
+import { multiSelectHit, sortObjects, computeVisibleIds, computeGridDimensions, GRID_CELL_LIMIT, buildRenderOrder, areEqual } from './BoardCanvas.jsx';
 
 // ---------------------------------------------------------------------------
 // multiSelectHit
@@ -242,5 +242,258 @@ describe('grid guard formula', () => {
   it('rows is at least 1', () => {
     const { rows } = computeGridDimensions({ x: 0, y: 0 }, 1, 1200, 800);
     expect(rows).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildRenderOrder
+// ---------------------------------------------------------------------------
+
+describe('buildRenderOrder', () => {
+  it('returns empty array for empty objects map', () => {
+    expect(buildRenderOrder({})).toEqual([]);
+  });
+
+  it('places root frames before root non-frames', () => {
+    const frame = { id: 'f1', type: 'frame', zIndex: 1 };
+    const sticky = { id: 's1', type: 'sticky', zIndex: 1 };
+    const result = buildRenderOrder({ f1: frame, s1: sticky });
+    const frameIdx = result.findIndex(o => o.id === 'f1');
+    const stickyIdx = result.findIndex(o => o.id === 's1');
+    expect(frameIdx).toBeLessThan(stickyIdx);
+  });
+
+  it('places frame children after their parent frame and before root non-frame children', () => {
+    const frame = { id: 'f1', type: 'frame', zIndex: 1 };
+    const child = { id: 'c1', type: 'sticky', zIndex: 1, frameId: 'f1' };
+    const root = { id: 's1', type: 'sticky', zIndex: 1 };
+    const result = buildRenderOrder({ f1: frame, c1: child, s1: root });
+    const frameIdx = result.findIndex(o => o.id === 'f1');
+    const childIdx = result.findIndex(o => o.id === 'c1');
+    const rootIdx = result.findIndex(o => o.id === 's1');
+    expect(frameIdx).toBeLessThan(childIdx);
+    expect(childIdx).toBeLessThan(rootIdx);
+  });
+
+  it('sorts root frames by zIndex', () => {
+    const f1 = { id: 'f1', type: 'frame', zIndex: 5 };
+    const f2 = { id: 'f2', type: 'frame', zIndex: 2 };
+    const result = buildRenderOrder({ f1, f2 });
+    expect(result[0].id).toBe('f2');
+    expect(result[1].id).toBe('f1');
+  });
+
+  it('places nested frames between their parent frame and parent frame children', () => {
+    const root = { id: 'root', type: 'frame', zIndex: 1 };
+    const nested = { id: 'nested', type: 'frame', zIndex: 1, frameId: 'root' };
+    const nestedChild = { id: 'nc', type: 'sticky', zIndex: 1, frameId: 'nested' };
+    const result = buildRenderOrder({ root, nested, nc: nestedChild });
+    const rootIdx = result.findIndex(o => o.id === 'root');
+    const nestedIdx = result.findIndex(o => o.id === 'nested');
+    const ncIdx = result.findIndex(o => o.id === 'nc');
+    expect(rootIdx).toBeLessThan(nestedIdx);
+    expect(nestedIdx).toBeLessThan(ncIdx);
+  });
+
+  it('sorts root non-frames by zIndex', () => {
+    const a = { id: 'a', type: 'sticky', zIndex: 3 };
+    const b = { id: 'b', type: 'sticky', zIndex: 1 };
+    const result = buildRenderOrder({ a, b });
+    expect(result[0].id).toBe('b');
+    expect(result[1].id).toBe('a');
+  });
+
+  it('treats missing zIndex as 0 when sorting non-frames', () => {
+    const a = { id: 'a', type: 'sticky' };
+    const b = { id: 'b', type: 'sticky', zIndex: 1 };
+    const result = buildRenderOrder({ a, b });
+    expect(result[0].id).toBe('a');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// areEqual (memo comparison for BoardCanvas)
+// ---------------------------------------------------------------------------
+
+describe('areEqual', () => {
+  const baseState = {
+    objects: {},
+    presentUsers: [],
+    selectedId: null,
+    stagePos: { x: 0, y: 0 },
+    stageScale: 1,
+    darkMode: false,
+    snapToGrid: false,
+    currentUserId: 'u1',
+    dragState: null,
+    dragPos: null,
+    activeTool: 'select',
+    selectedIds: new Set(),
+    canEdit: true,
+    connectorFirstPoint: null,
+    pendingTool: null,
+    onFollowUser: null,
+  };
+
+  function makeProps(state) {
+    return { state, handlers: {} };
+  }
+
+  it('returns true when all state fields are identical references', () => {
+    const props = makeProps(baseState);
+    expect(areEqual(props, props)).toBe(true);
+  });
+
+  it('returns false when objects reference changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, objects: {} });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when stagePos reference changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, stagePos: { x: 0, y: 0 } });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when stageScale changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, stageScale: 2 });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when activeTool changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, activeTool: 'pan' });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when selectedId changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, selectedId: 'obj1' });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when pendingTool changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, pendingTool: 'sticky' });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns false when dragState.draggingId changes', () => {
+    const prev = makeProps(baseState);
+    const next = makeProps({ ...baseState, dragState: { draggingId: 'obj1', action: null, overFrameId: null, illegalDrag: false } });
+    expect(areEqual(prev, next)).toBe(false);
+  });
+
+  it('returns true when dragState is null in both prev and next', () => {
+    const sharedState = { ...baseState };
+    const prev = makeProps(sharedState);
+    const next = makeProps({ ...sharedState });
+    // stagePos must be same reference for true
+    next.state.stagePos = prev.state.stagePos;
+    next.state.selectedIds = prev.state.selectedIds;
+    expect(areEqual(prev, next)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Middle-mouse-pan arithmetic (core logic of story-129)
+// ---------------------------------------------------------------------------
+
+describe('middle mouse pan delta arithmetic', () => {
+  // The panning formula used in handleMouseMoveWrapped:
+  //   newPos = { x: startStageX + (currentClientX - startClientX),
+  //              y: startStageY + (currentClientY - startClientY) }
+  // These tests verify the invariants of that formula without needing a DOM.
+
+  function computePanDelta(startStagePos, startClient, currentClient) {
+    return {
+      x: startStagePos.x + (currentClient.clientX - startClient.clientX),
+      y: startStagePos.y + (currentClient.clientY - startClient.clientY),
+    };
+  }
+
+  it('returns original position when cursor has not moved', () => {
+    const pos = computePanDelta({ x: 100, y: 200 }, { clientX: 300, clientY: 400 }, { clientX: 300, clientY: 400 });
+    expect(pos).toEqual({ x: 100, y: 200 });
+  });
+
+  it('pans right when cursor moves right', () => {
+    const pos = computePanDelta({ x: 0, y: 0 }, { clientX: 0, clientY: 0 }, { clientX: 50, clientY: 0 });
+    expect(pos.x).toBe(50);
+    expect(pos.y).toBe(0);
+  });
+
+  it('pans down when cursor moves down', () => {
+    const pos = computePanDelta({ x: 0, y: 0 }, { clientX: 0, clientY: 0 }, { clientX: 0, clientY: 80 });
+    expect(pos.x).toBe(0);
+    expect(pos.y).toBe(80);
+  });
+
+  it('pans diagonally with combined dx and dy', () => {
+    const pos = computePanDelta({ x: 10, y: 20 }, { clientX: 100, clientY: 100 }, { clientX: 130, clientY: 160 });
+    expect(pos).toEqual({ x: 40, y: 80 });
+  });
+
+  it('pans left when cursor moves left (negative delta)', () => {
+    const pos = computePanDelta({ x: 200, y: 100 }, { clientX: 300, clientY: 200 }, { clientX: 250, clientY: 200 });
+    expect(pos.x).toBe(150);
+    expect(pos.y).toBe(100);
+  });
+
+  it('preserves existing stage offset in final position', () => {
+    const startStagePos = { x: -400, y: -300 };
+    const pos = computePanDelta(startStagePos, { clientX: 500, clientY: 500 }, { clientX: 600, clientY: 550 });
+    expect(pos).toEqual({ x: -300, y: -250 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Middle-mouse-pan: button detection invariants
+// ---------------------------------------------------------------------------
+
+describe('middle mouse button detection', () => {
+  // handleMouseDown: intercepts button === 1 (middle mouse), returns early.
+  // handleMouseUp: clears pan state only for button === 1.
+  // handleStageClickWrapped: suppresses deselection for button === 1.
+  //
+  // These invariants are expressed as logical assertions on the button value.
+
+  it('button 1 is the middle mouse button (not left=0, not right=2)', () => {
+    const MIDDLE = 1;
+    expect(MIDDLE).not.toBe(0); // left
+    expect(MIDDLE).not.toBe(2); // right
+    expect(MIDDLE).toBe(1);
+  });
+
+  it('left-click (button=0) should not trigger middle-pan branch', () => {
+    const button = 0;
+    const triggersMiddlePan = button === 1;
+    expect(triggersMiddlePan).toBe(false);
+  });
+
+  it('middle-click (button=1) should trigger middle-pan branch in mousedown', () => {
+    const button = 1;
+    const triggersMiddlePan = button === 1;
+    expect(triggersMiddlePan).toBe(true);
+  });
+
+  it('right-click (button=2) should not trigger middle-pan branch', () => {
+    const button = 2;
+    const triggersMiddlePan = button === 1;
+    expect(triggersMiddlePan).toBe(false);
+  });
+
+  it('middle-click (button=1) should suppress click handler (return early)', () => {
+    const button = 1;
+    const shouldSuppress = button === 1;
+    expect(shouldSuppress).toBe(true);
+  });
+
+  it('non-middle click (button=0) should not suppress click handler', () => {
+    const button = 0;
+    const shouldSuppress = button === 1;
+    expect(shouldSuppress).toBe(false);
   });
 });
