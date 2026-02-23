@@ -665,7 +665,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
   const handleStageClickWrapped = (e) => {
     if (e.evt.button === 1) return;
-    if (e.evt.shiftKey && activeTool === 'select') {
+    if (e.evt.shiftKey && (activeTool === 'select' || activeTool === 'pan')) {
       const target = e.target;
       const stage = target.getStage();
       if (target !== stage && target.name() !== 'bg-rect') {
