@@ -63,10 +63,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
         frameId = findContainingFrame(posX, posY, w, h);
       }
 
-      await act().addObject({
+      const stickyRef = await act().addObject({
         type: 'sticky', ...stickyArgs, x: posX, y: posY,
-        ...(frameId ? { frameId } : {})
       });
+      if (frameId && stickyRef) {
+        await act().updateObject(stickyRef.id, { frameId });
+      }
     } else if (toolName === "createShape") {
       const w = toolArgs.width || 100, h = toolArgs.height || 100;
       const { frameIndex: fi, ...shapeArgs } = toolArgs;
@@ -90,10 +92,12 @@ export async function executeToolCall(toolName, toolArgs, context) {
         frameId = findContainingFrame(posX, posY, w, h);
       }
 
-      await act().addObject({
+      const shapeRef = await act().addObject({
         ...shapeArgs, x: posX, y: posY,
-        ...(frameId ? { frameId } : {})
       });
+      if (frameId && shapeRef) {
+        await act().updateObject(shapeRef.id, { frameId });
+      }
     } else if (toolName === "moveObject") {
       const { objectId, ...updates } = toolArgs;
       const currentObjs = objs();

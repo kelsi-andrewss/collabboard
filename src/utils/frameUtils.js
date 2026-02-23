@@ -167,12 +167,14 @@ export function hasDisallowedSiblingOverlap(objectId, objectType, proposedBounds
   let siblingIds;
   if (parentId) {
     const parent = allObjects[parentId];
-    siblingIds = (parent?.childIds || []).filter(sid => sid !== objectId);
+    siblingIds = (parent?.childIds || []).filter(
+      sid => sid !== objectId && (objectType === 'frame' || allObjects[sid]?.type === 'frame')
+    );
   } else {
     siblingIds = Object.keys(allObjects).filter(
       sid => sid !== objectId &&
              !allObjects[sid].frameId &&
-             (objectType !== 'frame' || allObjects[sid].type === 'frame')
+             (objectType === 'frame' || allObjects[sid].type === 'frame')
     );
   }
   for (const sibId of siblingIds) {

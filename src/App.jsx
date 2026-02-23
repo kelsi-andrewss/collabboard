@@ -46,6 +46,14 @@ import { AchievementsPanel } from './components/AchievementsPanel.jsx';
 import { useAchievements } from './hooks/useAchievements.js';
 import './App.css';
 
+const HOME_AI_SUGGESTED_PROMPTS = [
+  'Create a new board',
+  'Create a new group',
+  'Show me my recent boards',
+  'Organize my boards into groups',
+  'Rename my board called...',
+];
+
 export function App() {
   const { user, loading, login, logout, isAdmin } = useAuth();
   const { achievements, unlockAchievementRef } = useAchievements(user);
@@ -876,7 +884,7 @@ export function App() {
       {user && (
         <div className="header">
           <HeaderLeft
-            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.dragMode }}
+            state={{ boardName, boardId, boards: allBoards, groups, shapeColors, showColorPicker, snapToGrid, canUndo: board.canUndo, activeShapeType, colorHistory, showToolbar: !!boardId, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale, dragMode: preferences.dragMode, currentUserId: user?.uid }}
             handlers={{ setBoardId: (id) => { if (!id) navigateHome(); else setBoardId(id); }, setBoardName, onSwitchBoard: navigateToBoard, setShowColorPicker, setSnapToGrid, undo: board.undo, handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool: (tool) => { setPendingTool(tool); setPendingToolCount(0); }, setActiveTool, setStageScale, setStagePos }}
           />
           <div className="header-right">
@@ -957,7 +965,7 @@ export function App() {
               handlers={{ setShowAI: setShowHomeAI, setDarkMode: (val) => updatePreference('darkMode', val), handleRecenter: () => {} }}
             />
             <AIPanel
-              state={{ showAI: showHomeAI, aiPrompt: homeAiPrompt, isTyping: homeAI.isTyping, error: homeAI.error }}
+              state={{ showAI: showHomeAI, aiPrompt: homeAiPrompt, isTyping: homeAI.isTyping, error: homeAI.error, suggestedPrompts: HOME_AI_SUGGESTED_PROMPTS }}
               handlers={{ handleAISubmit: handleHomeAISubmit, setAiPrompt: setHomeAiPrompt, clearError: homeAI.clearError }}
             />
             <AdminPanel

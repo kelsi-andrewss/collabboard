@@ -10,7 +10,7 @@ import { useDraggableFloat } from '../hooks/useDraggableFloat';
 const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200];
 
 function HeaderLeftInner({ state, handlers }) {
-  const { boardName, boardId, boards, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale } = state;
+  const { boardName, boardId, boards, currentUserId, groups: groupsList = [], shapeColors, showColorPicker, snapToGrid, canUndo, activeShapeType, colorHistory, showToolbar, pendingTool, activeTool, canEdit, isAdmin, adminViewActive, stageScale } = state;
   const {
     setBoardId, setBoardName, onSwitchBoard, setShowColorPicker, setSnapToGrid, undo,
     handleAddSticky, handleAddShape, handleAddLine, handleAddArrow, handleAddFrame, handleAddText, updateActiveColor, setActiveShapeType, setPendingTool, setActiveTool,
@@ -68,9 +68,13 @@ function HeaderLeftInner({ state, handlers }) {
     return b.group || null;
   };
 
+  const ownBoards = boards?.filter(b =>
+    currentUserId && (b.ownerId === currentUserId || b.userId === currentUserId)
+  ) ?? [];
+
   const filteredGroups = (() => {
-    if (!boards?.length) return [];
-    const allBoards = boards;
+    if (!ownBoards.length) return [];
+    const allBoards = ownBoards;
     let filtered;
     if (!q) {
       filtered = allBoards;
@@ -474,6 +478,7 @@ function areEqual(prev, next) {
     ps.boardName === ns.boardName &&
     ps.boardId === ns.boardId &&
     ps.boards === ns.boards &&
+    ps.currentUserId === ns.currentUserId &&
     ps.showToolbar === ns.showToolbar &&
     ps.shapeColors === ns.shapeColors &&
     ps.showColorPicker === ns.showColorPicker &&

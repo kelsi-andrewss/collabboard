@@ -8,7 +8,7 @@ function formatTimestamp(ts) {
 }
 
 function AIPanelInner({ state, handlers }) {
-  const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading, pendingDeletions, pendingBoardDeletion } = state;
+  const { showAI, aiPrompt, isTyping, error, chatHistory, isHistoryLoading, pendingDeletions, pendingBoardDeletion, suggestedPrompts } = state;
   const { handleAISubmit, setAiPrompt, clearError, confirmDeletions, cancelDeletions, confirmBoardDeletion, cancelBoardDeletion } = handlers;
   const historyEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -83,6 +83,20 @@ function AIPanelInner({ state, handlers }) {
           </div>
         </div>
       )}
+      {suggestedPrompts && suggestedPrompts.length > 0 && !isTyping && (
+        <div className="ai-suggested-prompts">
+          {suggestedPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="ai-suggested-chip"
+              onClick={() => setAiPrompt(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
       <form onSubmit={handleSubmitAndRefocus} className="ai-input-area">
         <input
           ref={inputRef}
@@ -119,7 +133,8 @@ function areEqual(prev, next) {
     ps.chatHistory === ns.chatHistory &&
     ps.isHistoryLoading === ns.isHistoryLoading &&
     ps.pendingDeletions === ns.pendingDeletions &&
-    ps.pendingBoardDeletion === ns.pendingBoardDeletion
+    ps.pendingBoardDeletion === ns.pendingBoardDeletion &&
+    ps.suggestedPrompts === ns.suggestedPrompts
   );
 }
 
