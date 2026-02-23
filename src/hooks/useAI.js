@@ -81,6 +81,7 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
   const [chatHistory, setChatHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [pendingDeletions, setPendingDeletions] = useState(null);
+  const [pendingBoardDeletion, setPendingBoardDeletion] = useState(null);
 
   const requestTimestampsRef = useRef(getRecentTimestamps(loadTimestamps()));
 
@@ -433,6 +434,11 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
               const label = obj?.text || obj?.title || obj?.type || objectId;
               collectedDeletions.push({ objectId, label });
             }
+          } else if (call.name === 'deleteBoard') {
+            const { boardId: delBoardId, boardName: delBoardName } = call.args || {};
+            if (delBoardId) {
+              setPendingBoardDeletion({ boardId: delBoardId, boardName: delBoardName });
+            }
           } else {
             await executeToolCall(call.name, call.args, { ...sharedContext, _call: call });
           }
@@ -491,5 +497,15 @@ export function useAI(boardId, boardActions, objects, user, isAdmin, stagePos, s
     setPendingDeletions(null);
   };
 
-  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory, isHistoryLoading, pendingDeletions, confirmDeletions, cancelDeletions };
+  const confirmBoardDeletion = () => {
+    if (!pendingBoardDeletion) return;
+    boardActionsRef.current.deleteBoard?.(pendingBoardDeletion.boardId);
+    setPendingBoardDeletion(null);
+  };
+
+  const cancelBoardDeletion = () => {
+    setPendingBoardDeletion(null);
+  };
+
+  return { sendCommand, isTyping, error, clearError: () => setError(null), chatHistory, isHistoryLoading, pendingDeletions, confirmDeletions, cancelDeletions, pendingBoardDeletion, confirmBoardDeletion, cancelBoardDeletion };
 }

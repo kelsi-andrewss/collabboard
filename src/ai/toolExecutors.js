@@ -706,6 +706,8 @@ export async function executeToolCall(toolName, toolArgs, context) {
         height: h,
         color: '#fffde7',
       });
+    } else if (toolName === "deleteBoard") {
+      return { __pendingBoardDeletion: true, boardId: toolArgs.boardId, boardName: toolArgs.boardName };
     }
   } catch (error) {
     return { error: error.message };

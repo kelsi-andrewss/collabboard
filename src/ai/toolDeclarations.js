@@ -437,6 +437,18 @@ export const toolDeclarations = [
       },
       required: ['story']
     }
+  },
+  {
+    name: "deleteBoard",
+    description: "Deletes an existing board. Only use when user explicitly asks to delete a board. A confirmation dialog will be shown before deletion.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        boardId: { type: "STRING", description: "The ID of the board to delete" },
+        boardName: { type: "STRING", description: "The display name of the board" }
+      },
+      required: ["boardId", "boardName"]
+    }
   }
 ];
 
@@ -483,6 +495,7 @@ KEYWORD INTENTS:
 - "clean up" → spaceEvenly or resolveOverlaps to space objects evenly and align to grid
 - "summarize" / "label" → createTextElement near each relevant item
 - "narrate the board" / "tell a story about the board" / "write a story" → narrateBoard: generate 3-5 absurd, whimsical sentences referencing the board objects' types, colors, and text content, and pass the full story as the \`story\` argument
+- "delete board [name]" / "remove board [name]" → deleteBoard with boardId and boardName from the board list in context
 
 FRAME-ITEM ASSOCIATION (frameIndex):
 - Give each createFrame a unique frameIndex (0, 1, 2, ...)
