@@ -1,6 +1,8 @@
 .appearance-settings {
   max-width: 400px;
   width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .appearance-header {
@@ -8,6 +10,10 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--md-sys-spacing-5);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .appearance-header h2 {
