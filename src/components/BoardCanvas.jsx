@@ -455,6 +455,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const middlePanStartRef = useRef({ clientX: 0, clientY: 0 });
   const middlePanStagePosRef = useRef({ x: 0, y: 0 });
   const [shiftHeld, setShiftHeld] = useState(false);
+  const pendingShiftSelectRef = useRef(null);
+  const selectedIdsRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
     objects, dragState, presentUsers, currentUserId, dragPos,
@@ -482,8 +484,32 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const isSelectMode = activeTool === 'select';
 
   React.useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
+
+  const flushPendingShiftSelect = () => {
+    const pendingId = pendingShiftSelectRef.current;
+    if (!pendingId) return;
+    pendingShiftSelectRef.current = null;
+    if (setSelectedIds) {
+      const next = new Set(selectedIdsRef.current);
+      if (next.has(pendingId)) {
+        next.delete(pendingId);
+      } else {
+        next.add(pendingId);
+      }
+      setSelectedIds(next);
+    }
+  };
+
+  React.useEffect(() => {
     const onKeyDown = (e) => { if (e.key === 'Shift') setShiftHeld(true); };
-    const onKeyUp = (e) => { if (e.key === 'Shift') setShiftHeld(false); };
+    const onKeyUp = (e) => {
+      if (e.key === 'Shift') {
+        setShiftHeld(false);
+        flushPendingShiftSelect();
+      }
+    };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     return () => {
@@ -504,6 +530,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     if (!isSelectMode && !isShiftDrag) return;
     const target = e.target;
     const stage = target.getStage();
+    if (e.evt.shiftKey && target !== stage && target.name() !== 'bg-rect') {
+      const id = target.id() || target.parent?.id();
+      if (id) {
+        pendingShiftSelectRef.current = id;
+      }
+      return;
+    }
+    if (!e.evt.shiftKey) {
+      pendingShiftSelectRef.current = null;
+    }
     if (target !== stage && target.name() !== 'bg-rect') return;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
@@ -640,6 +676,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       isMiddlePanningRef.current = false;
       return;
     }
+    flushPendingShiftSelect();
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const rect = selRectRef.current;
     const wasShiftDrag = shiftDragRef.current;
