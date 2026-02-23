@@ -34,6 +34,8 @@ client_secret_*.json
 
 # Claude Code local settings
 .claude/
+_bmad/
+settings/
 
 # Misc
 .output.txt
