@@ -459,10 +459,9 @@
   cursor: pointer;
   color: var(--md-sys-color-on-surface-variant);
   padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
-  font-size: 12px;
+  font-size: var(--md-sys-typescale-body-medium-size);
   line-height: 1;
   border-radius: var(--md-sys-shape-corner-small);
-  min-width: 32px;
   height: 40px;
   display: flex;
   align-items: center;
@@ -491,6 +490,10 @@
   opacity: var(--md-sys-state-hover-opacity);
 }
 
+.zoom-dropdown-btn:active::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
 .zoom-dropdown {
   position: absolute;
   top: calc(100% + var(--md-sys-spacing-sm));
@@ -517,7 +520,7 @@
   padding: var(--md-sys-spacing-md) var(--md-sys-spacing-md);
   text-align: left;
   color: var(--md-sys-color-on-surface);
-  font-size: 13px;
+  font-size: var(--md-sys-typescale-body-medium-size);
   font-family: inherit;
   white-space: nowrap;
   border-radius: var(--md-sys-shape-corner-extra-small);
