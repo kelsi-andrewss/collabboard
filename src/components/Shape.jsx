@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Konva from 'konva';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { getContrastColor } from '../utils/colorUtils.js';
@@ -16,7 +15,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   const widthRef = useRef(width);
   const heightRef = useRef(height);
   const dragPosRef = useRef(dragPos);
-  const prevIsSelectedRef = useRef(isSelected);
   xRef.current = x;
   yRef.current = y;
   widthRef.current = width;
@@ -36,36 +34,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   }, [isSelected, isEditing, width, height]);
 
   // Delete on keydown is handled centrally in useKeyboardShortcuts (App.jsx).
-
-  useEffect(() => {
-    const wasSelected = prevIsSelectedRef.current;
-    prevIsSelectedRef.current = isSelected;
-    if (!isSelected || wasSelected) return;
-    if (document.documentElement.dataset.reducedMotion !== undefined) return;
-    const node = groupRef.current;
-    if (!node) return;
-    const tween1 = new Konva.Tween({
-      node,
-      duration: 0.08,
-      scaleX: 1.04,
-      scaleY: 1.04,
-      easing: Konva.Easings.EaseOut,
-      onFinish: () => {
-        tween1.destroy();
-        const tween2 = new Konva.Tween({
-          node,
-          duration: 0.08,
-          scaleX: 1,
-          scaleY: 1,
-          easing: Konva.Easings.EaseIn,
-          onFinish: () => tween2.destroy(),
-        });
-        tween2.play();
-      },
-    });
-    tween1.play();
-    return () => tween1.destroy();
-  }, [isSelected]);
 
   const handleTextChange = (e) => {
     onUpdate(id, { text: e.target.value });
@@ -139,31 +107,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             mainLayerRef.current.batchDraw();
           }
           onDragEnd(id, pos);
-          if (document.documentElement.dataset.reducedMotion === undefined) {
-            const node = groupRef.current;
-            if (node) {
-              const spring1 = new Konva.Tween({
-                node,
-                duration: 0.04,
-                x: finalX - 3,
-                y: finalY - 3,
-                easing: Konva.Easings.EaseOut,
-                onFinish: () => {
-                  spring1.destroy();
-                  const spring2 = new Konva.Tween({
-                    node,
-                    duration: 0.08,
-                    x: finalX,
-                    y: finalY,
-                    easing: Konva.Easings.EaseIn,
-                    onFinish: () => spring2.destroy(),
-                  });
-                  spring2.play();
-                },
-              });
-              spring1.play();
-            }
-          }
         }}
       >
         {type === 'rectangle' && (
