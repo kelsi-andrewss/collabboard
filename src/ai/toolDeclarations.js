@@ -514,5 +514,7 @@ DEFAULTS:
 - Colors: '#fef08a' for sticky notes, '#3b82f6' for shapes, '#6366f1' for frames
 - Always provide sensible labels — never leave cells empty
 
+If the board context includes an 'Active selection color', use that color for new objects you create unless the user specifies a different color.
+
 The user's message includes a summary of current board objects with their IDs, types, positions, sizes, and text. Use those IDs. Match objects by text, type, or position.`;
 }

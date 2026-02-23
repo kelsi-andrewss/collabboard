@@ -230,6 +230,8 @@ export function App() {
     await new Promise(r => setTimeout(r, 500));
   };
 
+  const selectedColorRef = useRef(null);
+
   const ai = useAI(boardId, {
     addObject: rawBoard?.addObject,
     updateObject: rawBoard?.updateObject,
@@ -240,6 +242,7 @@ export function App() {
     getBoards: () => allBoards,
     createGroup,
     deleteBoard,
+    getSelectedColor: () => selectedColorRef.current,
   }, board?.objects, user, isAdmin, stagePos, stageScale, setStagePos, setStageScale, preferences.aiResponseMode);
 
   const homeAI = useHomeAI({ allBoards, createNewBoard, setBoardId, setBoardName });
@@ -312,6 +315,8 @@ export function App() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
   selectedIdsRef.current = selectedIds;
+  const firstSelectedId = selectedIds.size > 0 ? selectedIds.values().next().value : null;
+  selectedColorRef.current = firstSelectedId ? (board.objects[firstSelectedId]?.color ?? null) : null;
   const [pendingTool, setPendingTool] = useState(null);
   const [pendingToolCount, setPendingToolCount] = useState(0);
   const pendingToolRef = useRef(null);
