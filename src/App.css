@@ -353,10 +353,6 @@
   padding-top: var(--header-height);
 }
 
-.home-content .controls-bar {
-  padding-left: 140px;
-}
-
 .login-content {
   flex: 1;
   display: flex;
