@@ -376,6 +376,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   } = handlers;
 
   const [selRect, setSelRect] = useState(null);
+  const selRectRef = useRef(null);
   const [toolHoverFrameId, setToolHoverFrameId] = useState(null);
   const selStartRef = useRef(null);
   const shiftDragRef = useRef(false);
@@ -405,7 +406,9 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     const canvasY = (pointer.y - stage.y()) / stage.scaleY();
     selStartRef.current = { x: canvasX, y: canvasY };
     shiftDragRef.current = isShiftDrag && !isSelectMode;
-    setSelRect({ x: canvasX, y: canvasY, width: 0, height: 0 });
+    const initRect = { x: canvasX, y: canvasY, width: 0, height: 0 };
+    selRectRef.current = initRect;
+    setSelRect(initRect);
   };
 
   const handleMouseMoveWrapped = (e) => {
@@ -493,24 +496,27 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
 
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
     const start = selStartRef.current;
-    setSelRect({
+    const updatedRect = {
       x: Math.min(start.x, canvasX),
       y: Math.min(start.y, canvasY),
       width: Math.abs(canvasX - start.x),
       height: Math.abs(canvasY - start.y),
-    });
+    };
+    selRectRef.current = updatedRect;
+    setSelRect(updatedRect);
   };
 
   const handleMouseUp = () => {
     if (!selStartRef.current || (!isSelectMode && !shiftDragRef.current)) return;
-    const rect = selRect;
+    const rect = selRectRef.current;
     const wasShiftDrag = shiftDragRef.current;
     selStartRef.current = null;
     shiftDragRef.current = false;
+    selRectRef.current = null;
     setSelRect(null);
     if (!rect || rect.width < 5 || rect.height < 5) return;
     const hit = new Set();
-    for (const obj of Object.values(objects)) {
+    for (const obj of Object.values(objectsRef.current)) {
       if (multiSelectHit(obj, rect)) hit.add(obj.id);
     }
     if (setSelectedIds) {
