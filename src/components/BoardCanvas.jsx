@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Group, Shape as KonvaShape, Circle, Line, Arrow } from 'react-konva';
+import { Stage, Layer, Rect, Text, Group, Shape as KonvaShape, Circle, Line, Arrow, RegularPolygon } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
 import { Shape } from './Shape';
@@ -89,7 +89,7 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
 
   if (pendingTool === 'frame') {
     const fw = Math.round(window.innerWidth * 0.55 / stageScale);
-    const fh = Math.round(window.innerHeight * 0.55 / stageScale);
+    const fh = Math.round((window.innerHeight - 60) * 0.55 / stageScale);
     return (
       <Layer ref={layerRef}>
         <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
@@ -178,6 +178,99 @@ function GhostLayer({ pendingTool, stageScale, layerRef, nodeRef }) {
           <Text
             x={0}
             y={th + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'rectangle') {
+    const sz = 100 / stageScale;
+    return (
+      <Layer ref={layerRef}>
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Rect
+            width={sz}
+            height={sz}
+            fill="rgba(99,102,241,0.08)"
+            stroke="#6366f1"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={sz + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'circle') {
+    const r = 50 / stageScale;
+    return (
+      <Layer ref={layerRef}>
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <Circle
+            x={r}
+            y={r}
+            radius={r}
+            fill="rgba(99,102,241,0.08)"
+            stroke="#6366f1"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={r * 2 + 4 / stageScale}
+            text="Press Esc to cancel"
+            fontSize={12 / stageScale}
+            fontFamily="sans-serif"
+            fill="#6366f1"
+            opacity={0.7}
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
+      </Layer>
+    );
+  }
+
+  if (pendingTool === 'triangle') {
+    const r = 58 / stageScale;
+    return (
+      <Layer ref={layerRef}>
+        <Group ref={nodeRef} x={OFFSCREEN} y={OFFSCREEN} opacity={ghostOpacity} listening={false}>
+          <RegularPolygon
+            x={r}
+            y={r}
+            sides={3}
+            radius={r}
+            fill="rgba(99,102,241,0.08)"
+            stroke="#6366f1"
+            strokeWidth={strokeW}
+            dash={[dashLen, dashGap]}
+            perfectDrawEnabled={false}
+          />
+          <Text
+            x={0}
+            y={r * 2 + 4 / stageScale}
             text="Press Esc to cancel"
             fontSize={12 / stageScale}
             fontFamily="sans-serif"
@@ -478,9 +571,21 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
       } else if (tool === 'frame') {
         const scale = stageScaleRef.current;
         const fw = Math.round(window.innerWidth * 0.55 / scale);
-        const fh = Math.round(window.innerHeight * 0.55 / scale);
+        const fh = Math.round((window.innerHeight - 60) * 0.55 / scale);
         node.x(canvasX - fw / 2);
         node.y(canvasY - fh / 2);
+      } else if (tool === 'rectangle') {
+        const half = 50 / stageScaleRef.current;
+        node.x(canvasX - half);
+        node.y(canvasY - half);
+      } else if (tool === 'circle') {
+        const r = 50 / stageScaleRef.current;
+        node.x(canvasX - r);
+        node.y(canvasY - r);
+      } else if (tool === 'triangle') {
+        const r = 58 / stageScaleRef.current;
+        node.x(canvasX - r);
+        node.y(canvasY - r);
       } else {
         node.x(canvasX - 50);
         node.y(canvasY - 50);
