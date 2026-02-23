@@ -42,10 +42,13 @@ import { BoardSettings } from './components/BoardSettings.jsx';
 import { AdminPanel } from './components/AdminPanel.jsx';
 import { AppearanceSettings } from './components/AppearanceSettings.jsx';
 import { PerformanceOverlay } from './components/PerformanceOverlay.jsx';
+import { AchievementsPanel } from './components/AchievementsPanel.jsx';
+import { useAchievements } from './hooks/useAchievements.js';
 import './App.css';
 
 export function App() {
   const { user, loading, login, logout, isAdmin } = useAuth();
+  const { achievements, unlockAchievementRef } = useAchievements(user);
   const { preferences, updatePreference } = useUserPreferences(user);
   const [adminViewActive, setAdminViewActive] = useState(true);
   const { groupSlugs, setGroupSlugs, boardId, setBoardId, boardName, setBoardName,
@@ -303,6 +306,7 @@ export function App() {
   const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   const [activeTool, setActiveTool] = useState(() => preferences.dragMode || 'pan');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const selectedIdsRef = useRef(new Set());
@@ -685,6 +689,10 @@ export function App() {
 
   const triggerConfettiAtCenter = () => {
     setConfettiPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    unlockAchievementRef.current?.('confetti_collector', {
+      title: 'Confetti Collector',
+      description: 'Triggered a confetti celebration on the board!',
+    });
   };
   onAIToolSuccessRef.current = triggerConfettiAtCenter;
 
@@ -873,7 +881,7 @@ export function App() {
               />
             )}
             {(!boardId) && user && (
-              <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} />
+              <UserAvatarMenu user={user} logout={logout} isAdmin={isAdmin} adminViewActive={adminViewActive} onToggleAdminView={() => setAdminViewActive(v => !v)} onOpenAdminPanel={() => setShowAdminPanel(true)} onOpenAppearance={() => setShowAppearanceSettings(true)} achievements={achievements} onOpenAchievements={() => setShowAchievements(true)} />
             )}
           </div>
         </div>
@@ -1220,6 +1228,12 @@ export function App() {
           preferences={preferences}
           updatePreference={updatePreference}
           onClose={() => setShowAppearanceSettings(false)}
+        />
+      )}
+      {showAchievements && (
+        <AchievementsPanel
+          achievements={achievements}
+          onClose={() => setShowAchievements(false)}
         />
       )}
     </div>

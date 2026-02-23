@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Shield, Palette } from 'lucide-react';
+import { LogOut, Shield, Palette, Trophy } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import './UserAvatarMenu.css';
 
-export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView, onOpenAdminPanel, onOpenAppearance }) {
+export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggleAdminView, onOpenAdminPanel, onOpenAppearance, achievements, onOpenAchievements }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -55,6 +55,13 @@ export function UserAvatarMenu({ user, logout, isAdmin, adminViewActive, onToggl
             </>
           )}
           <div className="dropdown-divider" />
+          <button className="dropdown-item" onClick={() => { setOpen(false); onOpenAchievements?.(); }}>
+            <Trophy size={16} />
+            Achievements
+            {achievements?.length > 0 && (
+              <span className="dropdown-item-badge">{achievements.length}</span>
+            )}
+          </button>
           <button className="dropdown-item" onClick={() => { setOpen(false); onOpenAppearance?.(); }}>
             <Palette size={16} />
             Appearance
