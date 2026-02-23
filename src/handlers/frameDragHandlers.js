@@ -168,6 +168,13 @@ export function makeFrameDragHandlers({
 
     // Set dragPos override so the frame holds its drop position while Firestore catches up
     if (setDragPos) setDragPos({ id, x: snapped.x, y: snapped.y });
+    // Imperatively position Konva node at snapped coords
+    const node = stageRef.current?.findOne('.' + id);
+    if (node) {
+      node.x(snapped.x);
+      node.y(snapped.y);
+      node.getLayer()?.batchDraw();
+    }
     // Single batch write for all changes
     board.batchUpdateObjects(allUpdates);
     frameDragRef.current = { frameId: null, dx: 0, dy: 0, startX: 0, startY: 0 };

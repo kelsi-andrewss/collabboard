@@ -119,6 +119,7 @@ export function makeObjectHandlers({
       if (node) { node.x(obj.x); node.y(obj.y); }
       stage?.batchDraw();
       setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+      setDragPos(null);
       if (setResizeTooltip && resizeTooltipTimer) {
         showErrorTooltip(
           "Can't place here — overlaps another frame.",
@@ -172,8 +173,17 @@ export function makeObjectHandlers({
     const connUpdates = getConnectedEndpointUpdates(id, tempObjects);
     for (const cu of connUpdates) allUpdates.push(cu);
 
-    // Snap toolbar to clamped position before write to prevent snap-back glitch
+    // Set final snapped position BEFORE Firestore write
     setDragPos({ id, x: snapped.x, y: snapped.y });
+
+    // Imperatively position Konva node at snapped coords — prevents flash if
+    // dragPos clears before Firestore confirms the new position.
+    const node = stageRef.current?.findOne('.' + id);
+    if (node) {
+      node.x(snapped.x);
+      node.y(snapped.y);
+      node.getLayer()?.batchDraw();
+    }
 
     // Atomic write
     if (allUpdates.length === 1) {
