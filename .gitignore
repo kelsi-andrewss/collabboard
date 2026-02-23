@@ -39,6 +39,8 @@ settings/
 
 # Misc
 .output.txt
+PROJECT_REQUIREMENTS_TODO.md
+collabboard-architecture.pdf
 
 # lock Files
 *-lock.json
