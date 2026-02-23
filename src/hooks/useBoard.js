@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export function useBoard(boardId, user, animationCallbacks) {
+export function useBoard(boardId, user) {
   const [objects, setObjects] = useState({});
   const [loading, setLoading] = useState(true);
   const hydrationRef = useRef(false);
@@ -85,7 +85,6 @@ export function useBoard(boardId, user, animationCallbacks) {
       updatedAt: serverTimestamp()
     });
     pendingWritesRef.current.set(ref.id, writeTs);
-    animationCallbacks?.markSpawning?.(ref.id);
     return ref;
   };
 

@@ -3,7 +3,6 @@ import Konva from 'konva';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { getContrastColor } from '../utils/colorUtils.js';
-import { useObjectAnimationContext } from '../contexts/ObjectAnimationContext.js';
 
 function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool }) {
   const shapeRef = useRef();
@@ -12,7 +11,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
   const trRef = useRef();
   const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
-  const animCtx = useObjectAnimationContext();
   const xRef = useRef(x);
   const yRef = useRef(y);
   const widthRef = useRef(width);
@@ -50,70 +48,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSelected, isEditing, onDelete]);
 
-  // Spawn / die animations. Re-runs when the registry version bumps.
-  useEffect(() => {
-    if (!animCtx) return;
-    const animState = animCtx.getAnimationState(id);
-    const node = groupRef.current;
-    if (!node || animState === 'idle') return;
-
-    const w = widthRef.current;
-    const h = heightRef.current;
-    const dp = dragPosRef.current;
-    const baseX = dp?.id === id ? dp.x : xRef.current;
-    const baseY = dp?.id === id ? dp.y : yRef.current;
-
-    if (animState === 'spawning') {
-      node.opacity(0);
-      node.scaleX(0.7);
-      node.scaleY(0.7);
-      node.offsetX(w / 2);
-      node.offsetY(h / 2);
-      node.x(baseX + w / 2);
-      node.y(baseY + h / 2);
-      const tween = new Konva.Tween({
-        node,
-        duration: 0.2,
-        opacity: 1,
-        scaleX: 1,
-        scaleY: 1,
-        easing: Konva.Easings.EaseOut,
-        onFinish: () => {
-          tween.destroy();
-          node.offsetX(0);
-          node.offsetY(0);
-          node.x(dragPosRef.current?.id === id ? dragPosRef.current.x : xRef.current);
-          node.y(dragPosRef.current?.id === id ? dragPosRef.current.y : yRef.current);
-          animCtx.clearAnimation(id);
-        },
-      });
-      tween.play();
-      return () => tween.destroy();
-    }
-
-    if (animState === 'dying') {
-      const onComplete = animCtx.getOnComplete(id);
-      node.offsetX(w / 2);
-      node.offsetY(h / 2);
-      node.x(baseX + w / 2);
-      node.y(baseY + h / 2);
-      const tween = new Konva.Tween({
-        node,
-        duration: 0.15,
-        opacity: 0,
-        scaleX: 0.7,
-        scaleY: 0.7,
-        easing: Konva.Easings.EaseIn,
-        onFinish: () => {
-          tween.destroy();
-          onComplete?.();
-        },
-      });
-      tween.play();
-      return () => tween.destroy();
-    }
-  }, [animCtx?.version]);
-
   useEffect(() => {
     const wasSelected = prevIsSelectedRef.current;
     prevIsSelectedRef.current = isSelected;
@@ -121,10 +55,6 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
     if (document.documentElement.dataset.reducedMotion !== undefined) return;
     const node = groupRef.current;
     if (!node) return;
-    if (animCtx) {
-      const animState = animCtx.getAnimationState(id);
-      if (animState === 'spawning' || animState === 'dying') return;
-    }
     const tween1 = new Konva.Tween({
       node,
       duration: 0.08,
