@@ -480,7 +480,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   const selectedIdsRef = useRef(null);
   const {
     selectedId, stagePos, stageScale, darkMode, snapToGrid,
-    objects, dragState, presentUsers, currentUserId, dragPos,
+    objects, dragState, presentUsers, currentUserId,
     activeTool, selectedIds, canEdit, pendingTool, connectorFirstPoint,
     onFollowUser,
   } = state;
@@ -535,7 +535,59 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
     updateObject, handleDeleteWithCleanup, handleContainedDragEnd,
     handleDragMove, handleResizeClamped, setSelectedId, onContextMenu, onTypingChange,
     setSelectedIds, handleFrameAutoFit,
+    snapshotGroupPositions, repositionGroupNodes, commitGroupDrag, groupDragSnapshotRef,
   } = handlers;
+
+  // Wrap handleDragMove to drive group repositioning when multiple objects are selected.
+  const handleDragMoveWrapped = (id, pos) => {
+    const ids = selectedIdsRef.current;
+    if (ids && ids.size > 1 && ids.has(id)) {
+      // Create snapshot lazily on first move of the group drag
+      if (!groupDragSnapshotRef.current) {
+        groupDragSnapshotRef.current = snapshotGroupPositions(id);
+      }
+      repositionGroupNodes(id, pos.x, pos.y, groupDragSnapshotRef.current);
+      // Also update DragPosContext for the primary dragging node
+      handleDragMove(id, pos);
+      return;
+    }
+    handleDragMove(id, pos);
+  };
+
+  // Wrap handleContainedDragEnd to commit the entire group on drop.
+  const handleContainedDragEndWrapped = (id, updates) => {
+    const snapshot = groupDragSnapshotRef.current;
+    if (snapshot && snapshot.has(id)) {
+      groupDragSnapshotRef.current = null;
+      commitGroupDrag(id, updates.x, updates.y, snapshot);
+      return;
+    }
+    handleContainedDragEnd(id, updates);
+  };
+
+  // Wrap handleFrameDragEnd to commit group drag when a frame is the dragging object.
+  const handleFrameDragEndWrapped = (id, updates) => {
+    const snapshot = groupDragSnapshotRef.current;
+    if (snapshot && snapshot.has(id)) {
+      groupDragSnapshotRef.current = null;
+      commitGroupDrag(id, updates.x, updates.y, snapshot);
+      return;
+    }
+    handleFrameDragEnd(id, updates);
+  };
+
+  // Wrap handleFrameDragMove similarly so frame group-drag repositions peers.
+  const handleFrameDragMoveWrapped = (id, pos) => {
+    const ids = selectedIdsRef.current;
+    if (ids && ids.size > 1 && ids.has(id)) {
+      if (!groupDragSnapshotRef.current) {
+        groupDragSnapshotRef.current = snapshotGroupPositions(id);
+      }
+      repositionGroupNodes(id, pos.x, pos.y, groupDragSnapshotRef.current);
+      return;
+    }
+    handleFrameDragMove(id, pos);
+  };
 
   const [selRect, setSelRect] = useState(null);
   const selRectRef = useRef(null);
@@ -945,8 +997,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   {...obj}
                   isSelected={obj.id === selectedId}
                   onSelect={setSelectedId}
-                  onDragEnd={handleFrameDragEnd}
-                  onDragMove={handleFrameDragMove}
+                  onDragEnd={handleFrameDragEndWrapped}
+                  onDragMove={handleFrameDragMoveWrapped}
                   onTransformEnd={handleTransformEnd}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
@@ -958,7 +1010,6 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onResizeClamped={handleResizeClamped}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   onAutoFit={handleFrameAutoFit}
                   pendingTool={pendingTool}
@@ -974,17 +1025,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   isSelected={obj.id === selectedId}
                   isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
-                  onDragEnd={handleContainedDragEnd}
+                  onDragEnd={handleContainedDragEndWrapped}
                   onTransformEnd={handleTransformEnd}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
-                  onDragMove={handleDragMove}
+                  onDragMove={handleDragMoveWrapped}
                   snapToGrid={snapToGrid}
                   gridSize={GRID_SIZE}
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
@@ -1001,17 +1051,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   isSelected={obj.id === selectedId}
                   isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
-                  onDragEnd={handleContainedDragEnd}
+                  onDragEnd={handleContainedDragEndWrapped}
                   onTransformEnd={handleTransformEnd}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
-                  onDragMove={handleDragMove}
+                  onDragMove={handleDragMoveWrapped}
                   snapToGrid={snapToGrid}
                   gridSize={GRID_SIZE}
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
                   shadowsEnabled={shadowsEnabled}
@@ -1026,17 +1075,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   isSelected={obj.id === selectedId}
                   isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
-                  onDragEnd={handleContainedDragEnd}
+                  onDragEnd={handleContainedDragEndWrapped}
                   onTransformEnd={handleTransformEnd}
                   onDelete={handleDeleteWithCleanup}
-                  onDragMove={handleDragMove}
+                  onDragMove={handleDragMoveWrapped}
                   onUpdate={updateObject}
                   snapToGrid={snapToGrid}
                   gridSize={GRID_SIZE}
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   canEdit={canEdit}
                   objects={objects}
                   stageScale={stageScale}
@@ -1051,17 +1099,16 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   isSelected={obj.id === selectedId}
                   isMultiSelected={isMultiSelected}
                   onSelect={setSelectedId}
-                  onDragEnd={handleContainedDragEnd}
+                  onDragEnd={handleContainedDragEndWrapped}
                   onTransformEnd={handleTransformEnd}
                   onUpdate={updateObject}
                   onDelete={handleDeleteWithCleanup}
-                  onDragMove={handleDragMove}
+                  onDragMove={handleDragMoveWrapped}
                   snapToGrid={snapToGrid}
                   gridSize={GRID_SIZE}
                   dragState={dragState}
                   dragLayerRef={dragLayerRef}
                   mainLayerRef={mainLayerRef}
-                  dragPos={dragPos}
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
@@ -1178,9 +1225,6 @@ export function areEqual(prev, next) {
     ps.dragState?.action === ns.dragState?.action &&
     ps.dragState?.draggingId === ns.dragState?.draggingId &&
     ps.dragState?.illegalDrag === ns.dragState?.illegalDrag &&
-    ps.dragPos?.id === ns.dragPos?.id &&
-    ps.dragPos?.x === ns.dragPos?.x &&
-    ps.dragPos?.y === ns.dragPos?.y &&
     ps.activeTool === ns.activeTool &&
     ps.selectedIds === ns.selectedIds &&
     ps.canEdit === ns.canEdit &&

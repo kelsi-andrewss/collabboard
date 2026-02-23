@@ -1,7 +1,6 @@
 import {
   findOverlappingFrame,
   findFrameAtPoint,
-  hasDisallowedSiblingOverlap,
   computeAncestorExpansions,
   computeAutoFitBounds,
   getDescendantIds,
@@ -9,7 +8,6 @@ import {
   getLineBounds,
   FRAME_MARGIN,
 } from '../utils/frameUtils.js';
-import { showErrorTooltip } from '../utils/tooltipUtils.js';
 import { getConnectedEndpointUpdates } from '../utils/connectorUtils.js';
 
 export function makeObjectHandlers({
@@ -17,6 +15,8 @@ export function makeObjectHandlers({
   stagePos, stageScale, setShapeColors,
   setDragPos, updateColorHistory,
   setResizeTooltip, resizeTooltipTimer,
+  dragStateRef, dragFrameRef, descendantCacheRef,
+  selectedIdsRef, batchUpdateObjects,
 }) {
   const updateActiveColor = (type, color) => {
     setShapeColors(prev => {
@@ -38,42 +38,51 @@ export function makeObjectHandlers({
   const handleDragMove = (id, pos) => {
     const obj = board.objects[id];
     if (!obj) return;
-    const tempObj = { ...obj, ...pos };
-    // For frames, exclude self and descendants from candidate parent frames
-    let candidates = board.objects;
-    if (obj.type === 'frame') {
-      const excluded = getDescendantIds(id, board.objects);
-      excluded.add(id);
-      candidates = Object.fromEntries(Object.entries(board.objects).filter(([k]) => !excluded.has(k)));
-    }
-    const stage = stageRef.current;
-    const pointer = stage?.getPointerPosition();
-    const cursorCanvas = pointer
-      ? { x: (pointer.x - stagePos.x) / stageScale, y: (pointer.y - stagePos.y) / stageScale }
-      : null;
-    const overFrame = (cursorCanvas && obj.type !== 'frame')
-      ? findFrameAtPoint(cursorCanvas.x, cursorCanvas.y, board.objects)
-      : findOverlappingFrame(tempObj, candidates);
-    const currentFrameId = obj.frameId || null;
-    let action = null;
-    let overFrameId = null;
-    if (overFrame) {
-      overFrameId = overFrame.id;
-      if (currentFrameId !== overFrame.id) {
-        action = 'add';
-      }
-    } else if (currentFrameId) {
-      overFrameId = currentFrameId;
-      action = 'remove';
-    }
-    let illegalDrag = false;
-    const newFrameIdForCheck = overFrame ? overFrame.id : null;
-    const bounds = (obj.type === 'line' || obj.type === 'arrow')
-      ? getLineBounds({ ...obj, x: pos.x, y: pos.y })
-      : { x: pos.x, y: pos.y, width: obj.width || (obj.type === 'sticky' ? 200 : 150), height: obj.height || (obj.type === 'sticky' ? 200 : 150) };
-    illegalDrag = hasDisallowedSiblingOverlap(id, obj.type, bounds, newFrameIdForCheck, board.objects, FRAME_MARGIN);
-    setDragState({ draggingId: id, overFrameId, action, illegalDrag });
     setDragPos({ id, x: pos.x, y: pos.y });
+    if (dragFrameRef && dragFrameRef.current !== null) return;
+    if (dragFrameRef) {
+      dragFrameRef.current = requestAnimationFrame(() => {
+        const objInner = board.objects[id];
+        if (!objInner) { dragFrameRef.current = null; return; }
+        const tempObj = { ...objInner, x: pos.x, y: pos.y };
+        if (!descendantCacheRef.current || descendantCacheRef.current.id !== id) {
+          descendantCacheRef.current = { id, descendants: getDescendantIds(id, board.objects) };
+        }
+        const descendants = descendantCacheRef.current.descendants;
+        let candidates = board.objects;
+        if (objInner.type === 'frame') {
+          const excluded = new Set(descendants);
+          excluded.add(id);
+          candidates = Object.fromEntries(Object.entries(board.objects).filter(([k]) => !excluded.has(k)));
+        }
+        const stage = stageRef.current;
+        const pointer = stage?.getPointerPosition();
+        const cursorCanvas = pointer
+          ? { x: (pointer.x - stagePos.x) / stageScale, y: (pointer.y - stagePos.y) / stageScale }
+          : null;
+        const overFrame = (cursorCanvas && objInner.type !== 'frame')
+          ? findFrameAtPoint(cursorCanvas.x, cursorCanvas.y, board.objects)
+          : findOverlappingFrame(tempObj, candidates);
+        const currentFrameId = objInner.frameId || null;
+        let action = null;
+        let overFrameId = null;
+        if (overFrame) {
+          overFrameId = overFrame.id;
+          if (currentFrameId !== overFrame.id) {
+            action = 'add';
+          }
+        } else if (currentFrameId) {
+          overFrameId = currentFrameId;
+          action = 'remove';
+        }
+        const next = { draggingId: id, overFrameId, action, illegalDrag: false };
+        const cur = dragStateRef.current;
+        if (cur.draggingId !== next.draggingId || cur.overFrameId !== next.overFrameId || cur.action !== next.action) {
+          setDragState(next);
+        }
+        dragFrameRef.current = null;
+      });
+    }
   };
 
   const handleContainedDragEnd = (id, updates) => {
@@ -105,36 +114,6 @@ export function makeObjectHandlers({
     const lineBounds = (obj.type === 'line' || obj.type === 'arrow') ? getLineBounds({ ...obj, x: snapped.x, y: snapped.y }) : null;
     const ow = lineBounds ? lineBounds.width : (obj.width || (obj.type === 'sticky' ? 200 : 150));
     const oh = lineBounds ? lineBounds.height : (obj.height || (obj.type === 'sticky' ? 200 : 150));
-
-    // Overlap check: objects cannot overlap sibling frames
-    // Exclude old parent frame when reparenting (to root or to an ancestor frame)
-    const objectsForOverlapCheck = Object.fromEntries(
-      Object.entries(board.objects).filter(([k]) => k !== id)
-    );
-    const proposedBounds = { x: snapped.x, y: snapped.y, width: ow, height: oh };
-    if (hasDisallowedSiblingOverlap(id, obj.type, proposedBounds, newFrameId || null, objectsForOverlapCheck, FRAME_MARGIN)) {
-      // Reject: snap back to pre-drag position
-      const stage = stageRef.current;
-      const node = stage?.findOne('.' + id);
-      if (node) { node.x(obj.x); node.y(obj.y); }
-      stage?.batchDraw();
-      setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
-      setDragPos(null);
-      if (setResizeTooltip && resizeTooltipTimer) {
-        showErrorTooltip(
-          "Can't place here — overlaps another frame.",
-          {
-            screenX: obj.x * stageScale + stagePos.x,
-            screenY: obj.y * stageScale + stagePos.y,
-            objW: (obj.width || 100) * stageScale,
-            objH: (obj.height || 100) * stageScale,
-          },
-          setResizeTooltip,
-          resizeTooltipTimer,
-        );
-      }
-      return;
-    }
 
     // Snap object fully outside frame when exiting
     if (oldFrameId && !newFrameId) {
@@ -191,6 +170,11 @@ export function makeObjectHandlers({
     } else {
       board.batchUpdateObjects(allUpdates);
     }
+    if (dragFrameRef && dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    if (descendantCacheRef) descendantCacheRef.current = null;
     setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
     // Do NOT call setDragPos(null) here. The auto-clear useEffect in App.jsx clears it
     // once Firestore confirms the new position. Clearing here prematurely causes a
@@ -272,6 +256,132 @@ export function makeObjectHandlers({
     setSelectedId(null);
   };
 
+  // Snapshot positions for all selected objects at the moment drag begins.
+  // Returns a Map<id, {x, y}> or null if not a group drag situation.
+  const snapshotGroupPositions = (draggingId) => {
+    const ids = selectedIdsRef ? selectedIdsRef.current : null;
+    if (!ids || ids.size <= 1) return null;
+    if (!ids.has(draggingId)) return null;
+    const snapshot = new Map();
+    for (const id of ids) {
+      const obj = board.objects[id];
+      if (obj) snapshot.set(id, { x: obj.x, y: obj.y });
+    }
+    return snapshot;
+  };
+
+  // Reposition all objects in the group except the dragging node (which Konva moves natively).
+  // Also moves any frame descendants that aren't themselves in the snapshot.
+  // Called on onDragMove — cheap, no Firestore writes.
+  const repositionGroupNodes = (draggingId, currentX, currentY, startSnapshot) => {
+    if (!startSnapshot) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const origin = startSnapshot.get(draggingId);
+    if (!origin) return;
+    const dx = currentX - origin.x;
+    const dy = currentY - origin.y;
+    // Track IDs we've already repositioned to avoid double-moving
+    const moved = new Set([draggingId]);
+
+    // If the dragging node is a frame, move its descendants too (Konva doesn't group them)
+    const draggingObj = board.objects[draggingId];
+    if (draggingObj && draggingObj.type === 'frame') {
+      const descendants = getDescendantIds(draggingId, board.objects);
+      for (const descId of descendants) {
+        if (moved.has(descId)) continue;
+        moved.add(descId);
+        const descObj = board.objects[descId];
+        const descNode = stage.findOne('.' + descId);
+        if (descObj && descNode) {
+          descNode.x(descObj.x + dx);
+          descNode.y(descObj.y + dy);
+        }
+      }
+    }
+
+    for (const [id, pos] of startSnapshot) {
+      if (id === draggingId) continue;
+      const node = stage.findOne('.' + id);
+      if (node) {
+        node.x(pos.x + dx);
+        node.y(pos.y + dy);
+      }
+      moved.add(id);
+      // Also move frame descendants that aren't in the snapshot
+      const obj = board.objects[id];
+      if (obj && obj.type === 'frame') {
+        const descendants = getDescendantIds(id, board.objects);
+        for (const descId of descendants) {
+          if (moved.has(descId)) continue;
+          moved.add(descId);
+          const descObj = board.objects[descId];
+          const descNode = stage.findOne('.' + descId);
+          if (descObj && descNode) {
+            descNode.x(descObj.x + dx);
+            descNode.y(descObj.y + dy);
+          }
+        }
+      }
+    }
+    stage.getLayers()[0]?.batchDraw();
+  };
+
+  // On dragEnd: snap all positions and write as a single batch.
+  // Frame descendants (not in the snapshot) are included in the write.
+  // Returns the snapped dx/dy so the caller can snap the dragging node too.
+  const commitGroupDrag = (draggingId, rawX, rawY, startSnapshot) => {
+    if (!startSnapshot) return null;
+    const origin = startSnapshot.get(draggingId);
+    if (!origin) return null;
+    const snappedX = snap(rawX);
+    const snappedY = snap(rawY);
+    const dx = snappedX - origin.x;
+    const dy = snappedY - origin.y;
+    const updates = [];
+    const written = new Set();
+    for (const [id, pos] of startSnapshot) {
+      updates.push({ id, data: { x: pos.x + dx, y: pos.y + dy } });
+      written.add(id);
+      // Include frame descendants that aren't separately in the selection
+      const obj = board.objects[id];
+      if (obj && obj.type === 'frame') {
+        const descendants = getDescendantIds(id, board.objects);
+        for (const descId of descendants) {
+          if (written.has(descId)) continue;
+          written.add(descId);
+          const descObj = board.objects[descId];
+          if (descObj) {
+            updates.push({ id: descId, data: { x: descObj.x + dx, y: descObj.y + dy } });
+          }
+        }
+      }
+    }
+    // Imperatively position all Konva nodes at their snapped coords to prevent flash
+    const stage = stageRef.current;
+    if (stage) {
+      for (const { id, data } of updates) {
+        const node = stage.findOne('.' + id);
+        if (node) {
+          node.x(data.x);
+          node.y(data.y);
+        }
+      }
+      stage.getLayers()[0]?.batchDraw();
+    }
+    if (batchUpdateObjects) {
+      batchUpdateObjects(updates);
+    } else {
+      board.batchUpdateObjects(updates);
+    }
+    setDragState({ draggingId: null, overFrameId: null, action: null, illegalDrag: false });
+    if (dragFrameRef && dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    return { dx, dy, snappedX, snappedY };
+  };
+
   const handleFrameAutoFit = (frameId) => {
     const frame = board.objects[frameId];
     if (!frame) return;
@@ -304,5 +414,8 @@ export function makeObjectHandlers({
     handleDuplicate,
     handleDuplicateMultiple,
     handleFrameAutoFit,
+    snapshotGroupPositions,
+    repositionGroupNodes,
+    commitGroupDrag,
   };
 }

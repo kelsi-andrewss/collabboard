@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { DragPosContext } from '../contexts/DragPosContext.js';
 import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { getContrastColor } from '../utils/colorUtils.js';
 
-function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool, shadowsEnabled }) {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, frameId, canEdit = true, pendingTool, shadowsEnabled }) {
+  const dragPos = useContext(DragPosContext);
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
