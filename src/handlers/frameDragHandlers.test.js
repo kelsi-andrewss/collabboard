@@ -64,7 +64,6 @@ function makeHandlers({
     setResizeTooltip,
     resizeTooltipTimer: { current: null },
     setDragPos,
-    descendantCacheRef: { current: null },
   });
 
   return { board, frameDragRef, stageRef, setDragPos, setDragState, handlers };
@@ -123,7 +122,6 @@ describe('handleFrameDragMove — setDragPos called in real-time', () => {
         setResizeTooltip: vi.fn(),
         resizeTooltipTimer: { current: null },
         setDragPos: undefined,
-        descendantCacheRef: { current: null },
       });
       handlers.handleFrameDragMove('f1', { x: 50, y: 80 });
     }).not.toThrow();
