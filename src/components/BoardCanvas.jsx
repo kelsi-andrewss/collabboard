@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Stage, Layer, Rect, Text, Group, Shape as KonvaShape, Circle, Line, Arrow, RegularPolygon } from 'react-konva';
 import { Frame } from './Frame';
 import { StickyNote } from './StickyNote';
@@ -11,8 +11,29 @@ import { PORTS, getPortCoords, findSnapTarget } from '../utils/connectorUtils.js
 
 const PORT_DISPLAY_RADIUS = 8;
 
+const cssVarCache = {};
+let cssVarObserver = null;
+
+function initCSSVarObserver() {
+  if (cssVarObserver) return;
+  cssVarObserver = new MutationObserver(() => {
+    const style = getComputedStyle(document.documentElement);
+    for (const name of Object.keys(cssVarCache)) {
+      cssVarCache[name] = style.getPropertyValue(name).trim();
+    }
+  });
+  cssVarObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'data-theme-color'],
+  });
+}
+
 function getCSSVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (name in cssVarCache) return cssVarCache[name];
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  cssVarCache[name] = val;
+  initCSSVarObserver();
+  return val;
 }
 
 const OFFSCREEN = -99999;
@@ -467,6 +488,47 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
   objectsRef.current = objects;
   connectorFirstPointRef.current = connectorFirstPoint;
   stageScaleRef.current = stageScale;
+
+  // B2: Prime cache on mount so first render never calls getComputedStyle inline
+  useEffect(() => {
+    getCSSVar('--md-sys-color-surface');
+    getCSSVar('--md-sys-color-outline-variant');
+  }, []);
+
+  // B3: Pre-compute frameChildMap in a single O(n) pass keyed on objects identity
+  const frameChildMap = useMemo(() => {
+    const map = {};
+    for (const obj of Object.values(objects)) {
+      if (obj.frameId) {
+        (map[obj.frameId] ||= []).push(obj);
+      }
+    }
+    return map;
+  }, [objects]);
+
+  // B1: Memoize viewport bounds, buildRenderOrder, and computeVisibleIds
+  const pad = 200;
+  const viewport = useMemo(() => ({
+    vLeft: -stagePos.x / stageScale - pad,
+    vTop: -stagePos.y / stageScale - pad,
+    vRight: -stagePos.x / stageScale - pad + window.innerWidth / stageScale + pad * 2,
+    vBottom: -stagePos.y / stageScale - pad + (window.innerHeight - HEADER_HEIGHT) / stageScale + pad * 2,
+  }), [stagePos, stageScale]);
+
+  const renderOrder = useMemo(() => buildRenderOrder(objects), [objects]);
+
+  const visibleIds = useMemo(
+    () => computeVisibleIds(renderOrder, objects, viewport, selectedId, dragState?.draggingId),
+    [renderOrder, objects, viewport, selectedId, dragState?.draggingId]
+  );
+
+  const visibleRenderOrder = useMemo(
+    () => renderOrder.filter(obj => visibleIds.has(obj.id)),
+    [renderOrder, visibleIds]
+  );
+
+  // B6: Suppress shadows at scale or when object count is high
+  const shadowsEnabled = stageScale >= 0.4 && Object.keys(objects).length <= 150;
   const {
     handleMouseMove, handleStageClick, setStagePos, handleWheel,
     handleFrameDragEnd, handleFrameDragMove, handleTransformEnd,
@@ -864,22 +926,11 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
             </>
           );
         })()}
-        {(() => {
-          const pad = 200;
-          const vLeft = -stagePos.x / stageScale - pad;
-          const vTop = -stagePos.y / stageScale - pad;
-          const vRight = vLeft + window.innerWidth / stageScale + pad * 2;
-          const vBottom = vTop + (window.innerHeight - HEADER_HEIGHT) / stageScale + pad * 2;
-          const allObjs = Object.values(objects);
-          const objMap = objects;
-          const visibleIds = computeVisibleIds(allObjs, objMap, { vLeft, vTop, vRight, vBottom }, selectedId, dragState?.draggingId);
-          return buildRenderOrder(objects)
-            .filter(obj => visibleIds.has(obj.id));
-        })()
+        {visibleRenderOrder
           .map((obj) => {
             const isMultiSelected = selectedIds?.has(obj.id);
             if (obj.type === 'frame') {
-              const frameChildren = Object.values(objects).filter(o => o.frameId === obj.id);
+              const frameChildren = frameChildMap[obj.id] || [];
               let frameMinW = 100;
               let frameMinH = 80;
               for (const child of frameChildren) {
@@ -937,6 +988,8 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   onTypingChange={onTypingChange}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
+                  shadowsEnabled={shadowsEnabled}
+                  darkMode={darkMode}
                 />
               );
             }
@@ -961,6 +1014,7 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
                   dragPos={dragPos}
                   canEdit={canEdit}
                   pendingTool={pendingTool}
+                  shadowsEnabled={shadowsEnabled}
                 />
               );
             }
@@ -1031,12 +1085,14 @@ function BoardCanvasInner({ stageRef, state, handlers }) {
           if (isConnectorTool) {
             for (const obj of Object.values(objects)) {
               if (obj.type === 'line' || obj.type === 'arrow') continue;
+              if (!visibleIds.has(obj.id)) continue;
               portTargets.push(obj);
             }
           } else if (isLineSelected) {
             for (const obj of Object.values(objects)) {
               if (obj.id === selectedId) continue;
               if (obj.type === 'line' || obj.type === 'arrow') continue;
+              if (!visibleIds.has(obj.id)) continue;
               portTargets.push(obj);
             }
           }

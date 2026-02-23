@@ -4,7 +4,7 @@ import { Rect, Ellipse, Group, Transformer, Text, Shape as KonvaShape } from 're
 import { Html } from 'react-konva-utils';
 import { getContrastColor } from '../utils/colorUtils.js';
 
-function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool }) {
+function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', color = '#3b82f6', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, canEdit = true, pendingTool, shadowsEnabled }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
@@ -35,18 +35,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
     }
   }, [isSelected, isEditing, width, height]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (isSelected && !isEditing && onDelete) {
-        onDelete(id);
-      }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, isEditing, onDelete]);
+  // Delete on keydown is handled centrally in useKeyboardShortcuts (App.jsx).
 
   useEffect(() => {
     const wasSelected = prevIsSelectedRef.current;
@@ -184,7 +173,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             height={height}
             fill={color}
             cornerRadius={4}
-            shadowEnabled={true}
+            shadowEnabled={shadowsEnabled}
             shadowBlur={frameId ? 3 : 6}
             shadowOffsetX={0}
             shadowOffsetY={frameId ? 1 : 1}
@@ -202,7 +191,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             radiusX={width / 2}
             radiusY={height / 2}
             fill={color}
-            shadowEnabled={true}
+            shadowEnabled={shadowsEnabled}
             shadowBlur={frameId ? 3 : 6}
             shadowOffsetX={0}
             shadowOffsetY={frameId ? 1 : 1}
@@ -218,7 +207,7 @@ function ShapeInner({ id, type, x, y, width = 100, height = 100, text = '', colo
             width={width}
             height={height}
             fill={color}
-            shadowEnabled={true}
+            shadowEnabled={shadowsEnabled}
             shadowBlur={frameId ? 3 : 6}
             shadowOffsetX={0}
             shadowOffsetY={frameId ? 1 : 1}
