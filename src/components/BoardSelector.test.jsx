@@ -488,6 +488,92 @@ describe('BoardSelector — Browse tab template filter', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Tests — All tab visibility by role
+// ---------------------------------------------------------------------------
+
+describe('BoardSelector — All tab visibility by role', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockUseBoardsListReturn.boards = [];
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('does not render an "All" tab for non-admin users', () => {
+    render(<BoardSelector {...defaultProps({ isAdmin: false })} />);
+    const buttons = screen.getAllByRole('button');
+    const allTab = buttons.find(b => b.textContent === 'All');
+    expect(allTab).toBeUndefined();
+  });
+
+  it('renders an "All" tab for admin users', () => {
+    render(<BoardSelector {...defaultProps({ isAdmin: true })} />);
+    const buttons = screen.getAllByRole('button');
+    const allTab = buttons.find(b => b.textContent === 'All');
+    expect(allTab).toBeTruthy();
+  });
+
+  it('renders "My Boards" and "Browse" tabs for non-admin users (no extras)', () => {
+    render(<BoardSelector {...defaultProps({ isAdmin: false })} />);
+    const buttons = screen.getAllByRole('button');
+    const filterTabLabels = ['My Boards', 'Browse', 'All'];
+    const rendered = buttons.filter(b => filterTabLabels.includes(b.textContent));
+    const labels = rendered.map(b => b.textContent);
+    expect(labels).toContain('My Boards');
+    expect(labels).toContain('Browse');
+    expect(labels).not.toContain('All');
+  });
+
+  it('renders My Boards, Browse, and All tabs for admin users', () => {
+    render(<BoardSelector {...defaultProps({ isAdmin: true })} />);
+    const buttons = screen.getAllByRole('button');
+    const filterTabLabels = ['My Boards', 'Browse', 'All'];
+    const rendered = buttons.filter(b => filterTabLabels.includes(b.textContent));
+    const labels = rendered.map(b => b.textContent);
+    expect(labels).toContain('My Boards');
+    expect(labels).toContain('Browse');
+    expect(labels).toContain('All');
+  });
+
+  it('defaults to "My Boards" active tab for non-admin when localStorage is empty', () => {
+    render(<BoardSelector {...defaultProps({ isAdmin: false })} />);
+    const buttons = screen.getAllByRole('button');
+    const myTab = buttons.find(b => b.textContent === 'My Boards');
+    expect(myTab.className).toContain('sort-btn--active');
+  });
+
+  it('ignores stale "all" in localStorage for non-admin and falls back to "my"', () => {
+    localStorage.setItem('collaboard_group_sort', JSON.stringify({ view: 'all' }));
+    render(<BoardSelector {...defaultProps({ isAdmin: false })} />);
+    const buttons = screen.getAllByRole('button');
+    const myTab = buttons.find(b => b.textContent === 'My Boards');
+    expect(myTab.className).toContain('sort-btn--active');
+  });
+
+  it('honours stored "all" view from localStorage for admin users', () => {
+    localStorage.setItem('collaboard_group_sort', JSON.stringify({ view: 'all' }));
+    render(<BoardSelector {...defaultProps({ isAdmin: true })} />);
+    const buttons = screen.getAllByRole('button');
+    const allTab = buttons.find(b => b.textContent === 'All');
+    expect(allTab.className).toContain('sort-btn--active');
+  });
+
+  it('does not activate "All" tab when "all" is in localStorage for non-admin', () => {
+    localStorage.setItem('collaboard_group_sort', JSON.stringify({ view: 'all' }));
+    render(<BoardSelector {...defaultProps({ isAdmin: false })} />);
+    const buttons = screen.getAllByRole('button');
+    const activeTab = buttons.find(b =>
+      (b.textContent === 'My Boards' || b.textContent === 'Browse') &&
+      b.className.includes('sort-btn--active')
+    );
+    expect(activeTab).toBeTruthy();
+  });
+});
+
 // Board-specific open visibility tests that don't apply to groups
 
 describe('BoardSelector — open visibility board-specific', () => {
