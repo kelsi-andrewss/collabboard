@@ -4,14 +4,14 @@ import { Rect, Text, Group, Transformer } from 'react-konva';
 import { Html } from 'react-konva-utils';
 import { darkenHex, getContrastColor } from '../utils/colorUtils.js';
 
-function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true, pendingTool }) {
+function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#fef08a', rotation = 0, isSelected, isMultiSelected, onSelect, onDragEnd, onTransformEnd, onUpdate, onDelete, onDragMove, snapToGrid = false, gridSize = 50, dragState, dragLayerRef, mainLayerRef, dragPos, frameId, onTypingChange, canEdit = true, pendingTool, shadowsEnabled, darkMode }) {
   const shapeRef = useRef();
   const textRef = useRef();
   const groupRef = useRef();
   const trRef = useRef();
   const sizeRef = useRef({ w: width, h: height });
   const [isEditing, setIsEditing] = useState(false);
-  const [isDark, setIsDark] = useState(document.documentElement.getAttribute('data-theme') === 'dark');
+  const isDark = darkMode;
   const xRef = useRef(x);
   const yRef = useRef(y);
   const widthRef = useRef(width);
@@ -27,14 +27,6 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
   useEffect(() => {
     sizeRef.current = { w: width, h: height };
   }, [width, height]);
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     if (isSelected && !isEditing && trRef.current) {
@@ -72,19 +64,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
     tween1.play();
     return () => tween1.destroy();
   }, [isSelected]);
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (isSelected && !isEditing && onDelete) {
-        onDelete(id);
-      }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, isEditing, onDelete]);
+  // Delete on keydown is handled centrally in useKeyboardShortcuts (App.jsx).
 
   const TEXT_SCALE_FACTOR = 0.14;
 
@@ -167,7 +147,7 @@ function StickyNoteInner({ id, x, y, width = 200, height = 200, text, color = '#
           width={width}
           height={height}
           fill={color}
-          shadowEnabled={true}
+          shadowEnabled={shadowsEnabled}
           shadowBlur={frameId ? 3 : 6}
           shadowOffsetX={0}
           shadowOffsetY={frameId ? 1 : 1}
